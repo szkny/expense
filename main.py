@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+"""
+家計簿スプレッドシートに自動で書き込みを行うバッチプログラム
+"""
 import json
 from json import JSONDecodeError
 import subprocess
@@ -9,7 +12,7 @@ TITLE = "家計簿"
 
 def exec_command(command: list) -> Any:
     """
-    method for execution util
+    utility method for shell command execution
     """
     res = subprocess.run(
         command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
@@ -53,7 +56,7 @@ def enter_expense_amount(expense_type: str) -> int:
             "-t",
             TITLE,
             "-i",
-            f"Amount for {expense_type}",
+            f"{expense_type}の金額を入力",
             "-n",
         ]
     )
@@ -62,20 +65,32 @@ def enter_expense_amount(expense_type: str) -> int:
     return expense_amount
 
 
-def main() -> None:
-    """ """
-    expense_type = select_expense_type()
-    expense_amount = enter_expense_amount(expense_type)
-    exec_command(
+def confirmation(expense_type: str, expense_amount: int) -> bool:
+    """
+    confirmation
+    """
+    data = exec_command(
         [
             "termux-dialog",
             "confirm",
             "-t",
             TITLE,
             "-i",
-            f"expense_type: {expense_type}, expense_amount: {expense_amount}",
+            f"以下の内容で登録しますか？\n\t{expense_type}, {expense_amount}円",
         ]
     )
+    choice = str(data["text"])
+    print("choice: ", choice)
+    return choice == "yes"
+
+
+def main() -> None:
+    """
+    main process
+    """
+    expense_type = select_expense_type()
+    expense_amount = enter_expense_amount(expense_type)
+    confirmation(expense_type, expense_amount)
 
 
 if __name__ == "__main__":
