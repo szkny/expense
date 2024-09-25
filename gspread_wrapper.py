@@ -111,7 +111,9 @@ class GspreadHandler:
         print(f"writing: '{new_value}' to {address}")
         self.sheet.update_acell(address, new_value)
 
-    def register_bill(self, category: str, amount: int, memo: str = "") -> None:
+    def register_payment(
+        self, category: str, amount: int, memo: str = ""
+    ) -> None:
         column = self.get_column()
         row = self.get_row(category)
         label = f"{column}{row}"
@@ -123,4 +125,4 @@ class GspreadHandler:
 if __name__ == "__main__":
     BOOKNAME = "CF (2024年度) テスト"
     handler = GspreadHandler(BOOKNAME)
-    handler.register_bill("食費", 123, "コンビニ")
+    handler.register_payment("食費", 123, "コンビニ")
