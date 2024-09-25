@@ -1,19 +1,15 @@
 import re
 import gspread
 import datetime as dt
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2 import service_account
 
 
 class GspreadHandler:
     def __init__(self, book_name: str) -> None:
-        scope = [
-            "https://spreadsheets.google.com/feeds",
-            "https://www.googleapis.com/auth/drive",
-        ]
-        creds = ServiceAccountCredentials.from_json_keyfile_name(
-            "credentials.json", scope
+        credentials = service_account.Credentials.from_service_account_file(
+            "credentials.json"
         )
-        self.client = gspread.authorize(creds)
+        self.client = gspread.authorize(credentials)
         self.workbook = self.client.open(book_name)
         self.load_sheet()
 
