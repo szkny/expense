@@ -6,7 +6,8 @@ import json
 from json import JSONDecodeError
 import subprocess
 from typing import Any
-from modules.gspread_wrapper import GspreadHandler
+
+from gspread_wrapper import GspreadHandler
 
 TITLE = "家計簿"
 
