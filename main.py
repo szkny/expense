@@ -10,6 +10,7 @@ from typing import Any
 from gspread_wrapper import GspreadHandler
 
 TITLE = "家計簿"
+BOOKNAME = "CF (2024年度)"
 
 
 def exec_command(command: list) -> Any:
@@ -117,9 +118,7 @@ def main() -> None:
     expense_amount = enter_expense_amount(expense_type)
     expense_memo = enter_expense_memo(expense_type)
     confirmation(expense_type, expense_amount, expense_memo)
-    # bookname = "CF (2024年度)"
-    bookname = "CF (2024年度) テスト"
-    handler = GspreadHandler(bookname)
+    handler = GspreadHandler(BOOKNAME)
     handler.register_expense(expense_type, expense_amount, expense_memo)
 
 
