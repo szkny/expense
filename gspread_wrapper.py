@@ -7,7 +7,11 @@ from google.oauth2 import service_account
 class GspreadHandler:
     def __init__(self, book_name: str) -> None:
         credentials = service_account.Credentials.from_service_account_file(
-            "credentials.json"
+            "credentials.json",
+            scopes=[
+                "https://spreadsheets.google.com/feeds",
+                "https://www.googleapis.com/auth/drive",
+            ],
         )
         self.client = gspread.authorize(credentials)
         self.workbook = self.client.open(book_name)
