@@ -6,6 +6,7 @@ import json
 from json import JSONDecodeError
 import subprocess
 from typing import Any
+from modules.gspread_wrapper import GspreadHandler
 
 TITLE = "家計簿"
 
@@ -65,7 +66,30 @@ def enter_expense_amount(expense_type: str) -> int:
     return expense_amount
 
 
-def confirmation(expense_type: str, expense_amount: int) -> bool:
+def enter_expense_memo(expense_type: str) -> str:
+    """
+    enter expense memo
+    """
+    data = exec_command(
+        [
+            "termux-dialog",
+            "text",
+            "-t",
+            TITLE,
+            "-i",
+            f"{expense_type}のメモを入力",
+        ]
+    )
+    expense_memo = str(data["text"])
+    print(
+        "expense_memo: ",
+    )
+    return expense_memo
+
+
+def confirmation(
+    expense_type: str, expense_amount: int, expense_memo: str
+) -> bool:
     """
     confirmation
     """
@@ -76,7 +100,7 @@ def confirmation(expense_type: str, expense_amount: int) -> bool:
             "-t",
             TITLE,
             "-i",
-            f"以下の内容で登録しますか？\n\t{expense_type}, {expense_amount}円",
+            f"以下の内容で登録しますか？\n\t{expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円",
         ]
     )
     choice = str(data["text"])
@@ -90,7 +114,12 @@ def main() -> None:
     """
     expense_type = select_expense_type()
     expense_amount = enter_expense_amount(expense_type)
-    confirmation(expense_type, expense_amount)
+    expense_memo = enter_expense_memo(expense_type)
+    confirmation(expense_type, expense_amount, expense_memo)
+    # bookname = "CF (2024年度)"
+    bookname = "CF (2024年度) テスト"
+    handler = GspreadHandler(bookname)
+    handler.register_expense(expense_type, expense_amount, expense_memo)
 
 
 if __name__ == "__main__":

@@ -53,8 +53,8 @@ class GspreadHandler:
             f"'{today_str}' not found in sheet '{self.sheetname}'."
         )
 
-    def get_row(self, category: str, offset: int = 30) -> int:
-        category_list = [
+    def get_row(self, expense_type: str, offset: int = 30) -> int:
+        expense_type_list = [
             "給与",
             "雑所得",
             "家賃",
@@ -68,7 +68,7 @@ class GspreadHandler:
             "遊興費",
             "雑費",
         ]
-        row = offset + category_list.index(category)
+        row = offset + expense_type_list.index(expense_type)
         return row
 
     def add_amount_data(self, label: str, amount: int) -> None:
@@ -88,7 +88,7 @@ class GspreadHandler:
         self.sheet.update_acell(label, new_value)
 
     def add_memo(
-        self, column: str, category: str, memo: str, offset: int = 49
+        self, column: str, expense_type: str, memo: str, offset: int = 49
     ) -> None:
         cell_range = f"{column}{offset}:{column}{offset+3}"
         cells = self.sheet.range(cell_range)
@@ -97,7 +97,7 @@ class GspreadHandler:
         )
         cells = list(
             filter(
-                lambda c: isinstance(c.value, str) and category in c.value,
+                lambda c: isinstance(c.value, str) and expense_type in c.value,
                 cells,
             )
         )
@@ -106,23 +106,23 @@ class GspreadHandler:
             new_value = f"{cell.value}, {memo}"
             address = cell.address
         else:
-            new_value = f"{category}: {memo}"
+            new_value = f"{expense_type}: {memo}"
             address = f"{column}{offset+non_empty_counts}"
         print(f"writing: '{new_value}' to {address}")
         self.sheet.update_acell(address, new_value)
 
-    def register_payment(
-        self, category: str, amount: int, memo: str = ""
+    def register_expense(
+        self, expense_type: str, amount: int, memo: str = ""
     ) -> None:
         column = self.get_column()
-        row = self.get_row(category)
+        row = self.get_row(expense_type)
         label = f"{column}{row}"
         self.add_amount_data(label, amount)
         if memo:
-            self.add_memo(column, category, memo)
+            self.add_memo(column, expense_type, memo)
 
 
 if __name__ == "__main__":
     BOOKNAME = "CF (2024年度) テスト"
     handler = GspreadHandler(BOOKNAME)
-    handler.register_payment("食費", 123, "コンビニ")
+    handler.register_expense("食費", 123, "コンビニ")
