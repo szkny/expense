@@ -95,9 +95,6 @@ class GspreadHandler:
         non_empty_counts = len(
             list(filter(lambda c: c.value != "" and c.value is not None, cells))
         )
-        if non_empty_counts > 3:
-            print("there are no space to write a memo.")
-            return
         cells = list(
             filter(
                 lambda c: isinstance(c.value, str) and expense_type in c.value,
@@ -111,6 +108,9 @@ class GspreadHandler:
         else:
             new_value = f"{expense_type}: {memo}"
             address = f"{column}{offset+non_empty_counts}"
+            if non_empty_counts > 3:
+                print("there are no space to write a memo.")
+                return
         print(f"writing: '{new_value}' to {address} in {self.sheetname}")
         self.sheet.update_acell(address, new_value)
 
