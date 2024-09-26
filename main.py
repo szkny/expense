@@ -133,6 +133,25 @@ def confirmation(
     return choice == "yes"
 
 
+def notify(title: str, content: str) -> None:
+    """
+    notification
+    """
+    log.info("start 'notify' method")
+    notify_command = [
+        "termux-notification",
+        "--title",
+        title,
+        "--content",
+        content,
+    ]
+    log.debug(f"execute command: {notify_command}")
+    subprocess.run(
+        notify_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+    )
+    log.info("end 'notify' method")
+
+
 def main() -> None:
     """
     main process
@@ -146,18 +165,12 @@ def main() -> None:
         if res:
             handler = GspreadHandler(BOOKNAME)
             handler.register_expense(expense_type, expense_amount, expense_memo)
-        notify_command = [
-            "termux-notification",
-            "--title",
-            "家計簿への登録が完了しました。",
-            "--content",
-            f"{expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円",
-        ]
-        log.debug(f"execute command: {notify_command}")
-        subprocess.run(
-            notify_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
-        )
-    except Exception:
+            notify(
+                "家計簿への登録が完了しました。",
+                f"{expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円",
+            )
+    except Exception as e:
+        notify("🚫家計簿の登録に失敗しました。", str(e))
         log.exception("error occurred")
     finally:
         log.info("end 'main' method")
