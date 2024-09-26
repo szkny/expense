@@ -3,7 +3,6 @@
 家計簿スプレッドシートに自動で書き込みを行うバッチプログラム
 """
 import json
-from json import JSONDecodeError
 import subprocess
 from typing import Any
 
@@ -24,7 +23,7 @@ def exec_command(command: list) -> Any:
 
     try:
         data = json.loads(json_str)
-    except JSONDecodeError as e:
+    except json.JSONDecodeError as e:
         raise e
     return data
 
@@ -40,7 +39,7 @@ def select_expense_type() -> str:
             "-t",
             TITLE,
             "-v",
-            "食費,交通費,遊興費,雑費,書籍費,医療費",
+            "食費,交通費,遊興費,雑費,書籍費,医療費,家賃,光熱費,通信費,特別経費",
         ]
     )
     expense_type = str(data["text"])
