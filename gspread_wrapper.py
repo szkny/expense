@@ -1,11 +1,13 @@
 import re
 import gspread
 import datetime as dt
+import logging as log
 from google.oauth2 import service_account
 
 
 class GspreadHandler:
     def __init__(self, book_name: str) -> None:
+        log.info("start 'GspreadHandler' constructor")
         credentials = service_account.Credentials.from_service_account_file(
             "credentials.json",
             scopes=[
@@ -16,8 +18,10 @@ class GspreadHandler:
         self.client = gspread.authorize(credentials)
         self.workbook = self.client.open(book_name)
         self.load_sheet()
+        log.info("end 'GspreadHandler' constructor")
 
     def load_sheet(self) -> None:
+        log.info("start 'load_sheet' method")
         sheetname_list: list[str] = [
             "Jan",
             "Feb",
@@ -39,21 +43,27 @@ class GspreadHandler:
             raise ValueError(f"sheetname '{sheetname}' not found.")
         self.sheetname = sheetname
         self.sheet = self.workbook.worksheet(self.sheetname)
+        log.info("end 'load_sheet' method")
 
     def get_column(self) -> str:
-        t = dt.datetime.today()
-        today_str = t.date().isoformat()
-        today_str = today_str.replace("-", "/")
-        cell = self.sheet.find(today_str)
-        if cell:
-            match_result = re.match("[A-Z]+", cell.address)
-            if match_result:
-                return match_result[0]
-        raise ValueError(
-            f"'{today_str}' not found in sheet '{self.sheetname}'."
-        )
+        log.info("start 'get_column' method")
+        try:
+            t = dt.datetime.today()
+            today_str = t.date().isoformat()
+            today_str = today_str.replace("-", "/")
+            cell = self.sheet.find(today_str)
+            if cell:
+                match_result = re.match("[A-Z]+", cell.address)
+                if match_result:
+                    return match_result[0]
+            raise ValueError(
+                f"'{today_str}' not found in sheet '{self.sheetname}'."
+            )
+        finally:
+            log.info("end 'get_column' method")
 
     def get_row(self, expense_type: str, offset: int = 30) -> int:
+        log.info("start 'get_row' method")
         expense_type_list = [
             "給与",
             "雑所得",
@@ -69,9 +79,11 @@ class GspreadHandler:
             "雑費",
         ]
         row = offset + expense_type_list.index(expense_type)
+        log.info("end 'get_row' method")
         return row
 
     def add_amount_data(self, label: str, amount: int) -> None:
+        log.info("start 'add_amount_data' method")
         cell = self.sheet.acell(
             label,
             value_render_option=gspread.worksheet.ValueRenderOption.formula,
@@ -84,12 +96,14 @@ class GspreadHandler:
             new_value = f"{cell.value}+{amount}"
         else:
             new_value = str(amount)
-        print(f"writing: '{new_value}' to {label} in {self.sheetname}")
+        log.debug(f"writing: '{new_value}' to {label} in {self.sheetname}")
+        log.info("end 'add_amount_data' method")
         self.sheet.update_acell(label, new_value)
 
     def add_memo(
         self, column: str, expense_type: str, memo: str, offset: int = 49
     ) -> None:
+        log.info("start 'add_memo' method")
         cell_range = f"{column}{offset}:{column}{offset+3}"
         cells = self.sheet.range(cell_range)
         non_empty_counts = len(
@@ -109,20 +123,23 @@ class GspreadHandler:
             new_value = f"{expense_type}: {memo}"
             address = f"{column}{offset+non_empty_counts}"
             if non_empty_counts > 3:
-                print("there are no space to write a memo.")
+                log.warn("there are no space to write a memo.")
                 return
-        print(f"writing: '{new_value}' to {address} in {self.sheetname}")
+        log.debug(f"writing: '{new_value}' to {address} in {self.sheetname}")
+        log.info("end 'add_memo' method")
         self.sheet.update_acell(address, new_value)
 
     def register_expense(
         self, expense_type: str, amount: int, memo: str = ""
     ) -> None:
+        log.info("start 'register_expense' method")
         column = self.get_column()
         row = self.get_row(expense_type)
         label = f"{column}{row}"
         self.add_amount_data(label, amount)
         if memo:
             self.add_memo(column, expense_type, memo)
+        log.info("end 'register_expense' method")
 
 
 if __name__ == "__main__":

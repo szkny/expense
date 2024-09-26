@@ -2,11 +2,25 @@
 """
 家計簿スプレッドシートに自動で書き込みを行うバッチプログラム
 """
+import os
 import json
+import logging as log
 import subprocess
 from typing import Any
 
 from gspread_wrapper import GspreadHandler
+
+HOME = os.getenv("HOME") or "~"
+os.makedirs(HOME + "/tmp/expense", exist_ok=True)
+
+log.basicConfig(
+    level=log.DEBUG,
+    handlers=[
+        log.StreamHandler(),
+        log.FileHandler(HOME + "/tmp/expense/expense.log"),
+    ],
+    format="%(asctime)s - [%(levelname)s] %(message)s",
+)
 
 TITLE = "家計簿"
 BOOKNAME = "CF (2024年度)"
@@ -16,6 +30,9 @@ def exec_command(command: list) -> Any:
     """
     utility method for shell command execution
     """
+    # funcname = inspect.currentframe()
+    log.info("start 'exec_command' method")
+    log.debug(f"execute command: {command}")
     res = subprocess.run(
         command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
     )
@@ -25,6 +42,7 @@ def exec_command(command: list) -> Any:
         data = json.loads(json_str)
     except json.JSONDecodeError as e:
         raise e
+    log.info("end 'exec_command' method")
     return data
 
 
@@ -32,6 +50,7 @@ def select_expense_type() -> str:
     """
     select expense type
     """
+    log.info("start 'select_expense_type' method")
     data = exec_command(
         [
             "termux-dialog",
@@ -43,7 +62,8 @@ def select_expense_type() -> str:
         ]
     )
     expense_type = str(data["text"])
-    print("expense_type: ", expense_type)
+    log.debug(f"expense_type: {expense_type}")
+    log.info("end 'select_expense_type' method")
     return expense_type
 
 
@@ -51,6 +71,7 @@ def enter_expense_amount(expense_type: str) -> int:
     """
     enter expense amount
     """
+    log.info("start 'enter_expense_amount' method")
     data = exec_command(
         [
             "termux-dialog",
@@ -63,7 +84,8 @@ def enter_expense_amount(expense_type: str) -> int:
         ]
     )
     expense_amount = int(data["text"])
-    print("expense_amount: ", expense_amount)
+    log.debug(f"expense_amount: {expense_amount}")
+    log.info("end 'enter_expense_amount' method")
     return expense_amount
 
 
@@ -71,6 +93,7 @@ def enter_expense_memo(expense_type: str) -> str:
     """
     enter expense memo
     """
+    log.info("start 'enter_expense_memo' method")
     data = exec_command(
         [
             "termux-dialog",
@@ -82,9 +105,8 @@ def enter_expense_memo(expense_type: str) -> str:
         ]
     )
     expense_memo = str(data["text"])
-    print(
-        "expense_memo: ",
-    )
+    log.debug(f"expense_memo: {expense_memo}")
+    log.info("end 'enter_expense_memo' method")
     return expense_memo
 
 
@@ -94,6 +116,7 @@ def confirmation(
     """
     confirmation
     """
+    log.info("start 'confirmation' method")
     data = exec_command(
         [
             "termux-dialog",
@@ -105,7 +128,8 @@ def confirmation(
         ]
     )
     choice = str(data["text"])
-    print("choice: ", choice)
+    log.debug("choice: " + choice)
+    log.info("end 'confirmation' method")
     return choice == "yes"
 
 
@@ -113,13 +137,19 @@ def main() -> None:
     """
     main process
     """
-    expense_type = select_expense_type()
-    expense_amount = enter_expense_amount(expense_type)
-    expense_memo = enter_expense_memo(expense_type)
-    res = confirmation(expense_type, expense_amount, expense_memo)
-    if res:
-        handler = GspreadHandler(BOOKNAME)
-        handler.register_expense(expense_type, expense_amount, expense_memo)
+    try:
+        log.info("start 'main' method")
+        expense_type = select_expense_type()
+        expense_amount = enter_expense_amount(expense_type)
+        expense_memo = enter_expense_memo(expense_type)
+        res = confirmation(expense_type, expense_amount, expense_memo)
+        if res:
+            handler = GspreadHandler(BOOKNAME)
+            handler.register_expense(expense_type, expense_amount, expense_memo)
+    except Exception:
+        log.exception("error occurred")
+    finally:
+        log.info("end 'main' method")
 
 
 if __name__ == "__main__":
