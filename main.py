@@ -117,9 +117,10 @@ def main() -> None:
     expense_type = select_expense_type()
     expense_amount = enter_expense_amount(expense_type)
     expense_memo = enter_expense_memo(expense_type)
-    confirmation(expense_type, expense_amount, expense_memo)
-    handler = GspreadHandler(BOOKNAME)
-    handler.register_expense(expense_type, expense_amount, expense_memo)
+    res = confirmation(expense_type, expense_amount, expense_memo)
+    if res:
+        handler = GspreadHandler(BOOKNAME)
+        handler.register_expense(expense_type, expense_amount, expense_memo)
 
 
 if __name__ == "__main__":
