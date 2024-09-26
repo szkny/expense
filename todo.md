@@ -1,4 +1,4 @@
 # TODO List
 
-- logger
-- error dialog
+- [x] logger
+- [ ] error dialog
