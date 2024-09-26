@@ -146,14 +146,16 @@ def main() -> None:
         if res:
             handler = GspreadHandler(BOOKNAME)
             handler.register_expense(expense_type, expense_amount, expense_memo)
-        exec_command(
-            [
-                "termux-notification",
-                "--title",
-                "家計簿への登録が完了しました。",
-                "--content",
-                f"{expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円",
-            ]
+        notify_command = [
+            "termux-notification",
+            "--title",
+            "家計簿への登録が完了しました。",
+            "--content",
+            f"{expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円",
+        ]
+        log.debug(f"execute command: {notify_command}")
+        subprocess.run(
+            notify_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
         )
     except Exception:
         log.exception("error occurred")
