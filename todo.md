@@ -2,4 +2,5 @@
 
 - [x] logger
 - [x] error dialog
-- [ ] retry logic
+- [x] retry logic
+- [ ] show today's expenses
