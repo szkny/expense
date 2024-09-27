@@ -34,7 +34,7 @@ def exec_command(command: list) -> Any:
     log.info("start 'exec_command' method")
     log.debug(f"execute command: {command}")
     res = subprocess.run(
-        command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+        command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=30
     )
     json_str = res.stdout.decode("utf-8")
 
@@ -147,7 +147,10 @@ def notify(title: str, content: str) -> None:
     ]
     log.debug(f"execute command: {notify_command}")
     subprocess.run(
-        notify_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+        notify_command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        timeout=30,
     )
     log.info("end 'notify' method")
 
