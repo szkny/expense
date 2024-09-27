@@ -133,6 +133,29 @@ def confirmation(
     return choice == "yes"
 
 
+def toast(content: str) -> None:
+    """
+    toast popup message
+    """
+    log.info("start 'toast' method")
+    notify_command = [
+        "termux-toast",
+        "-b",
+        "black",
+        "-g",
+        "top",
+        content,
+    ]
+    log.debug(f"execute command: {notify_command}")
+    subprocess.run(
+        notify_command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        timeout=30,
+    )
+    log.info("end 'toast' method")
+
+
 def notify(title: str, content: str) -> None:
     """
     notification
@@ -168,9 +191,8 @@ def main() -> None:
         if res:
             handler = GspreadHandler(BOOKNAME)
             handler.register_expense(expense_type, expense_amount, expense_memo)
-            notify(
-                "家計簿への登録が完了しました。",
-                f"{expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円",
+            toast(
+                f"家計簿への登録が完了しました。 {expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円",
             )
     except Exception as e:
         notify("🚫家計簿の登録に失敗しました。", str(e))
