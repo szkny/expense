@@ -13,6 +13,7 @@ gspread = "^6.1.2"
 google-auth = "^2.35.0"
 google-auth-oauthlib = "^1.2.1"
 google-auth-httplib2 = "^0.2.0"
+tenacity = "^9.0.0"
 
 [tool.poetry.group.dev.dependencies]
 # ruff = "^0.4.9"

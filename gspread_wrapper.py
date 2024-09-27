@@ -2,6 +2,7 @@ import re
 import gspread
 import datetime as dt
 import logging as log
+from tenacity import retry, stop_after_attempt
 from google.oauth2 import service_account
 
 
@@ -20,6 +21,7 @@ class GspreadHandler:
         self.load_sheet()
         log.info("end 'GspreadHandler' constructor")
 
+    @retry(stop=stop_after_attempt(3))
     def load_sheet(self) -> None:
         log.info("start 'load_sheet' method")
         sheetname_list: list[str] = [
@@ -82,6 +84,7 @@ class GspreadHandler:
         log.info("end 'get_row' method")
         return row
 
+    @retry(stop=stop_after_attempt(3))
     def add_amount_data(self, label: str, amount: int) -> None:
         log.info("start 'add_amount_data' method")
         cell = self.sheet.acell(
@@ -100,6 +103,7 @@ class GspreadHandler:
         log.info("end 'add_amount_data' method")
         self.sheet.update_acell(label, new_value)
 
+    @retry(stop=stop_after_attempt(3))
     def add_memo(
         self, column: str, expense_type: str, memo: str, offset: int = 49
     ) -> None:
@@ -129,6 +133,7 @@ class GspreadHandler:
         log.info("end 'add_memo' method")
         self.sheet.update_acell(address, new_value)
 
+    @retry(stop=stop_after_attempt(3))
     def register_expense(
         self, expense_type: str, amount: int, memo: str = ""
     ) -> None:
