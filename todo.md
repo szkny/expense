@@ -1,4 +1,5 @@
 # TODO List
 
 - [x] logger
-- [ ] error dialog
+- [x] error dialog
+- [ ] retry logic
