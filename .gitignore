@@ -1,3 +1,5 @@
 poetry.lock
 credentials.json
 __pycache__
+.mypy_cache
+.venv
