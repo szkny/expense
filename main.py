@@ -4,12 +4,15 @@
 """
 import os
 import json
-import logging as log
+import argparse
 import datetime
 import subprocess
+import logging as log
 from typing import Any
 
 from gspread_wrapper import GspreadHandler
+
+TITLE = "家計簿"
 
 HOME = os.getenv("HOME") or "~"
 os.makedirs(HOME + "/tmp/expense", exist_ok=True)
@@ -23,10 +26,8 @@ log.basicConfig(
     format="%(asctime)s - [%(levelname)s] %(message)s",
 )
 
-TITLE = "家計簿"
 
-
-def main() -> None:
+def main(args: argparse.Namespace) -> None:
     """
     main process
     """
@@ -34,19 +35,29 @@ def main() -> None:
     try:
         current_fiscal_year = get_fiscal_year()
         bookname = f"CF ({current_fiscal_year}年度)"
-        expense_type = select_expense_type()
-        expense_amount = enter_expense_amount(expense_type)
-        expense_memo = enter_expense_memo(expense_type)
-        res = confirmation(expense_type, expense_amount, expense_memo)
-        if res:
+        if args.check_todays_expenses:
             handler = GspreadHandler(bookname)
-            handler.register_expense(expense_type, expense_amount, expense_memo)
-            toast(
-                f"家計簿への登録が完了しました。 {expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円",
+            todays_expenses = handler.get_todays_expenses()
+            t = datetime.datetime.today()
+            today_str = t.date().isoformat()
+            confirmation(f"🗓️{today_str}\n📝{todays_expenses}")
+        else:
+            expense_type = select_expense_type()
+            expense_amount = enter_expense_amount(expense_type)
+            expense_memo = enter_expense_memo(expense_type)
+            res = confirmation(
+                f"以下の内容で登録しますか？\n\t{expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円"
             )
+            if res:
+                handler = GspreadHandler(bookname)
+                handler.register_expense(
+                    expense_type, expense_amount, expense_memo
+                )
+                toast(
+                    f"家計簿への登録が完了しました。 {expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円",
+                )
     except Exception as e:
-        notify("🚫家計簿の登録に失敗しました。", str(e))
-        log.exception("error occurred")
+        notify("🚫家計簿の登処理に失敗しました。", str(e))
     finally:
         log.info("end 'main' method")
 
@@ -148,9 +159,7 @@ def enter_expense_memo(expense_type: str) -> str:
     return expense_memo
 
 
-def confirmation(
-    expense_type: str, expense_amount: int, expense_memo: str
-) -> bool:
+def confirmation(content: str) -> bool:
     """
     confirmation
     """
@@ -162,7 +171,7 @@ def confirmation(
             "-t",
             TITLE,
             "-i",
-            f"以下の内容で登録しますか？\n\t{expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円",
+            content,
         ]
     )
     choice = str(data["text"])
@@ -217,4 +226,16 @@ def notify(title: str, content: str) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="家計簿スプレッドシートに自動で書き込みを行うバッチプログラム"
+    )
+    parser.add_argument(
+        "-c",
+        "--check",
+        dest="check_todays_expenses",
+        default=False,
+        action="store_true",
+        help="check today's expenses",
+    )
+    args = parser.parse_args()
+    main(args)
