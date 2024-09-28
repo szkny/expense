@@ -133,7 +133,6 @@ class GspreadHandler:
         log.info("end 'add_memo' method")
         self.sheet.update_acell(address, new_value)
 
-    @retry(stop=stop_after_attempt(3))
     def register_expense(
         self, expense_type: str, amount: int, memo: str = ""
     ) -> None:
