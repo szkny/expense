@@ -5,6 +5,7 @@
 import os
 import json
 import logging as log
+import datetime
 import subprocess
 from typing import Any
 
@@ -23,7 +24,44 @@ log.basicConfig(
 )
 
 TITLE = "家計簿"
-BOOKNAME = "CF (2024年度)"
+
+
+def main() -> None:
+    """
+    main process
+    """
+    log.info("start 'main' method")
+    try:
+        current_fiscal_year = get_fiscal_year()
+        bookname = f"CF ({current_fiscal_year}年度)"
+        expense_type = select_expense_type()
+        expense_amount = enter_expense_amount(expense_type)
+        expense_memo = enter_expense_memo(expense_type)
+        res = confirmation(expense_type, expense_amount, expense_memo)
+        if res:
+            handler = GspreadHandler(bookname)
+            handler.register_expense(expense_type, expense_amount, expense_memo)
+            toast(
+                f"家計簿への登録が完了しました。 {expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円",
+            )
+    except Exception as e:
+        notify("🚫家計簿の登録に失敗しました。", str(e))
+        log.exception("error occurred")
+    finally:
+        log.info("end 'main' method")
+
+
+def get_fiscal_year() -> int:
+    """
+    get fiscal year
+    """
+    log.info("start 'get_fiscal_year' method")
+    today = datetime.date.today()
+    year = today.year
+    if today.month < 4:
+        year -= 1
+    log.info("end 'get_fiscal_year' method")
+    return year
 
 
 def exec_command(command: list) -> Any:
@@ -176,29 +214,6 @@ def notify(title: str, content: str) -> None:
         timeout=30,
     )
     log.info("end 'notify' method")
-
-
-def main() -> None:
-    """
-    main process
-    """
-    try:
-        log.info("start 'main' method")
-        expense_type = select_expense_type()
-        expense_amount = enter_expense_amount(expense_type)
-        expense_memo = enter_expense_memo(expense_type)
-        res = confirmation(expense_type, expense_amount, expense_memo)
-        if res:
-            handler = GspreadHandler(BOOKNAME)
-            handler.register_expense(expense_type, expense_amount, expense_memo)
-            toast(
-                f"家計簿への登録が完了しました。 {expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円",
-            )
-    except Exception as e:
-        notify("🚫家計簿の登録に失敗しました。", str(e))
-        log.exception("error occurred")
-    finally:
-        log.info("end 'main' method")
 
 
 if __name__ == "__main__":
