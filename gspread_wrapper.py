@@ -145,8 +145,67 @@ class GspreadHandler:
             self.add_memo(column, expense_type, memo)
         log.info("end 'register_expense' method")
 
+    @retry(stop=stop_after_attempt(3))
+    def get_todays_expenses(self, offset: int = 30) -> str:
+        log.info("start 'get_today_expenses' method")
+        column = self.get_column()
+        expense_type_list = [
+            "給与",
+            "雑所得",
+            "家賃",
+            "光熱費",
+            "通信費",
+            "特別経費",
+            "食費",
+            "交通費",
+            "医療費",
+            "書籍費",
+            "遊興費",
+            "雑費",
+        ]
+        cell_range = (
+            f"{column}{offset}:{column}{offset+len(expense_type_list)-1}"
+        )
+        cells = self.sheet.range(cell_range)
+
+        def str2int(s: str) -> int:
+            return int(re.sub(r"[^\d]", "", s))
+
+        expense_list: list[gspread.Cell] = list(
+            filter(lambda c: str2int(str(c.value)) > 0, cells)
+        )
+        log.debug(f"expense_list: {expense_list}")
+        todays_expenses: list[dict] = [
+            {
+                "expense_type": expense_type_list[str2int(c.address) - offset],
+                "amount": str(c.value),
+            }
+            for c in expense_list
+        ]
+        if len(expense_list):
+            sum_amount = sum([str2int(str(c.value)) for c in expense_list])
+        else:
+            sum_amount = 0
+        todays_expenses.append(
+            {
+                "expense_type": "合計",
+                "amount": f"¥{sum_amount:,}",
+            }
+        )
+        log.info(f"todays_expenses: {todays_expenses}")
+        result = ", ".join(
+            [
+                f"{d.get('expense_type')}: {d.get('amount')}"
+                for d in todays_expenses
+            ]
+        )
+        log.info("end 'get_today_expenses' method")
+        return result
+
 
 if __name__ == "__main__":
-    BOOKNAME = "CF (2024年度) テスト"
+    BOOKNAME = "CF (2024年度)"
     handler = GspreadHandler(BOOKNAME)
-    handler.register_expense("食費", 123, "コンビニ")
+    # handler.register_expense("食費", 123, "コンビニ")
+    todays_expenses = handler.get_todays_expenses()
+    print(todays_expenses)
