@@ -3,4 +3,5 @@
 - [x] logger
 - [x] error dialog
 - [x] retry logic
-- [ ] show today's expenses
+- [x] show today's expenses
+- [ ] analyse/improve processing time
