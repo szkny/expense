@@ -40,7 +40,7 @@ def main(args: argparse.Namespace) -> None:
             todays_expenses = handler.get_todays_expenses()
             t = datetime.datetime.today()
             today_str = t.date().isoformat()
-            confirmation(f"🗓️{today_str}\n📝{todays_expenses}")
+            confirmation(f"🗓️{today_str}\n{todays_expenses}")
         else:
             expense_type = select_expense_type()
             expense_amount = enter_expense_amount(expense_type)

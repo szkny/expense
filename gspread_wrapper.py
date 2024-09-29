@@ -186,19 +186,15 @@ class GspreadHandler:
             sum_amount = sum([str2int(str(c.value)) for c in expense_list])
         else:
             sum_amount = 0
-        todays_expenses.append(
-            {
-                "expense_type": "合計",
-                "amount": f"¥{sum_amount:,}",
-            }
-        )
         log.info(f"todays_expenses: {todays_expenses}")
-        result = ", ".join(
+        result = "📝"
+        result += ", ".join(
             [
                 f"{d.get('expense_type')}: {d.get('amount')}"
                 for d in todays_expenses
             ]
         )
+        result += f"\n🔢合計: ¥{sum_amount:,}"
         log.info("end 'get_today_expenses' method")
         return result
 
