@@ -187,13 +187,16 @@ class GspreadHandler:
         else:
             sum_amount = 0
         log.info(f"todays_expenses: {todays_expenses}")
-        result = "📝"
-        result += ", ".join(
-            [
-                f"{d.get('expense_type')}: {d.get('amount')}"
-                for d in todays_expenses
-            ]
-        )
+        if sum_amount:
+            result = "📝"
+            result += ", ".join(
+                [
+                    f"{d.get('expense_type')}: {d.get('amount')}"
+                    for d in todays_expenses
+                ]
+            )
+        else:
+            result = ""
         result += f"\n🔢合計: ¥{sum_amount:,}"
         log.info("end 'get_today_expenses' method")
         return result
