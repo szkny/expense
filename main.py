@@ -49,6 +49,7 @@ def main(args: argparse.Namespace) -> None:
                 f"以下の内容で登録しますか？\n\t{expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円"
             )
             if res:
+                toast("登録中..")
                 handler = GspreadHandler(bookname)
                 handler.register_expense(
                     expense_type, expense_amount, expense_memo
