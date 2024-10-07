@@ -76,7 +76,7 @@ def get_fiscal_year() -> int:
     return year
 
 
-def exec_command(command: list) -> Any:
+def exec_command(command: list, timeout: int = 60) -> Any:
     """
     utility method for shell command execution
     """
@@ -84,7 +84,10 @@ def exec_command(command: list) -> Any:
     log.info("start 'exec_command' method")
     log.debug(f"execute command: {command}")
     res = subprocess.run(
-        command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=30
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        timeout=timeout,
     )
     json_str = res.stdout.decode("utf-8")
 
