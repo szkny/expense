@@ -36,6 +36,7 @@ def main(args: argparse.Namespace) -> None:
         current_fiscal_year = get_fiscal_year()
         bookname = f"CF ({current_fiscal_year}年度)"
         if args.check_todays_expenses:
+            toast("データ取得中..")
             handler = GspreadHandler(bookname)
             todays_expenses = handler.get_todays_expenses()
             t = datetime.datetime.today()
