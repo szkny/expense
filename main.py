@@ -59,6 +59,7 @@ def main(args: argparse.Namespace) -> None:
                     f"家計簿への登録が完了しました。 {expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円",
                 )
     except Exception as e:
+        log.exception("家計簿の登録処理に失敗しました。")
         notify("🚫家計簿の登録処理に失敗しました。", str(e))
     finally:
         log.info("end 'main' method")
