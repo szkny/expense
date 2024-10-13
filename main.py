@@ -41,7 +41,10 @@ def main(args: argparse.Namespace) -> None:
             todays_expenses = handler.get_todays_expenses()
             t = datetime.datetime.today()
             today_str = t.date().isoformat()
-            confirmation(f"🗓️{today_str}\n{todays_expenses}")
+            notify(
+                "家計簿の取得が完了しました。",
+                f"🗓️{today_str}\n{todays_expenses}",
+            )
         else:
             expense_type = select_expense_type()
             expense_amount = enter_expense_amount(expense_type)
@@ -55,8 +58,9 @@ def main(args: argparse.Namespace) -> None:
                 handler.register_expense(
                     expense_type, expense_amount, expense_memo
                 )
-                toast(
-                    f"家計簿への登録が完了しました。 {expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円",
+                notify(
+                    "家計簿への登録が完了しました。",
+                    f"{expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円",
                 )
     except Exception as e:
         log.exception("家計簿の登録処理に失敗しました。")
