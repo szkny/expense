@@ -5,3 +5,4 @@
 - [x] retry logic
 - [x] show today's expenses
 - [ ] analyse/improve processing time
+  - [ ] desynchronization of toast and notification
