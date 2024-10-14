@@ -190,7 +190,7 @@ def confirmation(content: str) -> bool:
     return choice == "yes"
 
 
-def toast(content: str) -> None:
+def toast(content: str, timeout: int = 30) -> None:
     """
     toast popup message
     """
@@ -208,12 +208,12 @@ def toast(content: str) -> None:
         notify_command,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        timeout=30,
+        timeout=timeout,
     )
     log.info("end 'toast' method")
 
 
-def notify(title: str, content: str) -> None:
+def notify(title: str, content: str, timeout: int = 30) -> None:
     """
     notification
     """
@@ -230,7 +230,7 @@ def notify(title: str, content: str) -> None:
         notify_command,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        timeout=30,
+        timeout=timeout,
     )
     log.info("end 'notify' method")
 
