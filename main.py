@@ -4,6 +4,7 @@
 """
 import os
 import json
+import asyncio
 import argparse
 import datetime
 import subprocess
@@ -27,16 +28,17 @@ log.basicConfig(
 )
 
 
-def main(args: argparse.Namespace) -> None:
+async def main(args: argparse.Namespace) -> None:
     """
     main process
     """
     log.info("start 'main' method")
     try:
+        loop = asyncio.get_running_loop()
         current_fiscal_year = get_fiscal_year()
         bookname = f"CF ({current_fiscal_year}年度)"
         if args.check_todays_expenses:
-            toast("データ取得中..")
+            await loop.run_in_executor(None, lambda: toast("データ取得中.."))
             handler = GspreadHandler(bookname)
             todays_expenses = handler.get_todays_expenses()
             t = datetime.datetime.today()
@@ -53,7 +55,7 @@ def main(args: argparse.Namespace) -> None:
                 f"以下の内容で登録しますか？\n\t{expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円"
             )
             if res:
-                toast("登録中..")
+                await loop.run_in_executor(None, lambda: toast("登録中.."))
                 handler = GspreadHandler(bookname)
                 handler.register_expense(
                     expense_type, expense_amount, expense_memo
@@ -248,4 +250,4 @@ if __name__ == "__main__":
         help="check today's expenses",
     )
     args = parser.parse_args()
-    main(args)
+    asyncio.run(main(args))
