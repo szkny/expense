@@ -4,7 +4,7 @@
 - [x] error dialog
 - [x] retry logic
 - [x] show today's expenses
-- [ ] stop process when cancel button was pressed
+- [x] stop process when cancel button was pressed
 - [ ] show budget left when check mode
 - [ ] analyse/improve processing time
   - [ ] desynchronization of toast and notification

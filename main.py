@@ -103,6 +103,8 @@ def exec_command(command: list, timeout: int = 60) -> Any:
         data = json.loads(json_str)
     except json.JSONDecodeError as e:
         raise e
+    if data["text"] == "":
+        raise Exception("入力がキャンセルされました。")
     log.info("end 'exec_command' method")
     return data
 
