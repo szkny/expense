@@ -5,6 +5,22 @@ import logging as log
 from tenacity import retry, stop_after_attempt
 from google.oauth2 import service_account
 
+expense_type_list: list[str] = [
+    "給与",
+    "雑所得",
+    "家賃",
+    "光熱費",
+    "通信費",
+    "養育費",
+    "特別経費",
+    "食費",
+    "交通費",
+    "医療費",
+    "書籍費",
+    "遊興費",
+    "雑費",
+]
+
 
 class GspreadHandler:
     def __init__(self, book_name: str) -> None:
@@ -64,22 +80,8 @@ class GspreadHandler:
         finally:
             log.info("end 'get_column' method")
 
-    def get_row(self, expense_type: str, offset: int = 30) -> int:
+    def get_row(self, expense_type: str, offset: int = 31) -> int:
         log.info("start 'get_row' method")
-        expense_type_list = [
-            "給与",
-            "雑所得",
-            "家賃",
-            "光熱費",
-            "通信費",
-            "特別経費",
-            "食費",
-            "交通費",
-            "医療費",
-            "書籍費",
-            "遊興費",
-            "雑費",
-        ]
         row = offset + expense_type_list.index(expense_type)
         log.info("end 'get_row' method")
         return row
@@ -105,7 +107,7 @@ class GspreadHandler:
 
     @retry(stop=stop_after_attempt(3))
     def add_memo(
-        self, column: str, expense_type: str, memo: str, offset: int = 49
+        self, column: str, expense_type: str, memo: str, offset: int = 51
     ) -> None:
         log.info("start 'add_memo' method")
         cell_range = f"{column}{offset}:{column}{offset+3}"
@@ -146,23 +148,9 @@ class GspreadHandler:
         log.info("end 'register_expense' method")
 
     @retry(stop=stop_after_attempt(3))
-    def get_todays_expenses(self, offset: int = 30) -> str:
+    def get_todays_expenses(self, offset: int = 31) -> str:
         log.info("start 'get_today_expenses' method")
         column = self.get_column()
-        expense_type_list = [
-            "給与",
-            "雑所得",
-            "家賃",
-            "光熱費",
-            "通信費",
-            "特別経費",
-            "食費",
-            "交通費",
-            "医療費",
-            "書籍費",
-            "遊興費",
-            "雑費",
-        ]
         cell_range = (
             f"{column}{offset}:{column}{offset+len(expense_type_list)-1}"
         )
