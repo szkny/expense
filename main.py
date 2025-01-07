@@ -50,20 +50,21 @@ async def main(args: argparse.Namespace) -> None:
         else:
             expense_type = select_expense_type()
             expense_amount = enter_expense_amount(expense_type)
-            expense_memo = enter_expense_memo(expense_type)
-            res = confirmation(
-                f"以下の内容で登録しますか？\n\t{expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円"
+            expense_memo = enter_expense_memo(
+                f"{expense_type}(¥{expense_amount})"
             )
-            if res:
-                await loop.run_in_executor(None, lambda: toast("登録中.."))
-                handler = GspreadHandler(bookname)
-                handler.register_expense(
-                    expense_type, expense_amount, expense_memo
-                )
-                notify(
-                    "家計簿への登録が完了しました。",
-                    f"{expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円",
-                )
+            # res = confirmation(
+            #     f"以下の内容で登録しますか？\n\t{expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円"
+            # )
+            # if not res:
+            #     return
+            await loop.run_in_executor(None, lambda: toast("登録中.."))
+            handler = GspreadHandler(bookname)
+            handler.register_expense(expense_type, expense_amount, expense_memo)
+            notify(
+                "家計簿への登録が完了しました。",
+                f"{expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円",
+            )
     except Exception as e:
         log.exception("家計簿の登録処理に失敗しました。")
         notify("🚫家計簿の登録処理に失敗しました。", str(e))
