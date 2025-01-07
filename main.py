@@ -38,7 +38,7 @@ async def main(args: argparse.Namespace) -> None:
         current_fiscal_year = get_fiscal_year()
         bookname = f"CF ({current_fiscal_year}年度)"
         if args.check_todays_expenses:
-            await loop.run_in_executor(None, lambda: toast("データ取得中.."))
+            loop.run_in_executor(None, lambda: toast("データ取得中.."))
             handler = GspreadHandler(bookname)
             todays_expenses = handler.get_todays_expenses()
             t = datetime.datetime.today()
@@ -58,7 +58,7 @@ async def main(args: argparse.Namespace) -> None:
             # )
             # if not res:
             #     return
-            await loop.run_in_executor(None, lambda: toast("登録中.."))
+            loop.run_in_executor(None, lambda: toast("登録中.."))
             handler = GspreadHandler(bookname)
             handler.register_expense(expense_type, expense_amount, expense_memo)
             notify(
