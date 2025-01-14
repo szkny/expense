@@ -123,7 +123,7 @@ def select_expense_type() -> str:
     data = exec_command(
         [
             "termux-dialog",
-            "sheet",
+            "spinner",
             "-t",
             TITLE,
             "-v",
