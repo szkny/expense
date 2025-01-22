@@ -186,7 +186,26 @@ class GspreadHandler:
         else:
             result = ""
         result += f"\n🔢合計: ¥{sum_amount:,}"
+        budget_left = self.get_budget_left(offset=offset)
+        result += f"\n{budget_left}"
         log.info("end 'get_today_expenses' method")
+        return result
+
+    @retry(stop=stop_after_attempt(3))
+    def get_budget_left(self, offset: int = 31) -> str:
+        log.info("start 'get_budget_left' method")
+        column = self.get_column()
+        cell_range = f"{column}{offset+len(expense_type_list)+4}"
+        cell = self.sheet.acell(cell_range)
+
+        def str2int(s: str) -> int:
+            return int(re.sub(r"[^\d]", "", s))
+
+        budget_left = str2int(str(cell.value))
+        log.debug(f"cell: {cell}")
+        log.debug(f"budget_left: {budget_left}")
+        result = f"残予算: ¥{budget_left:,}/日"
+        log.info("end 'get_budget_left' method")
         return result
 
 
