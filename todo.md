@@ -8,6 +8,7 @@
 - [x] show budget left when check mode
 - [ ] add feature of favorite item
 - [ ] add feature of frequently registred item
+- [ ] add feature of validation for usage history of credit card
 - [ ] add config file
 - [ ] analyse/improve processing time
   - [ ] desynchronization of toast and notification
