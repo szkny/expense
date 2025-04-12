@@ -201,8 +201,10 @@ class GspreadHandler:
         column = self.get_column()
         cell_range = f"{column}{offset+len(expense_type_list)+3}"
         cell1 = self.sheet.acell(cell_range)
-        budget_left1 = str2int(str(self.sheet.acell("D16").value)) - str2int(
-            str(cell1.value)
+        budget_left1 = max(
+            str2int(str(self.sheet.acell("D16").value))
+            - str2int(str(cell1.value)),
+            0,
         )
         cell_range = f"{column}{offset+len(expense_type_list)+4}"
         cell2 = self.sheet.acell(cell_range)
