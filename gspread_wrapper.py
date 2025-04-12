@@ -211,7 +211,7 @@ class GspreadHandler:
         budget_left2 = str2int(str(cell2.value))
         log.debug(f"cell1: {cell1}, cell2: {cell2}")
         log.debug(f"budget_left1: {budget_left1}, budget_left2: {budget_left2}")
-        result = f"💰️残予算: ¥{budget_left1:,}  ¥{budget_left2:,}/日"
+        result = f"💰️残予算: ¥{budget_left1:,}  (¥{budget_left2:,}/日)"
         log.info("end 'get_budget_left' method")
         return result
 
