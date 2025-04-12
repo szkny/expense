@@ -194,17 +194,22 @@ class GspreadHandler:
     @retry(stop=stop_after_attempt(3))
     def get_budget_left(self, offset: int = 31) -> str:
         log.info("start 'get_budget_left' method")
-        column = self.get_column()
-        cell_range = f"{column}{offset+len(expense_type_list)+4}"
-        cell = self.sheet.acell(cell_range)
 
         def str2int(s: str) -> int:
             return int(re.sub(r"[^\d]", "", s))
 
-        budget_left = str2int(str(cell.value))
-        log.debug(f"cell: {cell}")
-        log.debug(f"budget_left: {budget_left}")
-        result = f"残予算: ¥{budget_left:,}/日"
+        column = self.get_column()
+        cell_range = f"{column}{offset+len(expense_type_list)+3}"
+        cell1 = self.sheet.acell(cell_range)
+        budget_left1 = str2int(str(self.sheet.acell("D16").value)) - str2int(
+            str(cell1.value)
+        )
+        cell_range = f"{column}{offset+len(expense_type_list)+4}"
+        cell2 = self.sheet.acell(cell_range)
+        budget_left2 = str2int(str(cell2.value))
+        log.debug(f"cell1: {cell1}, cell2: {cell2}")
+        log.debug(f"budget_left1: {budget_left1}, budget_left2: {budget_left2}")
+        result = f"💰️残予算: ¥{budget_left1:,}  ¥{budget_left2:,}/日"
         log.info("end 'get_budget_left' method")
         return result
 
