@@ -54,7 +54,7 @@ async def main(args: argparse.Namespace) -> None:
                 f"{expense_type}(¥{expense_amount})"
             )
             # res = confirmation(
-            #     f"以下の内容で登録しますか？\n\t{expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円"
+            #     f"以下の内容で登録しますか？\n\t{expense_type}{':'+expense_memo if expense_memo else ''}, ¥{expense_amount:,}"
             # )
             # if not res:
             #     return
@@ -63,7 +63,7 @@ async def main(args: argparse.Namespace) -> None:
             handler.register_expense(expense_type, expense_amount, expense_memo)
             notify(
                 "家計簿への登録が完了しました。",
-                f"{expense_type}{':'+expense_memo if expense_memo else ''}, {expense_amount}円",
+                f"{expense_type}{':'+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
             )
     except Exception as e:
         log.exception("家計簿の登録処理に失敗しました。")
