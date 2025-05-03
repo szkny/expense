@@ -51,7 +51,7 @@ async def main(args: argparse.Namespace) -> None:
             expense_type = select_expense_type()
             expense_amount = enter_expense_amount(expense_type)
             expense_memo = enter_expense_memo(
-                f"{expense_type}(¥{expense_amount})"
+                f"{expense_type}(¥{expense_amount:,})"
             )
             # res = confirmation(
             #     f"以下の内容で登録しますか？\n\t{expense_type}{':'+expense_memo if expense_memo else ''}, ¥{expense_amount:,}"
