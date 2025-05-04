@@ -170,12 +170,20 @@ class GspreadHandler:
             }
             for c in expense_list
         ]
-        if len(expense_list):
-            sum_amount = sum([str2int(str(c.value)) for c in expense_list])
-        else:
-            sum_amount = 0
         log.info(f"todays_expenses: {todays_expenses}")
-        if sum_amount:
+        exclude_expense_types = ["給与", "雑所得"]
+        sum_amount = 0
+        if len(todays_expenses):
+            excluded_expenses = list(
+                filter(
+                    lambda item: item.get("expense_type")
+                    not in exclude_expense_types,
+                    todays_expenses,
+                )
+            )
+            sum_amount = sum(
+                [str2int(str(c.get("amount"))) for c in excluded_expenses]
+            )
             result = "📝"
             result += ", ".join(
                 [
