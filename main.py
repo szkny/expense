@@ -56,8 +56,7 @@ async def main(args: argparse.Namespace) -> None:
                 recent_expenses, frequent_expenses
             )
             if "🕒️" in expense_type or "🔥" in expense_type:
-                emoji = "🕒️ " if "🕒️" in expense_type else "🔥 "
-                data = expense_type.replace(emoji, "").split(":")
+                data = re.sub("(🕒️|🔥) ", "", expense_type).split(":")
                 expense_type = data[0]
                 expense_memo = data[1]
                 expense_amount = int(re.sub(r"[^\d]", "", data[2]))
