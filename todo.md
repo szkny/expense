@@ -8,7 +8,7 @@
 - [x] show budget left when check mode
 - [x] remove income from summation in check mode
 - [x] add feature of frequently registred item
-- [ ] add feature of favorite item
+- [x] add feature of favorite item
 - [ ] add feature of validation for usage history of credit card
 - [ ] add config file
 - [ ] analyse/improve processing time

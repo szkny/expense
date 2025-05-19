@@ -50,13 +50,16 @@ async def main(args: argparse.Namespace) -> None:
                 f"🗓️{today_str}\n{todays_expenses}",
             )
         else:
-            recent_expenses = get_recent_expenses(3)
+            favorite_expenses = get_favorite_expenses()
             frequent_expenses = get_frequent_expenses(3)
+            recent_expenses = get_recent_expenses(3)
             expense_type = select_expense_type(
-                recent_expenses, frequent_expenses
+                favorite_items=favorite_expenses,
+                frequent_items=frequent_expenses,
+                recent_items=recent_expenses,
             )
-            if "🕒️" in expense_type or "🔥" in expense_type:
-                data = re.sub("(🕒️|🔥) ", "", expense_type).split(":")
+            if any([emoji in expense_type for emoji in "⭐🔥🕒️"]):
+                data = re.sub("[⭐🔥🕒️] ", "", expense_type).split(" ")
                 expense_type = data[0]
                 expense_memo = data[1]
                 expense_amount = int(re.sub(r"[^\d]", "", data[2]))
@@ -85,6 +88,22 @@ async def main(args: argparse.Namespace) -> None:
         log.info("end 'main' method")
 
 
+def get_favorite_expenses() -> list[dict]:
+    """
+    get favorite expenses
+    """
+    log.info("start 'get_favorite_expenses' method")
+    if not os.path.exists(EXPENSE_HISTORY):
+        return []
+    try:
+        with open("./favorites.json", "r") as f:
+            data: list[dict] = json.load(f)
+    except FileNotFoundError:
+        return []
+    log.info("end 'get_favorite_expenses' method")
+    return data
+
+
 def get_frequent_expenses(num_items: int = 3) -> list[dict]:
     """
     get frequent expenses
@@ -110,8 +129,11 @@ def get_frequent_expenses(num_items: int = 3) -> list[dict]:
         else:
             return {}
 
-    with open(EXPENSE_HISTORY, "r") as f:
-        lines = f.readlines()
+    try:
+        with open(EXPENSE_HISTORY, "r") as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        return []
     lines = [",".join(line.split(",")[1:]) for line in lines]
     aggregated_lines: list[tuple] = Counter(lines).most_common()
     frequent_expenses: list[dict] = [
@@ -146,12 +168,13 @@ def get_recent_expenses(num_items: int = 3) -> list[dict]:
         else:
             return {}
 
-    with open(EXPENSE_HISTORY, "r") as f:
-        lines = f.readlines()[::-1]
+    try:
+        with open(EXPENSE_HISTORY, "r") as f:
+            lines = f.readlines()[::-1]
+    except FileNotFoundError:
+        return []
     lines = [",".join(line.split(",")[1:]) for line in lines]
-    print(lines)
     lines = list(dict.fromkeys(lines))  # remove duplicates
-    print(lines)
     recent_expenses: list[dict] = [parse_row(row) for row in lines[:num_items]]
     log.info("end 'get_recent_expenses' method")
     return recent_expenses
@@ -216,29 +239,39 @@ def exec_command(command: list, timeout: int = 60) -> Any:
 
 
 def select_expense_type(
-    recent_items: list[dict] = [], frequent_items: list[dict] = []
+    favorite_items: list[dict] = [],
+    frequent_items: list[dict] = [],
+    recent_items: list[dict] = [],
 ) -> str:
     """
     select expense type
     """
     log.info("start 'select_expense_type' method")
     items_list_str = "食費,交通費,遊興費,雑費,書籍費,医療費,家賃,光熱費,通信費,養育費,特別経費,給与,雑所得"
-    if len(recent_items):
-        recent_items_str = ",".join(
+    if len(favorite_items):
+        favorite_items_str = ",".join(
             [
-                f'🕒️ {i["expense_type"]}:{i["expense_memo"]}:¥{i["expense_amount"]}'
-                for i in recent_items
+                f'⭐ {i["expense_type"]} {i["expense_memo"]} ¥{i["expense_amount"]}'
+                for i in favorite_items
             ]
         )
-        items_list_str = items_list_str + "," + recent_items_str
+        items_list_str += "," + favorite_items_str
     if len(frequent_items):
         frequent_items_str = ",".join(
             [
-                f'🔥 {i["expense_type"]}:{i["expense_memo"]}:¥{i["expense_amount"]}'
+                f'🔥 {i["expense_type"]} {i["expense_memo"]} ¥{i["expense_amount"]}'
                 for i in frequent_items
             ]
         )
-        items_list_str = items_list_str + "," + frequent_items_str
+        items_list_str += "," + frequent_items_str
+    if len(recent_items):
+        recent_items_str = ",".join(
+            [
+                f'🕒️ {i["expense_type"]} {i["expense_memo"]} ¥{i["expense_amount"]}'
+                for i in recent_items
+            ]
+        )
+        items_list_str += "," + recent_items_str
     data = exec_command(
         [
             "termux-dialog",
