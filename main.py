@@ -50,7 +50,7 @@ async def main(args: argparse.Namespace) -> None:
                 f"🗓️{today_str}\n{todays_expenses}",
             )
         else:
-            recent_expenses = load_history(3)
+            recent_expenses = get_recent_expenses(3)
             expense_type = select_expense_type(recent_expenses)
             if "🕒️" in expense_type:
                 data = expense_type.replace("🕒️ ", "").split(":")
@@ -82,11 +82,11 @@ async def main(args: argparse.Namespace) -> None:
         log.info("end 'main' method")
 
 
-def load_history(num_items: int = 3) -> list:
+def get_recent_expenses(num_items: int = 3) -> list[dict]:
     """
-    load history
+    get recent expenses
     """
-    log.info("start 'load_history' method")
+    log.info("start 'get_recent_expenses' method")
     if not os.path.exists(EXPENSE_HISTORY):
         return []
 
@@ -114,7 +114,7 @@ def load_history(num_items: int = 3) -> list:
     lines = list(dict.fromkeys(lines))  # remove duplicates
     print(lines)
     recent_expenses: list[dict] = [parse_row(row) for row in lines[:num_items]]
-    log.info("end 'load_history' method")
+    log.info("end 'get_recent_expenses' method")
     return recent_expenses
 
 
