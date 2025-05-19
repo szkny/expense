@@ -59,7 +59,7 @@ async def main(args: argparse.Namespace) -> None:
                 recent_items=recent_expenses,
             )
             if any([emoji in expense_type for emoji in "⭐🔥🕒️"]):
-                data = re.sub("[⭐🔥🕒️] ", "", expense_type).split(" ")
+                data = re.sub("[⭐🔥🕒️] ", "", expense_type).split("/")
                 expense_type = data[0]
                 expense_memo = data[1]
                 expense_amount = int(re.sub(r"[^\d]", "", data[2]))
@@ -251,7 +251,7 @@ def select_expense_type(
     if len(favorite_items):
         favorite_items_str = ",".join(
             [
-                f'⭐ {i["expense_type"]} {i["expense_memo"]} ¥{i["expense_amount"]}'
+                f'⭐ {i["expense_type"]}/{i["expense_memo"]}/¥{i["expense_amount"]}'
                 for i in favorite_items
             ]
         )
@@ -259,7 +259,7 @@ def select_expense_type(
     if len(frequent_items):
         frequent_items_str = ",".join(
             [
-                f'🔥 {i["expense_type"]} {i["expense_memo"]} ¥{i["expense_amount"]}'
+                f'🔥 {i["expense_type"]}/{i["expense_memo"]}/¥{i["expense_amount"]}'
                 for i in frequent_items
             ]
         )
@@ -267,7 +267,7 @@ def select_expense_type(
     if len(recent_items):
         recent_items_str = ",".join(
             [
-                f'🕒️ {i["expense_type"]} {i["expense_memo"]} ¥{i["expense_amount"]}'
+                f'🕒️ {i["expense_type"]}/{i["expense_memo"]}/¥{i["expense_amount"]}'
                 for i in recent_items
             ]
         )
