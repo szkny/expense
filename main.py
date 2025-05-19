@@ -11,7 +11,7 @@ import datetime
 import subprocess
 import logging as log
 from typing import Any
-
+from collections import Counter
 from gspread_wrapper import GspreadHandler
 
 TITLE = "家計簿"
@@ -51,9 +51,13 @@ async def main(args: argparse.Namespace) -> None:
             )
         else:
             recent_expenses = get_recent_expenses(3)
-            expense_type = select_expense_type(recent_expenses)
-            if "🕒️" in expense_type:
-                data = expense_type.replace("🕒️ ", "").split(":")
+            frequent_expenses = get_frequent_expenses(3)
+            expense_type = select_expense_type(
+                recent_expenses, frequent_expenses
+            )
+            if "🕒️" in expense_type or "🔥" in expense_type:
+                emoji = "🕒️ " if "🕒️" in expense_type else "🔥 "
+                data = expense_type.replace(emoji, "").split(":")
                 expense_type = data[0]
                 expense_memo = data[1]
                 expense_amount = int(re.sub(r"[^\d]", "", data[2]))
@@ -80,6 +84,42 @@ async def main(args: argparse.Namespace) -> None:
         notify("🚫家計簿の登録処理に失敗しました。", str(e))
     finally:
         log.info("end 'main' method")
+
+
+def get_frequent_expenses(num_items: int = 3) -> list[dict]:
+    """
+    get frequent expenses
+    """
+    log.info("start 'get_frequent_expenses' method")
+    if not os.path.exists(EXPENSE_HISTORY):
+        return []
+
+    def parse_row(row: tuple[str, int]) -> dict:
+        data = row[0].strip().split(",")
+        if len(data) == 2:
+            return {
+                "expense_type": data[0],
+                "expense_memo": "",
+                "expense_amount": int(data[1]),
+            }
+        elif len(data) == 3:
+            return {
+                "expense_type": data[0],
+                "expense_memo": data[1],
+                "expense_amount": int(data[2]),
+            }
+        else:
+            return {}
+
+    with open(EXPENSE_HISTORY, "r") as f:
+        lines = f.readlines()
+    lines = [",".join(line.split(",")[1:]) for line in lines]
+    aggregated_lines: list[tuple] = Counter(lines).most_common()
+    frequent_expenses: list[dict] = [
+        parse_row(row) for row in aggregated_lines[:num_items]
+    ]
+    log.info("end 'get_frequent_expenses' method")
+    return frequent_expenses
 
 
 def get_recent_expenses(num_items: int = 3) -> list[dict]:
@@ -176,7 +216,9 @@ def exec_command(command: list, timeout: int = 60) -> Any:
     return data
 
 
-def select_expense_type(recent_items: list[dict] = []) -> str:
+def select_expense_type(
+    recent_items: list[dict] = [], frequent_items: list[dict] = []
+) -> str:
     """
     select expense type
     """
@@ -190,6 +232,14 @@ def select_expense_type(recent_items: list[dict] = []) -> str:
             ]
         )
         items_list_str = items_list_str + "," + recent_items_str
+    if len(frequent_items):
+        frequent_items_str = ",".join(
+            [
+                f'🔥 {i["expense_type"]}:{i["expense_memo"]}:¥{i["expense_amount"]}'
+                for i in frequent_items
+            ]
+        )
+        items_list_str = items_list_str + "," + frequent_items_str
     data = exec_command(
         [
             "termux-dialog",
