@@ -135,7 +135,9 @@ def get_frequent_expenses(num_items: int = 3) -> list[dict]:
     except FileNotFoundError:
         return []
     lines = [",".join(line.split(",")[1:]) for line in lines]
-    aggregated_lines: list[tuple] = Counter(lines).most_common()
+    aggregated_lines: list[tuple] = [
+        item for item in Counter(lines).most_common() if item[1] >= 2
+    ]
     frequent_expenses: list[dict] = [
         parse_row(row) for row in aggregated_lines[:num_items]
     ]
