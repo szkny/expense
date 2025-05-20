@@ -59,10 +59,15 @@ async def main(args: argparse.Namespace) -> None:
                 recent_items=recent_expenses,
             )
             if any([emoji in expense_type for emoji in "⭐🔥🕒️"]):
-                data = re.sub("[⭐🔥🕒️] ", "", expense_type).split("/")
-                expense_type = data[0]
-                expense_memo = data[1]
-                expense_amount = int(re.sub(r"[^\d]", "", data[2]))
+                data = re.sub("(⭐|🔥|🕒️) ", "", expense_type).split("/")
+                if len(data) == 3:
+                    expense_type = data[0]
+                    expense_memo = data[1]
+                    expense_amount = int(re.sub(r"[^\d]", "", data[2]))
+                elif len(data) == 2:
+                    expense_type = data[0]
+                    expense_memo = ""
+                    expense_amount = int(re.sub(r"[^\d]", "", data[1]))
             else:
                 expense_amount = enter_expense_amount(expense_type)
                 expense_memo = enter_expense_memo(
@@ -274,6 +279,7 @@ def select_expense_type(
             ]
         )
         items_list_str += "," + recent_items_str
+    items_list_str = items_list_str.replace("//", "/")
     data = exec_command(
         [
             "termux-dialog",
