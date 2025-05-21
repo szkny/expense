@@ -255,6 +255,7 @@ def select_expense_type(
     """
     log.info("start 'select_expense_type' method")
     items_list_str = "食費,交通費,遊興費,雑費,書籍費,医療費,家賃,光熱費,通信費,養育費,特別経費,給与,雑所得"
+    additional_items = ""
     if len(favorite_items):
         favorite_items_str = ",".join(
             [
@@ -262,7 +263,7 @@ def select_expense_type(
                 for i in favorite_items
             ]
         )
-        items_list_str += "," + favorite_items_str
+        additional_items += favorite_items_str
     if len(frequent_items):
         frequent_items_str = ",".join(
             [
@@ -270,7 +271,7 @@ def select_expense_type(
                 for i in frequent_items
             ]
         )
-        items_list_str += "," + frequent_items_str
+        additional_items += "," + frequent_items_str
     if len(recent_items):
         recent_items_str = ",".join(
             [
@@ -278,8 +279,9 @@ def select_expense_type(
                 for i in recent_items
             ]
         )
-        items_list_str += "," + recent_items_str
-    items_list_str = items_list_str.replace("//", "/")
+        additional_items += "," + recent_items_str
+    additional_items = additional_items.replace("//", "/")
+    items_list_str = additional_items + "," + items_list_str
     data = exec_command(
         [
             "termux-dialog",
