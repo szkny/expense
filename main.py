@@ -54,26 +54,13 @@ async def main(args: argparse.Namespace) -> None:
             frequent_expenses = get_frequent_expenses(3)
             recent_expenses = get_recent_expenses(3)
 
-            # filter out duplicates
-            def dict_to_key(d: dict) -> str:
-                return json.dumps(d, sort_keys=True)
-
-            seen1 = set(dict_to_key(d) for d in favorite_expenses)
-            frequent_expenses_filtered = []
-            seen2 = set()
-            for d in frequent_expenses:
-                k = dict_to_key(d)
-                if k not in seen1:
-                    seen2.add(k)
-                    frequent_expenses_filtered.append(d)
-            seen_all = seen1 | seen2
-            recent_expenses_filtered = []
-            for d in recent_expenses:
-                k = dict_to_key(d)
-                if k not in seen_all:
-                    recent_expenses_filtered.append(d)
-            frequent_expenses = frequent_expenses_filtered
-            recent_expenses = recent_expenses_filtered
+            favorite_expenses, frequent_expenses, recent_expenses = (
+                filter_duplicates(
+                    favorite_expenses=favorite_expenses,
+                    frequent_expenses=frequent_expenses,
+                    recent_expenses=recent_expenses,
+                )
+            )
 
             expense_type = select_expense_type(
                 favorite_items=favorite_expenses,
@@ -207,6 +194,37 @@ def get_recent_expenses(num_items: int = 3) -> list[dict]:
     recent_expenses: list[dict] = [parse_row(row) for row in lines[:num_items]]
     log.info("end 'get_recent_expenses' method")
     return recent_expenses
+
+
+def filter_duplicates(
+    favorite_expenses: list[dict],
+    frequent_expenses: list[dict],
+    recent_expenses: list[dict],
+) -> tuple[list[dict], list[dict], list[dict]]:
+    """
+    filter out duplicates
+    """
+
+    def dict_to_key(d: dict) -> str:
+        return json.dumps(d, sort_keys=True)
+
+    seen1 = set(dict_to_key(d) for d in favorite_expenses)
+    frequent_expenses_filtered = []
+    seen2 = set()
+    for d in frequent_expenses:
+        k = dict_to_key(d)
+        if k not in seen1:
+            seen2.add(k)
+            frequent_expenses_filtered.append(d)
+    seen_all = seen1 | seen2
+    recent_expenses_filtered = []
+    for d in recent_expenses:
+        k = dict_to_key(d)
+        if k not in seen_all:
+            recent_expenses_filtered.append(d)
+    frequent_expenses = frequent_expenses_filtered
+    recent_expenses = recent_expenses_filtered
+    return favorite_expenses, frequent_expenses, recent_expenses
 
 
 def store_expense(
