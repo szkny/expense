@@ -9,7 +9,7 @@
 - [x] remove income from summation in check mode
 - [x] add feature of frequently registred item
 - [x] add feature of favorite item
-- [ ] drop duplicates of favorite/frequent/recent items list
+- [x] drop duplicates of favorite/frequent/recent items list
 - [ ] add feature of validation for usage history of credit card
 - [ ] add config file
 - [ ] analyse/improve processing time
