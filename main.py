@@ -51,8 +51,8 @@ async def main(args: argparse.Namespace) -> None:
             )
         else:
             favorite_expenses = get_favorite_expenses()
-            frequent_expenses = get_frequent_expenses(3)
-            recent_expenses = get_recent_expenses(3)
+            frequent_expenses = get_frequent_expenses(5)
+            recent_expenses = get_recent_expenses(5)
 
             favorite_expenses, frequent_expenses, recent_expenses = (
                 filter_duplicates(
