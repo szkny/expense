@@ -10,6 +10,7 @@
 - [x] add feature of frequently registred item
 - [x] add feature of favorite item
 - [x] drop duplicates of favorite/frequent/recent items list
+- [ ] adapt to deficiencies of amount for instant registeration item
 - [ ] add feature of validation for usage history of credit card
 - [ ] add config file
 - [ ] analyse/improve processing time
