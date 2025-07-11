@@ -2,6 +2,7 @@
 """
 家計簿スプレッドシートに自動で書き込みを行うバッチプログラム
 """
+
 import os
 import re
 import json
@@ -49,6 +50,19 @@ async def main(args: argparse.Namespace) -> None:
                 "家計簿の取得が完了しました。",
                 f"🗓️{today_str}\n{todays_expenses}",
             )
+        elif args.json_data:
+            data = json.loads(args.json_data)
+            expense_type = data["expense_type"]
+            expense_amount = int(data["expense_amount"])
+            expense_memo = data.get("expense_memo", "")
+            loop.run_in_executor(None, lambda: toast("登録中.."))
+            handler = GspreadHandler(bookname)
+            handler.register_expense(expense_type, expense_amount, expense_memo)
+            store_expense(expense_type, expense_memo, expense_amount)
+            notify(
+                "家計簿への登録が完了しました。",
+                f"{expense_type}{':'+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
+            )
         else:
             favorite_expenses = get_favorite_expenses()
             frequent_expenses = get_frequent_expenses(5)
@@ -82,11 +96,6 @@ async def main(args: argparse.Namespace) -> None:
                 expense_memo = enter_expense_memo(
                     f"{expense_type}(¥{expense_amount:,})"
                 )
-            # res = confirmation(
-            #     f"以下の内容で登録しますか？\n\t{expense_type}{':'+expense_memo if expense_memo else ''}, ¥{expense_amount:,}"
-            # )
-            # if not res:
-            #     return
             loop.run_in_executor(None, lambda: toast("登録中.."))
             handler = GspreadHandler(bookname)
             handler.register_expense(expense_type, expense_amount, expense_memo)
@@ -458,6 +467,14 @@ if __name__ == "__main__":
         default=False,
         action="store_true",
         help="check today's expenses",
+    )
+    parser.add_argument(
+        "-j",
+        "--json",
+        dest="json_data",
+        type=str,
+        default=None,
+        help="expense data in JSON format",
     )
     args = parser.parse_args()
     asyncio.run(main(args))
