@@ -70,16 +70,16 @@ async def main(args: argparse.Namespace) -> None:
             screenshot_name = get_latest_screenshot()
             ocr_text = ocr_image(screenshot_name)
             expense_data = parse_ocr_text(ocr_text)
-            expense_type = select_expense_type()
             expense_amount = expense_data.get("amount", "")
             expense_memo = expense_data.get("memo", "")
+            confirmation(
+                f"読み取り結果は正しいですか？\n{expense_memo}, ¥{expense_amount:,}"
+            )
+            expense_type = select_expense_type()
             if not expense_amount:
                 expense_amount = enter_expense_amount(expense_type)
             if not expense_memo:
                 expense_memo = enter_expense_memo(expense_type)
-            confirmation(
-                f"以下の内容で登録しますか？\n{expense_type}{':'+expense_memo if expense_memo else ''}, ¥{expense_amount:,}"
-            )
             loop.run_in_executor(None, lambda: toast("登録中.."))
             handler = GspreadHandler(bookname)
             handler.register_expense(expense_type, expense_amount, expense_memo)
