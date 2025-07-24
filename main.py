@@ -5,11 +5,14 @@
 
 import os
 import re
+import glob
 import json
 import asyncio
 import argparse
 import datetime
 import subprocess
+import pytesseract
+from PIL import Image
 import logging as log
 from typing import Any
 from collections import Counter
@@ -55,6 +58,28 @@ async def main(args: argparse.Namespace) -> None:
             expense_type = data["expense_type"]
             expense_amount = int(data["expense_amount"])
             expense_memo = data.get("expense_memo", "")
+            loop.run_in_executor(None, lambda: toast("登録中.."))
+            handler = GspreadHandler(bookname)
+            handler.register_expense(expense_type, expense_amount, expense_memo)
+            store_expense(expense_type, expense_memo, expense_amount)
+            notify(
+                "家計簿への登録が完了しました。",
+                f"{expense_type}{':'+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
+            )
+        elif args.ocr_image:
+            screenshot_name = get_latest_screenshot()
+            ocr_text = ocr_image(screenshot_name)
+            expense_data = parse_ocr_text(ocr_text)
+            expense_type = select_expense_type()
+            expense_amount = expense_data.get("amount", "")
+            expense_memo = expense_data.get("memo", "")
+            if not expense_amount:
+                expense_amount = enter_expense_amount(expense_type)
+            if not expense_memo:
+                expense_memo = enter_expense_memo(expense_type)
+            confirmation(
+                f"以下の内容で登録しますか？\n{expense_type}{':'+expense_memo if expense_memo else ''}, ¥{expense_amount:,}"
+            )
             loop.run_in_executor(None, lambda: toast("登録中.."))
             handler = GspreadHandler(bookname)
             handler.register_expense(expense_type, expense_amount, expense_memo)
@@ -251,6 +276,120 @@ def store_expense(
     return
 
 
+def get_latest_screenshot() -> str:
+    """
+    get the latest screenshot file name
+    """
+    log.info("start 'get_latest_screenshot' method")
+    screenshot_list = glob.glob(
+        HOME + "/storage/dcim/Screenshots/Screenshot_*Pay.jpg"
+    )
+    if len(screenshot_list) == 0:
+        raise FileNotFoundError("スクリーンショットが見つかりませんでした。")
+    screenshot_name = sorted(screenshot_list)[-1]
+    log.debug(f"Latest screenshot: {screenshot_name}")
+    log.info("end 'get_latest_screenshot' method")
+    return screenshot_name
+
+
+def normalize_capture_text(text: str) -> str:
+    """
+    normalize capture text
+    """
+    log.info("start 'normalized_text' method")
+    normalized_text = re.sub(
+        r"[①-⑳]", lambda m: str(ord(m.group()) - ord("①") + 1), text
+    )
+    normalized_text = re.sub(
+        r"[０-９]", lambda m: str(int(m.group(0))), normalized_text
+    )
+    normalized_text = re.sub(
+        r"(?<=[^\x00-\x7F]) (?=[^\x00-\x7F])", "", normalized_text
+    )
+    log.info("end 'normalized_text' method")
+    return normalized_text
+
+
+def ocr_image(screenshot_name: str) -> str:
+    """
+    perform OCR on the image
+    """
+    log.info("start 'ocr_image' method")
+    img = Image.open(screenshot_name)
+    text = str(pytesseract.image_to_string(img, lang="jpn"))
+    text = normalize_capture_text(text)
+    log.debug(f"OCR text:\n{text}")
+    log.info("end 'ocr_image' method")
+    return text
+
+
+def parse_ocr_text(ocr_text: str) -> dict:
+    """
+    Extract expense data (amount and memo) from OCR text
+    """
+    log.info("start 'get_expense_data_from_ocr_text' method")
+
+    date_pattern = re.compile(
+        r"(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}(日)?|\d{1,2}[:時]\d{1,2}(分)?)"
+    )
+
+    def extract_amount(text_rows: list[str]) -> int | None:
+        amount_pattern = re.compile(
+            r"(?:¥\s*|)([1-9]\d{1,2}(?:[,\.]*\d{3})*|\d{2,})"
+        )
+        amounts = []
+        for i, row in enumerate(text_rows):
+            row = row.replace(" ", "")
+            if date_pattern.search(row):
+                continue
+
+            if match := amount_pattern.search(row):
+                log.debug(f"Processing row {i} for amount: {row}")
+                amounts.append(int(re.sub("[,.]", "", match.group(1))))
+
+        if not amounts:
+            log.debug("金額の抽出に失敗しました。")
+            toast("金額の抽出に失敗しました。")
+            return None
+        return amounts[0]
+
+    def extract_memo(text_rows: list[str]) -> str | None:
+        memo_pattern = re.compile(r"([^(.*お支払い完了.*)]{3,30})")
+        memos = []
+        for i, row in enumerate(text_rows):
+            if not row.strip():
+                continue
+
+            row = row.replace(" ", "")
+            if date_pattern.search(row):
+                continue
+
+            if match := memo_pattern.search(row.strip()):
+                log.debug(f"Processing row {i} for amount: {row}")
+                memos.append(match.group(1))
+
+        if not memos:
+            log.debug("メモの抽出に失敗しました。")
+            toast("メモの抽出に失敗しました。")
+            return None
+        return memos[0]
+
+    text_rows = ocr_text.split("\n")
+
+    expense_data = {
+        "amount": extract_amount(text_rows),
+        "memo": extract_memo(text_rows),
+    }
+
+    if expense_data["amount"]:
+        log.debug(f"Extracted Expense Amount: {expense_data['amount']}")
+    if expense_data["memo"]:
+        log.debug(f"Extracted Expense Memo: {expense_data['memo']}")
+
+    log.info("end 'get_expense_data_from_ocr_text' method")
+    return expense_data
+
+
 def get_fiscal_year() -> int:
     """
     get fiscal year
@@ -329,8 +468,9 @@ def select_expense_type(
             ]
         )
         additional_items += "," + recent_items_str
-    additional_items = additional_items.replace("//", "/")
-    items_list_str = additional_items + "," + items_list_str
+    if additional_items:
+        additional_items = additional_items.replace("//", "/")
+        items_list_str = additional_items + "," + items_list_str
     data = exec_command(
         [
             "termux-dialog",
@@ -475,6 +615,13 @@ if __name__ == "__main__":
         type=str,
         default=None,
         help="expense data in JSON format",
+    )
+    parser.add_argument(
+        "--ocr",
+        dest="ocr_image",
+        default=False,
+        action="store_true",
+        help="ocr image of the latest screenshot",
     )
     args = parser.parse_args()
     asyncio.run(main(args))
