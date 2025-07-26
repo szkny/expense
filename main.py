@@ -290,7 +290,7 @@ def get_latest_screenshot() -> str:
     """
     log.info("start 'get_latest_screenshot' method")
     screenshot_list = glob.glob(
-        HOME + "/storage/dcim/Screenshots/Screenshot_*Pay.jpg"
+        HOME + "/storage/dcim/Screenshots/Screenshot_*.jpg"
     )
     if len(screenshot_list) == 0:
         raise FileNotFoundError("スクリーンショットが見つかりませんでした。")
@@ -373,7 +373,7 @@ def parse_ocr_text(ocr_text: str) -> dict:
                 continue
 
             if match := memo_pattern.search(row.strip()):
-                log.debug(f"Processing row {i} for amount: {row}")
+                log.debug(f"Processing row {i} for memo: {row}")
                 memos.append(match.group(1))
 
         if not memos:
