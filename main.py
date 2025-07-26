@@ -417,6 +417,7 @@ def exec_command(command: list, timeout: int = 60) -> Any:
         timeout=timeout,
     )
     json_str = res.stdout.decode("utf-8")
+    log.debug(f"command output: {json_str}")
 
     try:
         data = json.loads(json_str)
@@ -597,6 +598,15 @@ def notify(title: str, content: str, timeout: int = 30) -> None:
 
 
 if __name__ == "__main__":
+    result = exec_command(
+        [
+            "expense_type_classification",
+            "--json",
+            '\'{"amount": 1000, "memo": "ランチ"}\'',
+        ]
+    )
+    print(result)
+    exit(0)
     parser = argparse.ArgumentParser(
         description="家計簿スプレッドシートに自動で書き込みを行うバッチプログラム"
     )
