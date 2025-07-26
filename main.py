@@ -335,7 +335,7 @@ def parse_ocr_text(ocr_text: str) -> dict:
 
     def extract_amount(text_rows: list[str]) -> int | None:
         amount_pattern = re.compile(
-            r"(?:¥\s*|)([1-9]\d{1,2}(?:[,\.]*\d{3})*|\d{2,})"
+            r"(?:¥\s*|)([1-9]\d{0,2}(?:[,\.]*\d{3})*|\d{2,})"
         )
         amounts = []
         for i, row in enumerate(text_rows):
