@@ -72,13 +72,21 @@ async def main(args: argparse.Namespace) -> None:
             expense_data = parse_ocr_text(ocr_text)
             expense_amount = expense_data.get("amount", "")
             expense_memo = expense_data.get("memo", "")
-            confirmation(
-                f"読み取り結果は正しいですか？\n{expense_memo}, ¥{expense_amount:,}"
+            res = exec_command(
+                [
+                    "expense_type_classification",
+                    "--json",
+                    f'{{"amount": {expense_amount}, "memo": "{expense_memo}"}}',
+                ]
             )
-            expense_type = select_expense_type()
-            if not expense_amount:
+            predicted_type = res.get("predicted_type", "")
+            if confirmation(
+                f"以下の読み取り内容で登録しますか？\n{predicted_type}:{expense_memo}, ¥{expense_amount:,}"
+            ):
+                expense_type = predicted_type
+            else:
+                expense_type = select_expense_type()
                 expense_amount = enter_expense_amount(expense_type)
-            if not expense_memo:
                 expense_memo = enter_expense_memo(expense_type)
             loop.run_in_executor(None, lambda: toast("登録中.."))
             handler = GspreadHandler(bookname)
@@ -423,12 +431,14 @@ def exec_command(command: list, timeout: int = 60) -> Any:
         data = json.loads(json_str)
     except json.JSONDecodeError as e:
         raise e
-    if data["code"] == -2:
+    if data.get("code", 0) == -2:
+        log.debug(f"data: {data}")
         raise Exception("入力がキャンセルされました。")
-    elif (command[1] != "text" or "-n" in command) and data["text"] in (
+    elif ("-n" in command) and data.get("text", "yes") in (
         "",
         "no",
     ):
+        log.debug(f"data: {data}")
         raise Exception("入力がキャンセルされました。")
     log.info("end 'exec_command' method")
     return data
@@ -598,15 +608,6 @@ def notify(title: str, content: str, timeout: int = 30) -> None:
 
 
 if __name__ == "__main__":
-    result = exec_command(
-        [
-            "expense_type_classification",
-            "--json",
-            '\'{"amount": 1000, "memo": "ランチ"}\'',
-        ]
-    )
-    print(result)
-    exit(0)
     parser = argparse.ArgumentParser(
         description="家計簿スプレッドシートに自動で書き込みを行うバッチプログラム"
     )
