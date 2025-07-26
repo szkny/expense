@@ -55,9 +55,9 @@ async def main(args: argparse.Namespace) -> None:
             )
         elif args.json_data:
             data = json.loads(args.json_data)
-            expense_type = data["expense_type"]
-            expense_amount = int(data["expense_amount"])
-            expense_memo = data.get("expense_memo", "")
+            expense_type = data["type"]
+            expense_amount = int(data["amount"])
+            expense_memo = data.get("memo", "")
             loop.run_in_executor(None, lambda: toast("登録中.."))
             handler = GspreadHandler(bookname)
             handler.register_expense(expense_type, expense_amount, expense_memo)
