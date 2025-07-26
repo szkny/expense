@@ -81,7 +81,7 @@ async def main(args: argparse.Namespace) -> None:
             )
             predicted_type = res.get("predicted_type", "")
             if confirmation(
-                f"以下の読み取り内容で登録しますか？\n{predicted_type}:{expense_memo}, ¥{expense_amount:,}"
+                f"以下の読み取り内容で登録しますか？\n{predicted_type}: {expense_memo}, ¥{expense_amount:,}"
             ):
                 expense_type = predicted_type
             else:
