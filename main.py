@@ -67,11 +67,13 @@ async def main(args: argparse.Namespace) -> None:
                 f"{expense_type}{':'+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
             )
         elif args.ocr_image:
+            loop.run_in_executor(None, lambda: toast("画像解析中.."))
             screenshot_name = get_latest_screenshot()
             ocr_text = ocr_image(screenshot_name)
             expense_data = parse_ocr_text(ocr_text)
             expense_amount = expense_data.get("amount", "")
             expense_memo = expense_data.get("memo", "")
+            loop.run_in_executor(None, lambda: toast("支出項目解析中.."))
             res = exec_command(
                 [
                     "expense_type_classification",
