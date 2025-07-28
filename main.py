@@ -579,7 +579,7 @@ def confirmation(content: str) -> bool:
     return choice == "yes"
 
 
-def toast(content: str, timeout: int = 30) -> None:
+def toast(content: str, timeout: int = 5) -> None:
     """
     toast popup message
     """
