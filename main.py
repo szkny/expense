@@ -72,7 +72,7 @@ async def main(args: argparse.Namespace) -> None:
             expense_memo = ocr_data.get("expense_memo", "")
             expense_amount = ocr_data.get("expense_amount", 0)
             if confirmation(
-                f"以下の読み取り内容で登録しますか？\n{predicted_type}:{expense_memo}, ¥{expense_amount:,}"
+                f"以下の読み取り内容で登録しますか？\n{predicted_type}: {expense_memo}, ¥{expense_amount:,}"
             ):
                 expense_type = predicted_type
             else:
@@ -277,13 +277,13 @@ def store_expense(
 
 def ocr_main(loop: asyncio.AbstractEventLoop) -> dict:
     log.info("start 'ocr_main' method")
-    # loop.run_in_executor(None, lambda: toast("画像解析中.."))
+    toast("画像解析中..")
     screenshot_name = get_latest_screenshot()
     ocr_text = ocr_image(screenshot_name)
     expense_data = parse_ocr_text(ocr_text)
     expense_amount = expense_data.get("amount", "")
     expense_memo = expense_data.get("memo", "")
-    # loop.run_in_executor(None, lambda: toast("支出項目解析中.."))
+    toast("支出項目解析中..")
     res = exec_command(
         [
             "expense_type_classification",
@@ -292,7 +292,6 @@ def ocr_main(loop: asyncio.AbstractEventLoop) -> dict:
         ]
     )
     predicted_type = res.get("predicted_type", "")
-    # loop.run_in_executor(None, lambda: toast("解析完了"))
     log.info("end 'ocr_main' method")
     return {
         "predicted_type": predicted_type,
@@ -307,7 +306,7 @@ def get_latest_screenshot() -> str:
     """
     log.info("start 'get_latest_screenshot' method")
     screenshot_list = glob.glob(
-        HOME + "/storage/dcim/Screenshots/Screenshot_*.jpg"
+        HOME + "/storage/dcim/Screenshots/Screenshot_*Pay.jpg"
     )
     if len(screenshot_list) == 0:
         raise FileNotFoundError("スクリーンショットが見つかりませんでした。")
