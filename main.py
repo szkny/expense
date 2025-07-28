@@ -67,23 +67,12 @@ async def main(args: argparse.Namespace) -> None:
                 f"{expense_type}{':'+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
             )
         elif args.ocr_image:
-            loop.run_in_executor(None, lambda: toast("画像解析中.."))
-            screenshot_name = get_latest_screenshot()
-            ocr_text = ocr_image(screenshot_name)
-            expense_data = parse_ocr_text(ocr_text)
-            expense_amount = expense_data.get("amount", "")
-            expense_memo = expense_data.get("memo", "")
-            loop.run_in_executor(None, lambda: toast("支出項目解析中.."))
-            res = exec_command(
-                [
-                    "expense_type_classification",
-                    "--json",
-                    f'{{"amount": {expense_amount}, "memo": "{expense_memo}"}}',
-                ]
-            )
-            predicted_type = res.get("predicted_type", "")
+            ocr_data = ocr_main(loop)
+            predicted_type = ocr_data.get("predicted_type", "")
+            expense_memo = ocr_data.get("expense_memo", "")
+            expense_amount = ocr_data.get("expense_amount", 0)
             if confirmation(
-                f"以下の読み取り内容で登録しますか？\n{predicted_type}: {expense_memo}, ¥{expense_amount:,}"
+                f"以下の読み取り内容で登録しますか？\n{predicted_type}:{expense_memo}, ¥{expense_amount:,}"
             ):
                 expense_type = predicted_type
             else:
@@ -286,6 +275,32 @@ def store_expense(
     return
 
 
+def ocr_main(loop: asyncio.AbstractEventLoop) -> dict:
+    log.info("start 'ocr_main' method")
+    # loop.run_in_executor(None, lambda: toast("画像解析中.."))
+    screenshot_name = get_latest_screenshot()
+    ocr_text = ocr_image(screenshot_name)
+    expense_data = parse_ocr_text(ocr_text)
+    expense_amount = expense_data.get("amount", "")
+    expense_memo = expense_data.get("memo", "")
+    # loop.run_in_executor(None, lambda: toast("支出項目解析中.."))
+    res = exec_command(
+        [
+            "expense_type_classification",
+            "--json",
+            f'{{"amount": {expense_amount}, "memo": "{expense_memo}"}}',
+        ]
+    )
+    predicted_type = res.get("predicted_type", "")
+    # loop.run_in_executor(None, lambda: toast("解析完了"))
+    log.info("end 'ocr_main' method")
+    return {
+        "predicted_type": predicted_type,
+        "expense_amount": expense_amount,
+        "expense_memo": expense_memo,
+    }
+
+
 def get_latest_screenshot() -> str:
     """
     get the latest screenshot file name
@@ -326,6 +341,7 @@ def ocr_image(screenshot_name: str) -> str:
     """
     log.info("start 'ocr_image' method")
     img = Image.open(screenshot_name)
+    # TODO: crop the image to the area of target
     text = str(pytesseract.image_to_string(img, lang="jpn"))
     text = normalize_capture_text(text)
     log.debug(f"OCR text:\n{text}")
