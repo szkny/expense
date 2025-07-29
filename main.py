@@ -306,10 +306,11 @@ def store_expense(
     return
 
 
-def ocr_main() -> dict:
+def ocr_main(offset: int = 0) -> dict:
+    """main method for OCR processing"""
     log.info("start 'ocr_main' method")
     toast("画像解析中..")
-    screenshot_name = get_latest_screenshot()
+    screenshot_name = get_latest_screenshot(offset)
     ocr_text = ocr_image(screenshot_name)
     expense_data = parse_ocr_text(ocr_text)
     expense_amount = expense_data.get("amount", "")
@@ -331,7 +332,27 @@ def ocr_main() -> dict:
     }
 
 
-def get_latest_screenshot() -> str:
+def ocr_test(n: int = 10, offset: int = 0) -> None:
+    """OCR text processing for multiple screenshots"""
+    result = []
+    for i in range(n):
+        screenshot_name = get_latest_screenshot(offset + i)
+        expense_data = ocr_main(offset + i)
+        expense_amount = expense_data.get("expense_amount", "")
+        expense_memo = expense_data.get("expense_memo", "")
+        expense_type = expense_data.get("expense_type", "")
+        result.append(
+            {
+                "screenshot_name": screenshot_name,
+                "expense_type": expense_type,
+                "expense_amount": expense_amount,
+                "expense_memo": expense_memo,
+            }
+        )
+    log.info(f"OCR results: {json.dumps(result, indent=2, ensure_ascii=False)}")
+
+
+def get_latest_screenshot(offset: int = 0) -> str:
     """
     get the latest screenshot file name
     """
@@ -341,7 +362,7 @@ def get_latest_screenshot() -> str:
     )
     if len(screenshot_list) == 0:
         raise FileNotFoundError("スクリーンショットが見つかりませんでした。")
-    screenshot_name = sorted(screenshot_list)[-1]
+    screenshot_name = sorted(screenshot_list)[-1 - offset]
     log.debug(f"Latest screenshot: {screenshot_name}")
     log.info("end 'get_latest_screenshot' method")
     return screenshot_name
@@ -371,8 +392,36 @@ def ocr_image(screenshot_name: str) -> str:
     """
     log.info("start 'ocr_image' method")
     img = Image.open(screenshot_name)
-    # TODO: crop the image to the area of target
-    text = str(pytesseract.image_to_string(img, lang="jpn"))
+
+    # Define OCR regions for different payment apps
+    OCR_REGIONS = {
+        "PayPay": [
+            (160, 100, 1000, 250),  # Region 1: Transaction title
+            (0, 270, 1000, 450),  # Region 2: Transaction amount
+        ],
+    }
+
+    # Determine which regions to process based on screenshot name
+    regions_to_process = {}
+    for app_name, regions in OCR_REGIONS.items():
+        if app_name in screenshot_name:
+            regions_to_process = {app_name: regions}
+            break
+
+    # Process regions if found, otherwise process entire image
+    if regions_to_process:
+        results = []
+        for app_name, regions in regions_to_process.items():
+            log.debug(f"Processing OCR for {app_name}")
+            for i, region in enumerate(regions):
+                cropped = img.crop(region)
+                text = str(pytesseract.image_to_string(cropped, lang="jpn"))
+                log.debug(f"\t[{i}] region: {region}, ocr text: {text}")
+                results.append(text)
+        text = "\n".join(results)
+    else:
+        text = str(pytesseract.image_to_string(img, lang="jpn"))
+
     text = normalize_capture_text(text)
     log.debug(f"OCR text:\n{text}")
     log.info("end 'ocr_image' method")
@@ -407,6 +456,9 @@ def parse_ocr_text(ocr_text: str) -> dict:
             log.debug("金額の抽出に失敗しました。")
             toast("金額の抽出に失敗しました。")
             return None
+
+        # Filter out amounts less than or equal to 30
+        amounts = list(filter(lambda x: x > 30, amounts))
         return amounts[0]
 
     def extract_memo(text_rows: list[str]) -> str | None:
@@ -643,8 +695,6 @@ def notify(title: str, content: str, timeout: int = 30) -> None:
 
 
 if __name__ == "__main__":
-    ocr_main()
-    exit()
     parser = argparse.ArgumentParser(
         description="家計簿スプレッドシートに自動で書き込みを行うバッチプログラム"
     )
