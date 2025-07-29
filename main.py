@@ -82,6 +82,7 @@ async def main(args: argparse.Namespace) -> None:
                 f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
             )
         else:
+            ocr_expenses = get_ocr_expenses()
             favorite_expenses = get_favorite_expenses()
             frequent_expenses = get_frequent_expenses(5)
             recent_expenses = get_recent_expenses(5)
@@ -95,12 +96,15 @@ async def main(args: argparse.Namespace) -> None:
             )
 
             expense_type = select_expense_type(
-                favorite_items=favorite_expenses,
-                frequent_items=frequent_expenses,
-                recent_items=recent_expenses,
+                item_list=[
+                    {"icon": "📷", "items": ocr_expenses},
+                    {"icon": "⭐", "items": favorite_expenses},
+                    {"icon": "🔥", "items": frequent_expenses},
+                    {"icon": "🕒️", "items": recent_expenses},
+                ],
             )
-            if any([emoji in expense_type for emoji in "⭐🔥🕒️"]):
-                data = re.sub("(⭐|🔥|🕒️) ", "", expense_type).split("/")
+            if any([emoji in expense_type for emoji in "⭐🔥🕒️📷"]):
+                data = re.sub("(⭐|🔥|🕒️|📷) ", "", expense_type).split("/")
                 if len(data) == 3:
                     expense_type = data[0]
                     expense_memo = data[1]
@@ -221,6 +225,28 @@ def get_recent_expenses(num_items: int = 3) -> list[dict]:
     recent_expenses: list[dict] = [parse_row(row) for row in lines[:num_items]]
     log.info("end 'get_recent_expenses' method")
     return recent_expenses
+
+
+def get_ocr_expenses() -> list[dict]:
+    """
+    get OCR expenses
+    """
+    log.info("start 'get_ocr_expenses' method")
+    try:
+        with open("./caches/ocr_data.json", "r") as f:
+            data: dict = json.load(f)
+    except FileNotFoundError:
+        log.debug("OCR data not found.")
+        return []
+    ocr_expenses = [
+        {
+            "expense_type": data.get("expense_type", ""),
+            "expense_memo": data.get("expense_memo", ""),
+            "expense_amount": int(data.get("expense_amount", 0)),
+        }
+    ]
+    log.info("end 'get_ocr_expenses' method")
+    return ocr_expenses
 
 
 def filter_duplicates(
@@ -456,9 +482,7 @@ def exec_command(command: list, timeout: int = 60) -> Any:
 
 
 def select_expense_type(
-    favorite_items: list[dict] = [],
-    frequent_items: list[dict] = [],
-    recent_items: list[dict] = [],
+    item_list: list[dict[str, Any]] = [],
 ) -> str:
     """
     select expense type
@@ -466,30 +490,19 @@ def select_expense_type(
     log.info("start 'select_expense_type' method")
     items_list_str = "食費,交通費,遊興費,雑費,書籍費,医療費,家賃,光熱費,通信費,養育費,特別経費,給与,雑所得"
     additional_items = ""
-    if len(favorite_items):
-        favorite_items_str = ",".join(
-            [
-                f'⭐ {i["expense_type"]}/{i["expense_memo"]}/¥{i["expense_amount"]}'
-                for i in favorite_items
-            ]
-        )
-        additional_items += favorite_items_str
-    if len(frequent_items):
-        frequent_items_str = ",".join(
-            [
-                f'🔥 {i["expense_type"]}/{i["expense_memo"]}/¥{i["expense_amount"]}'
-                for i in frequent_items
-            ]
-        )
-        additional_items += "," + frequent_items_str
-    if len(recent_items):
-        recent_items_str = ",".join(
-            [
-                f'🕒️ {i["expense_type"]}/{i["expense_memo"]}/¥{i["expense_amount"]}'
-                for i in recent_items
-            ]
-        )
-        additional_items += "," + recent_items_str
+    for item_data in item_list:
+        items: list[dict] = item_data.get("items", [])
+        icon: str = item_data.get("icon", "")
+        if len(items):
+            items_str = ",".join(
+                [
+                    f'{icon} {i["expense_type"]}/{i["expense_memo"]}/¥{i["expense_amount"]}'
+                    for i in items
+                ]
+            )
+            if len(additional_items):
+                items_str = "," + items_str
+            additional_items += items_str
     if additional_items:
         additional_items = additional_items.replace("//", "/")
         items_list_str = additional_items + "," + items_list_str
