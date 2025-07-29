@@ -87,12 +87,18 @@ async def main(args: argparse.Namespace) -> None:
             frequent_expenses = get_frequent_expenses(5)
             recent_expenses = get_recent_expenses(5)
 
-            favorite_expenses, frequent_expenses, recent_expenses = (
-                filter_duplicates(
-                    favorite_expenses=favorite_expenses,
-                    frequent_expenses=frequent_expenses,
-                    recent_expenses=recent_expenses,
-                )
+            (
+                favorite_expenses,
+                frequent_expenses,
+                recent_expenses,
+                ocr_expenses,
+            ) = filter_duplicates(
+                [
+                    favorite_expenses,
+                    frequent_expenses,
+                    recent_expenses,
+                    ocr_expenses,
+                ]
             )
 
             expense_type = select_expense_type(
@@ -250,34 +256,39 @@ def get_ocr_expenses() -> list[dict]:
 
 
 def filter_duplicates(
-    favorite_expenses: list[dict],
-    frequent_expenses: list[dict],
-    recent_expenses: list[dict],
-) -> tuple[list[dict], list[dict], list[dict]]:
+    expenses_list: list[list[dict]],
+) -> list[list[dict]]:
     """
-    filter out duplicates
+    filter out duplicate expenses across different expense categories
     """
+    log.info("start 'filter_duplicates' method")
 
     def dict_to_key(d: dict) -> str:
         return json.dumps(d, sort_keys=True)
 
-    seen1 = set(dict_to_key(d) for d in favorite_expenses)
-    frequent_expenses_filtered = []
-    seen2 = set()
-    for d in frequent_expenses:
-        k = dict_to_key(d)
-        if k not in seen1:
-            seen2.add(k)
-            frequent_expenses_filtered.append(d)
-    seen_all = seen1 | seen2
-    recent_expenses_filtered = []
-    for d in recent_expenses:
-        k = dict_to_key(d)
-        if k not in seen_all:
-            recent_expenses_filtered.append(d)
-    frequent_expenses = frequent_expenses_filtered
-    recent_expenses = recent_expenses_filtered
-    return favorite_expenses, frequent_expenses, recent_expenses
+    def filter_list(expenses: list[dict], seen: set) -> list[dict]:
+        filtered = []
+        for expense in expenses:
+            key = dict_to_key(expense)
+            if key not in seen:
+                seen.add(key)
+                filtered.append(expense)
+        return filtered
+
+    # Add first expenses keys to seen set
+    seen_keys: set[str] = set()
+    seen_keys.update(dict_to_key(d) for d in expenses_list[0])
+
+    # Filter remaining lists in priority order
+    result = [expenses_list[0]]
+    for expenses in expenses_list[1:]:
+        if not expenses:
+            continue
+        filtered_expenses = filter_list(expenses, seen_keys)
+        result.append(filtered_expenses)
+
+    log.info("end 'filter_duplicates' method")
+    return result
 
 
 def store_expense(
