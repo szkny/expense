@@ -68,23 +68,17 @@ async def main(args: argparse.Namespace) -> None:
             )
         elif args.ocr_image:
             ocr_data = ocr_main(loop)
-            predicted_type = ocr_data.get("predicted_type", "")
+            expense_type = ocr_data["expense_type"]
+            expense_amount = int(ocr_data["expense_amount"])
             expense_memo = ocr_data.get("expense_memo", "")
-            expense_amount = ocr_data.get("expense_amount", 0)
-            if confirmation(
-                f"以下の読み取り内容で登録しますか？\n{predicted_type}: {expense_memo}, ¥{expense_amount:,}"
-            ):
-                expense_type = predicted_type
-            else:
-                expense_type = select_expense_type()
-                expense_amount = enter_expense_amount(expense_type)
-                expense_memo = enter_expense_memo(expense_type)
-            loop.run_in_executor(None, lambda: toast("登録中.."))
-            handler = GspreadHandler(bookname)
-            handler.register_expense(expense_type, expense_amount, expense_memo)
-            store_expense(expense_type, expense_memo, expense_amount)
+            json.dump(
+                ocr_data,
+                open("./caches/ocr_data.json", "w"),
+                ensure_ascii=False,
+                indent=2,
+            )
             notify(
-                "家計簿への登録が完了しました。",
+                "画像の解析が完了しました。",
                 f"{expense_type}{':'+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
             )
         else:
@@ -291,10 +285,10 @@ def ocr_main(loop: asyncio.AbstractEventLoop) -> dict:
             f'{{"amount": {expense_amount}, "memo": "{expense_memo}"}}',
         ]
     )
-    predicted_type = res.get("predicted_type", "")
+    expense_type = res.get("predicted_type", "")
     log.info("end 'ocr_main' method")
     return {
-        "predicted_type": predicted_type,
+        "expense_type": expense_type,
         "expense_amount": expense_amount,
         "expense_memo": expense_memo,
     }
