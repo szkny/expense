@@ -67,7 +67,7 @@ async def main(args: argparse.Namespace) -> None:
                 f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
             )
         elif args.ocr_image:
-            ocr_data = ocr_main(loop)
+            ocr_data = ocr_main()
             expense_type = ocr_data["expense_type"]
             expense_amount = int(ocr_data["expense_amount"])
             expense_memo = ocr_data.get("expense_memo", "")
@@ -306,7 +306,7 @@ def store_expense(
     return
 
 
-def ocr_main(loop: asyncio.AbstractEventLoop) -> dict:
+def ocr_main() -> dict:
     log.info("start 'ocr_main' method")
     toast("画像解析中..")
     screenshot_name = get_latest_screenshot()
@@ -643,6 +643,8 @@ def notify(title: str, content: str, timeout: int = 30) -> None:
 
 
 if __name__ == "__main__":
+    ocr_main()
+    exit()
     parser = argparse.ArgumentParser(
         description="家計簿スプレッドシートに自動で書き込みを行うバッチプログラム"
     )
