@@ -133,8 +133,8 @@ async def main(args: argparse.Namespace) -> None:
                 f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
             )
     except Exception as e:
-        log.exception("家計簿の登録処理に失敗しました。")
-        notify("🚫家計簿の登録処理に失敗しました。", str(e))
+        log.exception("処理に失敗しました。")
+        notify("🚫処理に失敗しました。", str(e))
     finally:
         log.info("end 'main' method")
 
