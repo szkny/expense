@@ -64,7 +64,7 @@ async def main(args: argparse.Namespace) -> None:
             store_expense(expense_type, expense_memo, expense_amount)
             notify(
                 "家計簿への登録が完了しました。",
-                f"{expense_type}{':'+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
+                f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
             )
         elif args.ocr_image:
             ocr_data = ocr_main(loop)
@@ -79,7 +79,7 @@ async def main(args: argparse.Namespace) -> None:
             )
             notify(
                 "画像の解析が完了しました。",
-                f"{expense_type}{':'+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
+                f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
             )
         else:
             favorite_expenses = get_favorite_expenses()
@@ -120,7 +120,7 @@ async def main(args: argparse.Namespace) -> None:
             store_expense(expense_type, expense_memo, expense_amount)
             notify(
                 "家計簿への登録が完了しました。",
-                f"{expense_type}{':'+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
+                f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
             )
     except Exception as e:
         log.exception("家計簿の登録処理に失敗しました。")
