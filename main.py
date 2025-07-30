@@ -53,35 +53,31 @@ async def main(args: argparse.Namespace) -> None:
                 "家計簿の取得が完了しました。",
                 f"🗓️{today_str}\n{todays_expenses}",
             )
+            return
         elif args.json_data:
             data = json.loads(args.json_data)
             expense_type = data["type"]
             expense_amount = int(data["amount"])
             expense_memo = data.get("memo", "")
-            loop.run_in_executor(None, lambda: toast("登録中.."))
-            handler = GspreadHandler(bookname)
-            handler.register_expense(expense_type, expense_amount, expense_memo)
-            store_expense(expense_type, expense_memo, expense_amount)
-            notify(
-                "家計簿への登録が完了しました。",
-                f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
-            )
         elif args.ocr_image:
             ocr_data = ocr_main()
             expense_type = ocr_data["expense_type"]
             expense_amount = int(ocr_data["expense_amount"])
             expense_memo = ocr_data.get("expense_memo", "")
+            latest_ocr_data = get_ocr_expenses()[0]
+            if latest_ocr_data == ocr_data:
+                log.info("OCR data already exists, skipping registration.")
+                notify(
+                    "OCRデータは登録済のためスキップされました。",
+                    f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
+                )
+                return
             json.dump(
                 ocr_data,
                 open("./caches/ocr_data.json", "w"),
                 ensure_ascii=False,
                 indent=2,
             )
-            notify(
-                "画像の解析が完了しました。",
-                f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
-            )
-            # TODO: register expense to spreadsheet
         else:
             ocr_expenses = get_ocr_expenses()
             favorite_expenses = get_favorite_expenses()
@@ -125,14 +121,14 @@ async def main(args: argparse.Namespace) -> None:
                 expense_memo = enter_expense_memo(
                     f"{expense_type}(¥{expense_amount:,})"
                 )
-            loop.run_in_executor(None, lambda: toast("登録中.."))
-            handler = GspreadHandler(bookname)
-            handler.register_expense(expense_type, expense_amount, expense_memo)
-            store_expense(expense_type, expense_memo, expense_amount)
-            notify(
-                "家計簿への登録が完了しました。",
-                f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
-            )
+        loop.run_in_executor(None, lambda: toast("登録中.."))
+        handler = GspreadHandler(bookname)
+        handler.register_expense(expense_type, expense_amount, expense_memo)
+        store_expense(expense_type, expense_memo, expense_amount)
+        notify(
+            "家計簿への登録が完了しました。",
+            f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
+        )
     except Exception as e:
         log.exception("処理に失敗しました。")
         notify("🚫処理に失敗しました。", str(e))
@@ -250,8 +246,12 @@ def get_ocr_expenses() -> list[dict]:
             "expense_type": data.get("expense_type", ""),
             "expense_memo": data.get("expense_memo", ""),
             "expense_amount": int(data.get("expense_amount", 0)),
+            "screenshot_name": data.get("screenshot_name", ""),
         }
     ]
+    log.debug(
+        f"OCR expenses: {json.dumps(ocr_expenses, indent=2, ensure_ascii=False)}"
+    )
     log.info("end 'get_ocr_expenses' method")
     return ocr_expenses
 
@@ -330,6 +330,7 @@ def ocr_main(offset: int = 0) -> dict:
         "expense_type": expense_type,
         "expense_amount": expense_amount,
         "expense_memo": expense_memo,
+        "screenshot_name": screenshot_name,
     }
 
 
