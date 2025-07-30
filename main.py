@@ -64,7 +64,7 @@ async def main(args: argparse.Namespace) -> None:
             expense_type = ocr_data["expense_type"]
             expense_amount = int(ocr_data["expense_amount"])
             expense_memo = ocr_data.get("expense_memo", "")
-            latest_ocr_data = get_ocr_expenses()[0]
+            latest_ocr_data = get_ocr_expenses(with_screenshot_name=True)[0]
             if latest_ocr_data == ocr_data:
                 log.info("OCR data already exists, skipping registration.")
                 notify(
@@ -230,7 +230,7 @@ def get_recent_expenses(num_items: int = 3) -> list[dict]:
     return recent_expenses
 
 
-def get_ocr_expenses() -> list[dict]:
+def get_ocr_expenses(with_screenshot_name: bool = False) -> list[dict]:
     """
     get OCR expenses
     """
@@ -241,14 +241,14 @@ def get_ocr_expenses() -> list[dict]:
     except FileNotFoundError:
         log.debug("OCR data not found.")
         return []
-    ocr_expenses = [
-        {
-            "expense_type": data.get("expense_type", ""),
-            "expense_memo": data.get("expense_memo", ""),
-            "expense_amount": int(data.get("expense_amount", 0)),
-            "screenshot_name": data.get("screenshot_name", ""),
-        }
-    ]
+    ocr_expense = {
+        "expense_type": data.get("expense_type", ""),
+        "expense_memo": data.get("expense_memo", ""),
+        "expense_amount": int(data.get("expense_amount", 0)),
+    }
+    if with_screenshot_name:
+        ocr_expense["screenshot_name"] = data.get("screenshot_name", "")
+    ocr_expenses = [ocr_expense]
     log.debug(
         f"OCR expenses: {json.dumps(ocr_expenses, indent=2, ensure_ascii=False)}"
     )
