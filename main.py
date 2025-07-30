@@ -81,6 +81,7 @@ async def main(args: argparse.Namespace) -> None:
                 "画像の解析が完了しました。",
                 f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
             )
+            # TODO: register expense to spreadsheet
         else:
             ocr_expenses = get_ocr_expenses()
             favorite_expenses = get_favorite_expenses()
@@ -332,6 +333,7 @@ def ocr_main(offset: int = 0) -> dict:
     }
 
 
+# TODO: move to a test scripts
 def ocr_test(n: int = 10, offset: int = 0) -> None:
     """OCR text processing for multiple screenshots"""
     result = []
@@ -394,6 +396,7 @@ def ocr_image(screenshot_name: str) -> str:
     img = Image.open(screenshot_name)
 
     # Define OCR regions for different payment apps
+    # TODO: load from config or environment
     OCR_REGIONS = {
         "PayPay": [
             (160, 100, 1000, 250),  # Region 1: Transaction title
