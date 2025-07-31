@@ -322,6 +322,7 @@ def ocr_main(offset: int = 0) -> dict:
             "expense_type_classification",
             "--json",
             f'{{"amount": {expense_amount}, "memo": "{expense_memo}"}}',
+            "--predict-only",
         ]
     )
     expense_type = res.get("predicted_type", "")
