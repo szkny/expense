@@ -334,27 +334,6 @@ def ocr_main(offset: int = 0) -> dict:
     }
 
 
-# TODO: move to a test scripts
-def ocr_test(n: int = 10, offset: int = 0) -> None:
-    """OCR text processing for multiple screenshots"""
-    result = []
-    for i in range(n):
-        screenshot_name = get_latest_screenshot(offset + i)
-        expense_data = ocr_main(offset + i)
-        expense_amount = expense_data.get("expense_amount", "")
-        expense_memo = expense_data.get("expense_memo", "")
-        expense_type = expense_data.get("expense_type", "")
-        result.append(
-            {
-                "screenshot_name": screenshot_name,
-                "expense_type": expense_type,
-                "expense_amount": expense_amount,
-                "expense_memo": expense_memo,
-            }
-        )
-    log.info(f"OCR results: {json.dumps(result, indent=2, ensure_ascii=False)}")
-
-
 def get_latest_screenshot(offset: int = 0) -> str:
     """
     get the latest screenshot file name
