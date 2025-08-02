@@ -307,16 +307,18 @@ def store_expense(
     return
 
 
-def ocr_main(offset: int = 0) -> dict:
+def ocr_main(offset: int = 0, enable_toast: bool = True) -> dict:
     """main method for OCR processing"""
     log.info("start 'ocr_main' method")
-    toast("画像解析中..")
+    if enable_toast:
+        toast("画像解析中..")
     screenshot_name = get_latest_screenshot(offset)
     ocr_text = ocr_image(screenshot_name)
     expense_data = parse_ocr_text(ocr_text)
     expense_amount = expense_data.get("amount", "")
     expense_memo = expense_data.get("memo", "")
-    toast("支出項目解析中..")
+    if enable_toast:
+        toast("支出項目解析中..")
     res = exec_command(
         [
             "expense_type_classification",

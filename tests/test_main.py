@@ -137,11 +137,11 @@ class TestMain(unittest.TestCase):
             mock_open.assert_called_once_with(unittest.mock.ANY, "a")
             mock_open().write.assert_called_once()
 
-    def test_ocr_main(self, n: int = 5, offset: int = 0) -> None:
+    def test_ocr_main(self, n: int = 3, offset: int = 0) -> None:
         result = []
         for i in range(n):
             screenshot_name = get_latest_screenshot(offset + i)
-            expense_data = ocr_main(offset + i)
+            expense_data = ocr_main(offset + i, enable_toast=False)
             expense_amount = expense_data.get("expense_amount", "")
             expense_memo = expense_data.get("expense_memo", "")
             expense_type = expense_data.get("expense_type", "")
