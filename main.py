@@ -321,7 +321,7 @@ def ocr_main(offset: int = 0, enable_toast: bool = True) -> dict:
         toast("支出項目解析中..")
     res = exec_command(
         [
-            "expense_type_classification",
+            "expense_type_classifier",
             "--json",
             f'{{"amount": {expense_amount}, "memo": "{expense_memo}"}}',
         ]
