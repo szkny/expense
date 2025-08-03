@@ -557,7 +557,7 @@ def select_expense_type(
     data = exec_command(
         [
             "termux-dialog",
-            "spinner",
+            "sheet",
             "-t",
             TITLE,
             "-v",
