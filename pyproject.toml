@@ -1,32 +1,35 @@
-[tool.poetry]
+[project]
 name = "expense"
 version = "0.1.0"
 description = "household expenses on termux"
-authors = ["Sohei.Suzuki <suzuki.s1008@gmail.com>"]
-license = "MIT"
+authors = [{ name="Sohei.Suzuki", email="s.s1008@gmail.com" }]
 readme = "README.md"
-package-mode = false
+license = { text = "MIT" }
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    "joblib>=1.2.0",
+    "gspread>=6.0.0",
+    "platformdirs>=4.0.0",
+    "google-auth>=2.20.0",
+    "google-auth>=2.30.0",
+    "google-auth-oauthlib>=1.2.0",
+    "google-auth-httplib2>=0.2.0",
+    "tenacity>=9.0.0",
+    "pytesseract>=0.3.0",
+]
 
-[tool.poetry.dependencies]
-python = "^3.11"
-gspread = "^6.1.2"
-google-auth = "^2.35.0"
-google-auth-oauthlib = "^1.2.1"
-google-auth-httplib2 = "^0.2.0"
-tenacity = "^9.0.0"
-pytesseract = "^0.3.13"
+[project.scripts]
+expense = "expense.main:main"
 
-[tool.poetry.group.dev.dependencies]
-# ruff = "^0.4.9"
-black = "^24.4.2"
-mypy = "^1.10.0"
-pytest = "^8.2.2"
-pytest-env = "^1.1.3"
-debugpy = "^1.8.5"
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
 [tool.mypy]
 warn_return_any = true

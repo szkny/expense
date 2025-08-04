@@ -4,3 +4,7 @@ favorites.json
 __pycache__
 .mypy_cache
 .venv
+**.pyc
+**.egg-info
+build
+dist

@@ -18,7 +18,7 @@ import logging as log
 from typing import Any
 from collections import Counter
 from platformdirs import user_cache_dir
-from gspread_wrapper import GspreadHandler
+from expense.gspread_wrapper import GspreadHandler
 
 TITLE = "家計簿"
 
@@ -39,11 +39,45 @@ log.basicConfig(
 )
 
 
-async def main(args: argparse.Namespace) -> None:
+def main() -> None:
     """
     main process
     """
-    log.info("start 'main' method")
+    parser = argparse.ArgumentParser(
+        description="家計簿スプレッドシートに自動で書き込みを行うバッチプログラム"
+    )
+    parser.add_argument(
+        "-c",
+        "--check",
+        dest="check_todays_expenses",
+        default=False,
+        action="store_true",
+        help="check today's expenses",
+    )
+    parser.add_argument(
+        "-j",
+        "--json",
+        dest="json_data",
+        type=str,
+        default=None,
+        help="expense data in JSON format",
+    )
+    parser.add_argument(
+        "--ocr",
+        dest="ocr_image",
+        default=False,
+        action="store_true",
+        help="ocr image of the latest screenshot",
+    )
+    args = parser.parse_args()
+    asyncio.run(expense_main(args))
+
+
+async def expense_main(args: argparse.Namespace) -> None:
+    """
+    main process for expense registration
+    """
+    log.info("start 'expense_main' method")
     try:
         loop = asyncio.get_running_loop()
         current_fiscal_year = get_fiscal_year()
@@ -138,7 +172,7 @@ async def main(args: argparse.Namespace) -> None:
         log.exception("処理に失敗しました。")
         notify("🚫処理に失敗しました。", str(e))
     finally:
-        log.info("end 'main' method")
+        log.info("end 'expense_main' method")
 
 
 def get_favorite_expenses() -> list[dict]:
@@ -685,31 +719,4 @@ def notify(title: str, content: str, timeout: int = 30) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="家計簿スプレッドシートに自動で書き込みを行うバッチプログラム"
-    )
-    parser.add_argument(
-        "-c",
-        "--check",
-        dest="check_todays_expenses",
-        default=False,
-        action="store_true",
-        help="check today's expenses",
-    )
-    parser.add_argument(
-        "-j",
-        "--json",
-        dest="json_data",
-        type=str,
-        default=None,
-        help="expense data in JSON format",
-    )
-    parser.add_argument(
-        "--ocr",
-        dest="ocr_image",
-        default=False,
-        action="store_true",
-        help="ocr image of the latest screenshot",
-    )
-    args = parser.parse_args()
-    asyncio.run(main(args))
+    main()
