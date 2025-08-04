@@ -45,6 +45,7 @@ ignore_missing_imports = false
 module = [
     "matplotlib.*",
     "pytesseract",
+    "expense.*",
 ]
 ignore_missing_imports = true
 

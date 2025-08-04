@@ -17,14 +17,16 @@ from PIL import Image
 import logging as log
 from typing import Any
 from collections import Counter
-from platformdirs import user_cache_dir
 from expense.gspread_wrapper import GspreadHandler
+from platformdirs import user_cache_dir, user_config_dir
 
 TITLE = "家計簿"
 
 APP_NAME = "expense"
 CACHE_PATH = pathlib.Path(user_cache_dir(APP_NAME))
+CONFIG_PATH = pathlib.Path(user_config_dir(APP_NAME))
 CACHE_PATH.mkdir(parents=True, exist_ok=True)
+CONFIG_PATH.mkdir(parents=True, exist_ok=True)
 
 HOME = os.getenv("HOME") or "~"
 EXPENSE_HISTORY = CACHE_PATH / "expense_history.log"
@@ -183,7 +185,7 @@ def get_favorite_expenses() -> list[dict]:
     if not os.path.exists(EXPENSE_HISTORY):
         return []
     try:
-        with open("./favorites.json", "r") as f:
+        with open(CONFIG_PATH / "favorites.json", "r") as f:
             data: list[dict] = json.load(f)
     except FileNotFoundError:
         return []

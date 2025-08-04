@@ -1,9 +1,15 @@
 import re
+import pathlib
 import gspread
 import datetime as dt
 import logging as log
+from platformdirs import user_config_dir
 from tenacity import retry, stop_after_attempt
 from google.oauth2 import service_account
+
+APP_NAME = "expense"
+CONFIG_PATH = pathlib.Path(user_config_dir(APP_NAME))
+CONFIG_PATH.mkdir(parents=True, exist_ok=True)
 
 expense_type_list: list[str] = [
     "給与",
@@ -26,7 +32,7 @@ class GspreadHandler:
     def __init__(self, book_name: str) -> None:
         log.info("start 'GspreadHandler' constructor")
         credentials = service_account.Credentials.from_service_account_file(
-            "credentials.json",
+            CONFIG_PATH / "credentials.json",
             scopes=[
                 "https://spreadsheets.google.com/feeds",
                 "https://www.googleapis.com/auth/drive",
