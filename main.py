@@ -8,6 +8,7 @@ import re
 import glob
 import json
 import asyncio
+import pathlib
 import argparse
 import datetime
 import subprocess
@@ -16,19 +17,23 @@ from PIL import Image
 import logging as log
 from typing import Any
 from collections import Counter
+from platformdirs import user_cache_dir
 from gspread_wrapper import GspreadHandler
 
 TITLE = "家計簿"
 
+APP_NAME = "expense"
+CACHE_PATH = pathlib.Path(user_cache_dir(APP_NAME))
+CACHE_PATH.mkdir(parents=True, exist_ok=True)
+
 HOME = os.getenv("HOME") or "~"
-os.makedirs(HOME + "/tmp/expense", exist_ok=True)
-EXPENSE_HISTORY = HOME + "/tmp/expense/expense_history.log"
+EXPENSE_HISTORY = CACHE_PATH / "expense_history.log"
 
 log.basicConfig(
     level=log.DEBUG,
     handlers=[
         log.StreamHandler(),
-        log.FileHandler(HOME + "/tmp/expense/expense.log"),
+        log.FileHandler(CACHE_PATH / "expense.log"),
     ],
     format="%(asctime)s - [%(levelname)s] %(message)s",
 )
@@ -64,8 +69,8 @@ async def main(args: argparse.Namespace) -> None:
             expense_type = ocr_data["expense_type"]
             expense_amount = int(ocr_data["expense_amount"])
             expense_memo = ocr_data.get("expense_memo", "")
-            latest_ocr_data = get_ocr_expenses(with_screenshot_name=True)[0]
-            if latest_ocr_data == ocr_data:
+            latest_ocr_data = get_ocr_expenses(with_screenshot_name=True)
+            if len(latest_ocr_data) and latest_ocr_data[0] == ocr_data:
                 log.info("OCR data already exists, skipping registration.")
                 notify(
                     "OCRデータは登録済のためスキップされました。",
@@ -74,7 +79,7 @@ async def main(args: argparse.Namespace) -> None:
                 return
             json.dump(
                 ocr_data,
-                open("./caches/ocr_data.json", "w"),
+                open(CACHE_PATH / "ocr_data.json", "w"),
                 ensure_ascii=False,
                 indent=2,
             )
@@ -236,7 +241,7 @@ def get_ocr_expenses(with_screenshot_name: bool = False) -> list[dict]:
     """
     log.info("start 'get_ocr_expenses' method")
     try:
-        with open("./caches/ocr_data.json", "r") as f:
+        with open(CACHE_PATH / "ocr_data.json", "r") as f:
             data: dict = json.load(f)
     except FileNotFoundError:
         log.debug("OCR data not found.")
