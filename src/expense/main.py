@@ -29,13 +29,13 @@ CACHE_PATH.mkdir(parents=True, exist_ok=True)
 CONFIG_PATH.mkdir(parents=True, exist_ok=True)
 
 HOME = os.getenv("HOME") or "~"
-EXPENSE_HISTORY = CACHE_PATH / "expense_history.log"
+EXPENSE_HISTORY = CACHE_PATH / f"{APP_NAME}_history.log"
 
 log.basicConfig(
     level=log.DEBUG,
     handlers=[
         log.StreamHandler(),
-        log.FileHandler(CACHE_PATH / "expense.log"),
+        log.FileHandler(CACHE_PATH / f"{APP_NAME}.log"),
     ],
     format="%(asctime)s - [%(levelname)s] %(message)s",
 )
