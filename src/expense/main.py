@@ -291,7 +291,7 @@ def get_ocr_expenses(with_screenshot_name: bool = False) -> list[dict]:
         ocr_expense["screenshot_name"] = data.get("screenshot_name", "")
     ocr_expenses = [ocr_expense]
     log.debug(
-        f"OCR expenses: {json.dumps(ocr_expenses, indent=2, ensure_ascii=False)}"
+        f"Latest OCR expenses: {json.dumps(ocr_expenses, indent=2, ensure_ascii=False)}"
     )
     log.info("end 'get_ocr_expenses' method")
     return ocr_expenses
@@ -373,7 +373,7 @@ def ocr_main(offset: int = 0, enable_toast: bool = True) -> dict:
         "expense_type": expense_type,
         "expense_amount": expense_amount,
         "expense_memo": expense_memo,
-        "screenshot_name": screenshot_name,
+        "screenshot_name": os.path.basename(screenshot_name),
     }
 
 
@@ -458,16 +458,14 @@ def parse_ocr_text(ocr_text: str) -> dict:
     """
     Extract expense data (amount and memo) from OCR text
     """
-    log.info("start 'get_expense_data_from_ocr_text' method")
+    log.info("start 'parse_ocr_text' method")
 
     date_pattern = re.compile(
         r"(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}(日)?|\d{1,2}[:時]\d{1,2}(分)?)"
     )
 
     def extract_amount(text_rows: list[str]) -> int | None:
-        amount_pattern = re.compile(
-            r"(?:¥\s*|)([1-9]\d{0,2}(?:[,\.]*\d{3})*|\d{2,})"
-        )
+        amount_pattern = re.compile(r"([1-9]\d{0,2}[,\.]*\d{0,3})")
         amounts = []
         for i, row in enumerate(text_rows):
             row = row.replace(" ", "")
@@ -520,7 +518,7 @@ def parse_ocr_text(ocr_text: str) -> dict:
     if expense_data["memo"]:
         log.debug(f"Extracted Expense Memo: {expense_data['memo']}")
 
-    log.info("end 'get_expense_data_from_ocr_text' method")
+    log.info("end 'parse_ocr_text' method")
     return expense_data
 
 
