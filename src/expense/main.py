@@ -28,7 +28,7 @@ CONFIG_PATH = pathlib.Path(user_config_dir(APP_NAME))
 CACHE_PATH.mkdir(parents=True, exist_ok=True)
 CONFIG_PATH.mkdir(parents=True, exist_ok=True)
 
-HOME = os.getenv("HOME") or "~"
+HOME = pathlib.Path(os.getenv("HOME") or "~")
 EXPENSE_HISTORY = CACHE_PATH / f"{APP_NAME}_history.log"
 
 log.basicConfig(
@@ -383,7 +383,7 @@ def get_latest_screenshot(offset: int = 0) -> str:
     """
     log.info("start 'get_latest_screenshot' method")
     screenshot_list = glob.glob(
-        HOME + "/storage/dcim/Screenshots/Screenshot_*Pay.jpg"
+        (HOME / "storage/dcim/Screenshots/Screenshot_*Pay.jpg").as_posix()
     )
     if len(screenshot_list) == 0:
         raise FileNotFoundError("スクリーンショットが見つかりませんでした。")
