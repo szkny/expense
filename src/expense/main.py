@@ -120,7 +120,6 @@ async def expense_main(args: argparse.Namespace) -> None:
                 indent=2,
             )
         else:
-            ocr_expenses = get_ocr_expenses()
             favorite_expenses = get_favorite_expenses()
             frequent_expenses = get_frequent_expenses(5)
             recent_expenses = get_recent_expenses(5)
@@ -129,26 +128,23 @@ async def expense_main(args: argparse.Namespace) -> None:
                 favorite_expenses,
                 frequent_expenses,
                 recent_expenses,
-                ocr_expenses,
             ) = filter_duplicates(
                 [
                     favorite_expenses,
                     frequent_expenses,
                     recent_expenses,
-                    ocr_expenses,
                 ]
             )
 
             expense_type = select_expense_type(
                 item_list=[
-                    {"icon": "📷", "items": ocr_expenses},
                     {"icon": "⭐", "items": favorite_expenses},
                     {"icon": "🔥", "items": frequent_expenses},
                     {"icon": "🕒️", "items": recent_expenses},
                 ],
             )
-            if any([emoji in expense_type for emoji in "⭐🔥🕒️📷"]):
-                data = re.sub("(⭐|🔥|🕒️|📷) ", "", expense_type).split("/")
+            if any([emoji in expense_type for emoji in "⭐🔥🕒️"]):
+                data = re.sub("(⭐|🔥|🕒️) ", "", expense_type).split("/")
                 if len(data) == 3:
                     expense_type = data[0]
                     expense_memo = data[1]
@@ -324,8 +320,6 @@ def filter_duplicates(
     # Filter remaining lists in priority order
     result = [expenses_list[0]]
     for expenses in expenses_list[1:]:
-        if not expenses:
-            continue
         filtered_expenses = filter_list(expenses, seen_keys)
         result.append(filtered_expenses)
 
