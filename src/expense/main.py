@@ -413,17 +413,15 @@ def ocr_image(screenshot_name: str) -> str:
     img = Image.open(screenshot_name)
 
     # Define OCR regions for different payment apps
-    # TODO: load from config or environment
-    OCR_REGIONS = {
-        "PayPay": [
-            (160, 100, 1000, 250),  # Region 1: Transaction title
-            (0, 270, 1000, 450),  # Region 2: Transaction amount
-        ],
-    }
+    try:
+        with open(CONFIG_PATH / "ocr_regions.json", "r") as f:
+            ocr_regions: dict[str, list] = json.load(f)
+    except FileNotFoundError:
+        ocr_regions = {}
 
     # Determine which regions to process based on screenshot name
     regions_to_process = {}
-    for app_name, regions in OCR_REGIONS.items():
+    for app_name, regions in ocr_regions.items():
         if app_name in screenshot_name:
             regions_to_process = {app_name: regions}
             break
