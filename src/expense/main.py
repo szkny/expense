@@ -13,6 +13,7 @@ import argparse
 import datetime
 import subprocess
 import pytesseract
+import pandas as pd
 from PIL import Image
 import logging as log
 from typing import Any
@@ -107,7 +108,8 @@ async def expense_main(args: argparse.Namespace) -> None:
             expense_memo = ocr_data.get("expense_memo", "")
             latest_ocr_data = get_ocr_expense()
             if len(latest_ocr_data) and (
-                latest_ocr_data.get("screenshot_name") == ocr_data.get("screenshot_name")
+                latest_ocr_data.get("screenshot_name")
+                == ocr_data.get("screenshot_name")
             ):
                 log.info("OCR data already exists, skipping registration.")
                 notify(
@@ -525,11 +527,13 @@ def extract_memo(text_rows: list[str], date_pattern: re.Pattern) -> str | None:
         if date_pattern.search(row):
             break
 
-        pattern = r"[^A-Za-z]"  # non-alphabets
+        # Remove spaces between alphabets and non-alphabets
+        pattern_nonalpha = r"[^A-Za-z]"  # non-alphabets
         pattern_alpha = r"[A-Za-z]"  # alphabets
-        row = re.sub(f"(?<={pattern_alpha}) (?={pattern})", "", row)
-        row = re.sub(f"(?<={pattern}) (?={pattern_alpha})", "", row)
+        row = re.sub(f"(?<={pattern_alpha}) (?={pattern_nonalpha})", "", row)
+        row = re.sub(f"(?<={pattern_nonalpha}) (?={pattern_alpha})", "", row)
 
+        # Extract memos
         if match := memo_pattern.search(row.strip()):
             log.debug(f"Processing row {i} for memo: {row}")
             memos.append(match.group(1))
@@ -548,8 +552,103 @@ def extract_memo(text_rows: list[str], date_pattern: re.Pattern) -> str | None:
             memo += " " + memos[1]
         elif len(memos[0]) < len(memos[1]):
             memo = memos[1]
+
+    memo = correct_expense_memo(memo)
     log.info("end 'extract_memo' method")
     return memo
+
+
+def levenshtein(a: str, b: str) -> int:
+    """
+    calculate the Levenshtein distance between two strings
+    """
+    if a == b:
+        return 0
+    la, lb = len(a), len(b)
+    if la == 0:
+        return lb
+    if lb == 0:
+        return la
+    if la < lb:
+        a, b = b, a
+        la, lb = lb, la
+    prev = list(range(lb + 1))
+    cur = [0] * (lb + 1)
+    for i in range(1, la + 1):
+        cur[0] = i
+        ai = a[i - 1]
+        for j in range(1, lb + 1):
+            cost = 0 if ai == b[j - 1] else 1
+            insertion = cur[j - 1] + 1
+            deletion = prev[j] + 1
+            substitution = prev[j - 1] + cost
+            cur[j] = min(insertion, deletion, substitution)
+        prev, cur = cur, prev
+    return prev[lb]
+
+
+def similarity(a: str, b: str) -> float:
+    """
+    calculate the similarity between two strings
+    """
+    if len(a) == 0 and len(b) == 0:
+        return 1.0
+    return 1.0 - levenshtein(a, b) / max(len(a), len(b))
+
+
+def get_most_similar_memo(
+    target: str, memos: list[str], threshold: float = 0.9
+) -> str:
+    """
+    get the most similar memo from a list of memos
+    """
+    log.info("start 'get_most_similar_memo' method")
+    log.debug(f"Target memo:\t\t{target}")
+    most_similar_memo = ""
+    highest_similarity = 0.0
+    for memo in memos:
+        sim = similarity(target, memo)
+        if sim > highest_similarity:
+            highest_similarity = sim
+            most_similar_memo = memo
+    log.debug(
+        f"Most similar memo:\t{most_similar_memo} (similarity: {highest_similarity: .2f})"
+    )
+    if highest_similarity < threshold:
+        most_similar_memo = ""
+        log.debug(f"No similar memo found above the threshold ({threshold: .2f}).")
+    else:
+        log.debug(f"Similar memo found above the threshold ({threshold: .2f}).")
+    log.info("end 'get_most_similar_memo' method")
+    return most_similar_memo
+
+
+def get_expense_history() -> pd.DataFrame:
+    log.info("start 'get_expense_history' method")
+    expense_cache_path = pathlib.Path(user_cache_dir("expense"))
+    fname = expense_cache_path / "expense_history.log"
+    df = pd.read_csv(fname, index_col=None)
+    df = df.T.reset_index().T
+    df.columns = pd.Index(["date", "type", "memo", "amount"])
+    df.index = pd.Index(range(len(df)))
+    log.info("end 'get_expense_history' method")
+    return df
+
+
+def correct_expense_memo(expense_memo: str) -> str:
+    """
+    correct expense memo using expense history
+    """
+    log.info("start 'correct_expense_memo' method")
+    if not expense_memo:
+        return ""
+    df = get_expense_history()
+    memos = df["memo"].dropna().unique().tolist()
+    corrected_memo = get_most_similar_memo(expense_memo, memos)
+    if not corrected_memo:
+        corrected_memo = expense_memo
+    log.info("end 'correct_expense_memo' method")
+    return corrected_memo
 
 
 def get_fiscal_year() -> int:
