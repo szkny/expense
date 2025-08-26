@@ -24,7 +24,7 @@ class TestMain(unittest.TestCase):
             normalize_capture_text("０１２３４５６７８９"), "0123456789"
         )
         self.assertEqual(normalize_capture_text("あ い う え お"), "あいうえお")
-        self.assertEqual(normalize_capture_text("①０ あ い"), "10 あい")
+        self.assertEqual(normalize_capture_text("①０ あ い"), "10あい")
 
     def test_get_fiscal_year(self) -> None:
         with patch("src.expense.main.datetime") as mock_datetime:

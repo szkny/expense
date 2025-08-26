@@ -399,7 +399,9 @@ def normalize_capture_text(text: str) -> str:
         r"[０-９]", lambda m: str(int(m.group(0))), normalized_text
     )
     normalized_text = re.sub(
-        r"(?<=[^\x00-\x7F]) (?=[^\x00-\x7F])", "", normalized_text
+        r"(?<=[^A-Za-z]) (?=[^A-Za-z])",
+        "",
+        normalized_text,
     )
     log.info("end 'normalized_text' method")
     return normalized_text
@@ -455,54 +457,11 @@ def parse_ocr_text(ocr_text: str) -> dict:
     date_pattern = re.compile(
         r"(\d{4}[-/年]\d{1,2}[-/月]\d{1,2}(日)?|\d{1,2}[:時]\d{1,2}(分)?)"
     )
-
-    def extract_amount(text_rows: list[str]) -> int | None:
-        amount_pattern = re.compile(r"([1-9]\d{0,2}[,\.]*\d{0,3})")
-        amounts = []
-        for i, row in enumerate(text_rows):
-            row = row.replace(" ", "")
-            if date_pattern.search(row):
-                continue
-
-            if match := amount_pattern.search(row):
-                log.debug(f"Processing row {i} for amount: {row}")
-                amounts.append(int(re.sub("[,.]", "", match.group(1))))
-
-        if not amounts:
-            log.debug("金額の抽出に失敗しました。")
-            toast("金額の抽出に失敗しました。")
-            return None
-
-        # Filter out amounts less than or equal to 30
-        amounts = list(filter(lambda x: x > 30, amounts))
-        return amounts[0]
-
-    def extract_memo(text_rows: list[str]) -> str | None:
-        memo_pattern = re.compile(r"([^(.*お支払い完了.*)]{3,30})")
-        memos = []
-        for i, row in enumerate(text_rows):
-            if not row.strip():
-                continue
-
-            row = row.replace(" ", "")
-            if date_pattern.search(row):
-                continue
-
-            if match := memo_pattern.search(row.strip()):
-                log.debug(f"Processing row {i} for memo: {row}")
-                memos.append(match.group(1))
-
-        if not memos:
-            log.debug("メモの抽出に失敗しました。")
-            toast("メモの抽出に失敗しました。")
-            return None
-        return memos[0]
-
     text_rows = ocr_text.split("\n")
 
     expense_data = {
-        "amount": extract_amount(text_rows),
-        "memo": extract_memo(text_rows),
+        "amount": extract_amount(text_rows, date_pattern),
+        "memo": extract_memo(text_rows, date_pattern),
     }
 
     if expense_data["amount"]:
@@ -512,6 +471,85 @@ def parse_ocr_text(ocr_text: str) -> dict:
 
     log.info("end 'parse_ocr_text' method")
     return expense_data
+
+
+def extract_amount(
+    text_rows: list[str], date_pattern: re.Pattern
+) -> int | None:
+    """
+    Extract amount from text rows
+    """
+    log.info("start 'extract_amount' method")
+    amount_pattern = re.compile(r"([1-9]\d{0,2}[,\.]*\d{0,3})")
+    amounts = []
+    for i, row in enumerate(text_rows):
+        row = row.replace(" ", "")
+
+        # Skip first two rows and empty rows
+        if i < 2 or not row.strip():
+            continue
+
+        # Skip rows containing date patterns
+        if date_pattern.search(row):
+            continue
+
+        # Extract amounts
+        if match := amount_pattern.search(row):
+            log.debug(f"Processing row {i} for amount: {row}")
+            amounts.append(int(re.sub("[,.]", "", match.group(1))))
+
+    if not amounts:
+        log.debug("金額の抽出に失敗しました。")
+        toast("金額の抽出に失敗しました。")
+        return None
+
+    # Filter out amounts less than or equal to 30
+    amounts = list(filter(lambda x: x > 30, amounts))
+    log.info("end 'extract_amount' method")
+    return amounts[0]
+
+
+def extract_memo(text_rows: list[str], date_pattern: re.Pattern) -> str | None:
+    """
+    Extract memo from text rows
+    """
+    log.info("start 'extract_memo' method")
+    memo_pattern = re.compile(r"([^(.*お支払い完了.*)]{3,30})")
+    memos = []
+    for i, row in enumerate(text_rows):
+        # Skip empty rows
+        if not row.strip():
+            continue
+
+        # Skip rows containing date patterns
+        if date_pattern.search(row):
+            break
+
+        pattern = r"[^A-Za-z]"  # non-alphabets
+        pattern_alpha = r"[A-Za-z]"  # alphabets
+        row = re.sub(f"(?<={pattern_alpha}) (?={pattern})", "", row)
+        row = re.sub(f"(?<={pattern}) (?={pattern_alpha})", "", row)
+
+        if match := memo_pattern.search(row.strip()):
+            log.debug(f"Processing row {i} for memo: {row}")
+            memos.append(match.group(1))
+
+    if not memos:
+        log.debug("メモの抽出に失敗しました。")
+        toast("メモの抽出に失敗しました。")
+        return None
+
+    memo = memos[0]
+    # Combine first two memos
+    if len(memos) > 1:
+        if len(memos[0] + memos[1]) <= 30 and not (
+            memos[0] in memos[1] or memos[1] in memos[0]
+        ):
+            memo += " " + memos[1]
+        elif len(memos[0]) < len(memos[1]):
+            memo = memos[1]
+    log.info("end 'extract_memo' method")
+    return memo
 
 
 def get_fiscal_year() -> int:

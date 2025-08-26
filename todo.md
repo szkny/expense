@@ -11,6 +11,7 @@
 - [x] add feature of favorite item
 - [x] drop duplicates of favorite/frequent/recent items list
 - [x] scan screenshot of receipt
+- [x] scan memo from 2 lines in ocr mode
 - [ ] add test scripts
 - [ ] add feature of undo
 - [ ] adapt to deficiencies of amount for instant registeration item
