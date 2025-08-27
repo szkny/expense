@@ -358,13 +358,17 @@ def ocr_main(offset: int = 0, enable_toast: bool = True) -> dict:
     expense_memo = expense_data.get("memo", "")
     if enable_toast:
         toast("支出項目解析中..")
-    res = exec_command(
-        [
-            "expense_type_classifier",
-            "--json",
-            f'{{"amount": {expense_amount}, "memo": "{expense_memo}"}}',
-        ]
-    )
+    try:
+        res = exec_command(
+            [
+                "expense_type_classifier",
+                "--json",
+                f'{{"amount": {expense_amount}, "memo": "{expense_memo}"}}',
+            ]
+        )
+    except json.decoder.JSONDecodeError as e:
+        log.error(f"JSON decode error: {e}")
+        res = {}
     expense_type = res.get("predicted_type", "")
     log.info("end 'ocr_main' method")
     return {
@@ -676,7 +680,15 @@ def get_expense_history() -> pd.DataFrame:
     log.info("start 'get_expense_history' method")
     expense_cache_path = pathlib.Path(user_cache_dir("expense"))
     fname = expense_cache_path / "expense_history.log"
-    df = pd.read_csv(fname, index_col=None)
+    df = pd.DataFrame()
+    try:
+        df = pd.read_csv(fname, index_col=None)
+    except FileNotFoundError:
+        pass
+    except pd.errors.EmptyDataError:
+        pass
+    if df.empty:
+        return df
     df = df.T.reset_index().T
     df.columns = pd.Index(["date", "type", "memo", "amount"])
     df.index = pd.Index(range(len(df)))
@@ -720,6 +732,9 @@ def correct_expense_memo(
     log.debug(f"Target expense_memo:\n{expense_memo}")
     corrected_memo = expense_memo
     df = get_expense_history()
+    if df.empty or "memo" not in df.columns:
+        log.info("end 'correct_expense_memo' method")
+        return corrected_memo
     memos = df["memo"].dropna().unique().tolist()
 
     # correct memo using similar words and memos
