@@ -140,19 +140,22 @@ class TestMain(unittest.TestCase):
     def test_ocr_main(self, n: int = 3, offset: int = 0) -> None:
         result = []
         for i in range(n):
-            screenshot_name = get_latest_screenshot(offset + i)
-            expense_data = ocr_main(offset + i, enable_toast=False)
-            expense_amount = expense_data.get("expense_amount", "")
-            expense_memo = expense_data.get("expense_memo", "")
-            expense_type = expense_data.get("expense_type", "")
-            result.append(
-                {
-                    "screenshot_name": os.path.basename(screenshot_name),
-                    "expense_type": expense_type,
-                    "expense_amount": expense_amount,
-                    "expense_memo": expense_memo,
-                }
-            )
+            try:
+                screenshot_name = get_latest_screenshot(offset + i)
+                expense_data = ocr_main(offset + i, enable_toast=False)
+                expense_amount = expense_data.get("expense_amount", "")
+                expense_memo = expense_data.get("expense_memo", "")
+                expense_type = expense_data.get("expense_type", "")
+                result.append(
+                    {
+                        "screenshot_name": os.path.basename(screenshot_name),
+                        "expense_type": expense_type,
+                        "expense_amount": expense_amount,
+                        "expense_memo": expense_memo,
+                    }
+                )
+            except Exception as e:
+                print(f"Error processing screenshot (No.{i}):\n{e}\n")
         df_result = pd.DataFrame(result)
         print(f"OCR results:\n{df_result}")
 

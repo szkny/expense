@@ -13,11 +13,13 @@ import argparse
 import datetime
 import subprocess
 import pytesseract
+import unicodedata
 import pandas as pd
 from PIL import Image
 import logging as log
 from typing import Any
 from collections import Counter
+from janome.tokenizer import Tokenizer
 from expense.gspread_wrapper import GspreadHandler
 from platformdirs import user_cache_dir, user_config_dir
 
@@ -394,16 +396,25 @@ def normalize_capture_text(text: str) -> str:
     normalize capture text
     """
     log.info("start 'normalized_text' method")
+    normalized_text = text
     normalized_text = re.sub(
-        r"[①-⑳]", lambda m: str(ord(m.group()) - ord("①") + 1), text
+        r"[①-⑳]", lambda m: str(ord(m.group()) - ord("①") + 1), normalized_text
     )
-    normalized_text = re.sub(
-        r"[０-９]", lambda m: str(int(m.group(0))), normalized_text
-    )
+    normalized_text = unicodedata.normalize("NFKC", normalized_text)
+    normalized_text = re.sub(r"^[ -/:-@[-´{-~]", "", normalized_text)
     normalized_text = re.sub(
         r"(?<=[^A-Za-z]) (?=[^A-Za-z])",
         "",
         normalized_text,
+    )
+    normalized_text = re.sub(r" +([A-Za-z]) +", r"\1", normalized_text)
+    pattern_nonalpha = r"[^A-Za-z]"  # non-alphabets
+    pattern_alpha = r"[A-Za-z]"  # alphabets
+    normalized_text = re.sub(
+        f"(?<={pattern_alpha}) (?={pattern_nonalpha})", "", normalized_text
+    )
+    normalized_text = re.sub(
+        f"(?<={pattern_nonalpha}) (?={pattern_alpha})", "", normalized_text
     )
     log.info("end 'normalized_text' method")
     return normalized_text
@@ -444,6 +455,7 @@ def ocr_image(screenshot_name: str) -> str:
     else:
         text = str(pytesseract.image_to_string(img, lang="jpn"))
 
+    log.debug(f"Raw OCR text:\n{text}")
     text = normalize_capture_text(text)
     log.debug(f"OCR text:\n{text}")
     log.info("end 'ocr_image' method")
@@ -516,33 +528,30 @@ def extract_memo(text_rows: list[str], date_pattern: re.Pattern) -> str | None:
     Extract memo from text rows
     """
     log.info("start 'extract_memo' method")
-    memo_pattern = re.compile(r"([^(.*お支払い完了.*)]{3,30})")
+    exclude_pattern = re.compile(r".*お支払い完了.*")
     memos = []
     for i, row in enumerate(text_rows):
-        # Skip empty rows
-        if not row.strip():
-            continue
+        row = row.strip()
 
+        # Skip empty rows
+        if not row:
+            continue
         # Skip rows containing date patterns
         if date_pattern.search(row):
             break
-
-        # Remove spaces between alphabets and non-alphabets
-        pattern_nonalpha = r"[^A-Za-z]"  # non-alphabets
-        pattern_alpha = r"[A-Za-z]"  # alphabets
-        row = re.sub(f"(?<={pattern_alpha}) (?={pattern_nonalpha})", "", row)
-        row = re.sub(f"(?<={pattern_nonalpha}) (?={pattern_alpha})", "", row)
+        if exclude_pattern.search(row):
+            continue
 
         # Extract memos
-        if match := memo_pattern.search(row.strip()):
-            log.debug(f"Processing row {i} for memo: {row}")
-            memos.append(match.group(1))
+        log.debug(f"Processing row {i} for memo: {row}")
+        memos.append(row)
 
     if not memos:
         log.debug("メモの抽出に失敗しました。")
         toast("メモの抽出に失敗しました。")
         return None
 
+    log.debug(f"Extracted memos: {memos}")
     memo = memos[0]
     # Combine first two memos
     if len(memos) > 1:
@@ -553,7 +562,7 @@ def extract_memo(text_rows: list[str], date_pattern: re.Pattern) -> str | None:
         elif len(memos[0]) < len(memos[1]):
             memo = memos[1]
 
-    memo = correct_expense_memo(memo)
+    memo = correct_expense_memo(memo, use_similar_word_correct=False)
     log.info("end 'extract_memo' method")
     return memo
 
@@ -604,6 +613,10 @@ def get_most_similar_memo(
     """
     log.info("start 'get_most_similar_memo' method")
     log.debug(f"Target memo:\t\t{target}")
+    if target in memos:
+        log.debug("Exact match found.")
+        log.info("end 'get_most_similar_memo' method")
+        return target
     most_similar_memo = ""
     highest_similarity = 0.0
     for memo in memos:
@@ -616,14 +629,50 @@ def get_most_similar_memo(
     )
     if highest_similarity < threshold:
         most_similar_memo = ""
-        log.debug(f"No similar memo found above the threshold ({threshold: .2f}).")
+        log.debug(
+            f"Similar memo not found above the threshold={threshold: .2f}"
+        )
     else:
-        log.debug(f"Similar memo found above the threshold ({threshold: .2f}).")
+        log.debug(f"Similar memo found above the threshold={threshold: .2f}")
     log.info("end 'get_most_similar_memo' method")
     return most_similar_memo
 
 
+def get_most_similar_word(
+    target: str, words: list[str], threshold: int = 1
+) -> str:
+    """
+    get the most similar word from a list of words
+    """
+    log.info("start 'get_most_similar_word' method")
+    log.debug(f"Target word:\t\t{target}")
+    if target in words:
+        log.debug("Exact match found.")
+        log.info("end 'get_most_similar_word' method")
+        return target
+    most_similar_word = ""
+    lowest_dist = 0
+    for word in words:
+        leven_dist = levenshtein(target, word)
+        if lowest_dist == 0 or leven_dist < lowest_dist:
+            lowest_dist = leven_dist
+            most_similar_word = word
+    log.debug(
+        f"Most similar word:\t{most_similar_word} (distance: {lowest_dist})"
+    )
+    if lowest_dist > threshold:
+        most_similar_word = ""
+        log.debug(f"Similar word not found within the threshold={threshold}")
+    else:
+        log.debug(f"Similar word found within the threshold={threshold}")
+    log.info("end 'get_most_similar_word' method")
+    return most_similar_word
+
+
 def get_expense_history() -> pd.DataFrame:
+    """
+    get expense history as a pandas DataFrame
+    """
     log.info("start 'get_expense_history' method")
     expense_cache_path = pathlib.Path(user_cache_dir("expense"))
     fname = expense_cache_path / "expense_history.log"
@@ -635,18 +684,67 @@ def get_expense_history() -> pd.DataFrame:
     return df
 
 
-def correct_expense_memo(expense_memo: str) -> str:
+def tokenize_text(text: str, tokenizer: Tokenizer) -> list[str]:
+    """
+    tokenize text using janome tokenizer
+    """
+    if not isinstance(text, str) or text.strip() == "":
+        return []
+    processed_text = list(tokenizer.tokenize(text, wakati=True))
+    return processed_text
+
+
+def get_memo_words(memos: list[str], min_len: int = 3) -> list[str]:
+    """
+    get unique words from memos
+    """
+    log.info("start 'get_memo_words' method")
+    df_wakati = pd.Series(
+        list(map(lambda s: tokenize_text(s, Tokenizer()), memos))
+    )
+    words: list[str] = df_wakati.explode().unique().tolist()
+    words = [w for w in words if len(w) >= min_len]
+    log.info("end 'get_memo_words' method")
+    return words
+
+
+def correct_expense_memo(
+    expense_memo: str, use_similar_word_correct: bool = True
+) -> str:
     """
     correct expense memo using expense history
     """
     log.info("start 'correct_expense_memo' method")
     if not expense_memo:
         return ""
+    log.debug(f"Target expense_memo:\n{expense_memo}")
+    corrected_memo = expense_memo
     df = get_expense_history()
     memos = df["memo"].dropna().unique().tolist()
-    corrected_memo = get_most_similar_memo(expense_memo, memos)
-    if not corrected_memo:
-        corrected_memo = expense_memo
+
+    # correct memo using similar words and memos
+    if use_similar_word_correct:
+        vocabs = get_memo_words(memos, min_len=3)
+        memo_words = tokenize_text(expense_memo, Tokenizer())
+        log.debug(f"Target memo_words:\n{memo_words}")
+        corrected_words = []
+        for word in memo_words:
+            if len(word) < 3:
+                corrected_words.append(word)
+                continue
+            corrected_word = get_most_similar_word(word, vocabs, threshold=1)
+            if corrected_word:
+                corrected_words.append(corrected_word)
+            else:
+                corrected_words.append(word)
+        corrected_memo = "".join(corrected_words)
+        log.debug(f"Corrected memo after word correction:\n{corrected_memo}")
+
+    # correct memo using similar memos
+    corrected_memo2 = get_most_similar_memo(corrected_memo, memos)
+    if corrected_memo2:
+        corrected_memo = corrected_memo2
+    log.debug(f"Corrected memo after memo correction:\n{corrected_memo}")
     log.info("end 'correct_expense_memo' method")
     return corrected_memo
 
