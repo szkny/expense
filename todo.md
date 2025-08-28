@@ -12,6 +12,8 @@
 - [x] drop duplicates of favorite/frequent/recent items list
 - [x] scan screenshot of receipt
 - [x] scan memo from 2 lines in ocr mode
+- [ ] add a feature for fuzzy search of expense history
+- [ ] implement web app (Django, Flask, FastAPI, Jinja2, etc.)
 - [ ] add test scripts
 - [ ] add feature of undo
 - [ ] adapt to deficiencies of amount for instant registeration item
