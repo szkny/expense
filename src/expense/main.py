@@ -127,8 +127,8 @@ async def expense_main(args: argparse.Namespace) -> None:
             )
         else:
             favorite_expenses = get_favorite_expenses()
-            frequent_expenses = get_frequent_expenses(5)
-            recent_expenses = get_recent_expenses(5)
+            frequent_expenses = get_frequent_expenses(8)
+            recent_expenses = get_recent_expenses(8)
 
             (
                 favorite_expenses,
@@ -188,11 +188,12 @@ def get_favorite_expenses() -> list[dict]:
         return []
     try:
         with open(CONFIG_PATH / "favorites.json", "r") as f:
-            data: list[dict] = json.load(f)
+            favorite_expenses: list[dict] = json.load(f)
     except FileNotFoundError:
         return []
+    log.debug(f"Favorite expenses: {json.dumps(favorite_expenses, indent=2, ensure_ascii=False)}")
     log.info("end 'get_favorite_expenses' method")
-    return data
+    return favorite_expenses
 
 
 def get_frequent_expenses(num_items: int = 3) -> list[dict]:
@@ -232,6 +233,7 @@ def get_frequent_expenses(num_items: int = 3) -> list[dict]:
     frequent_expenses: list[dict] = [
         parse_row(row) for row in aggregated_lines[:num_items]
     ]
+    log.debug(f"Frequent expenses: {json.dumps(frequent_expenses, indent=2, ensure_ascii=False)}")
     log.info("end 'get_frequent_expenses' method")
     return frequent_expenses
 
@@ -269,6 +271,7 @@ def get_recent_expenses(num_items: int = 3) -> list[dict]:
     lines = [",".join(line.split(",")[1:]) for line in lines]
     lines = list(dict.fromkeys(lines))  # remove duplicates
     recent_expenses: list[dict] = [parse_row(row) for row in lines[:num_items]]
+    log.debug(f"Recent expenses: {json.dumps(recent_expenses, indent=2, ensure_ascii=False)}")
     log.info("end 'get_recent_expenses' method")
     return recent_expenses
 
