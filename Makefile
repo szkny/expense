@@ -3,9 +3,14 @@
 build:
 	@echo "Building the project..."
 	python -m build
-	@echo "Build complete.\n"
+	@echo
 
 install: build
 	@echo "Installing the package..."
 	pip install .
-	@echo "Installation complete.\n"
+	@echo
+
+serve:
+	@echo "Starting the service..."
+	uvicorn src.expense.api.server:app --reload
+	@echo
