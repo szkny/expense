@@ -1,7 +1,7 @@
 import asyncio
 import argparse
 
-from core.expense import expense_main
+from expense.core.expense import expense_main
 
 
 def main() -> None:
