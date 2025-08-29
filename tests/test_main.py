@@ -3,16 +3,18 @@ import unittest
 import datetime
 import pandas as pd
 from unittest.mock import patch
-from src.expense.main import (
-    normalize_capture_text,
+from src.expense.core.expense import (
     get_fiscal_year,
     filter_duplicates,
     get_favorite_expenses,
     get_frequent_expenses,
     get_recent_expenses,
     store_expense,
+)
+from src.expense.core.ocr import (
     ocr_main,
     get_latest_screenshot,
+    normalize_capture_text,
 )
 
 
@@ -27,7 +29,7 @@ class TestMain(unittest.TestCase):
         self.assertEqual(normalize_capture_text("①０ あ い"), "10あい")
 
     def test_get_fiscal_year(self) -> None:
-        with patch("src.expense.main.datetime") as mock_datetime:
+        with patch("src.expense.core.expense.datetime") as mock_datetime:
             # Test case 1: Month is April (start of fiscal year)
             mock_datetime.date.today.return_value = datetime.date(2023, 4, 1)
             self.assertEqual(get_fiscal_year(), 2023)
@@ -53,7 +55,7 @@ class TestMain(unittest.TestCase):
 
     def test_get_favorite_expenses(self) -> None:
         with (
-            patch("src.expense.main.os.path.exists") as mock_exists,
+            patch("src.expense.core.expense.os.path.exists") as mock_exists,
             patch(
                 "builtins.open",
                 unittest.mock.mock_open(
@@ -78,7 +80,7 @@ class TestMain(unittest.TestCase):
 
     def test_get_frequent_expenses(self) -> None:
         with (
-            patch("src.expense.main.os.path.exists") as mock_exists,
+            patch("src.expense.core.expense.os.path.exists") as mock_exists,
             patch(
                 "builtins.open",
                 unittest.mock.mock_open(
@@ -103,7 +105,7 @@ class TestMain(unittest.TestCase):
 
     def test_get_recent_expenses(self) -> None:
         with (
-            patch("src.expense.main.os.path.exists") as mock_exists,
+            patch("src.expense.core.expense.os.path.exists") as mock_exists,
             patch(
                 "builtins.open",
                 unittest.mock.mock_open(
