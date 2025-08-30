@@ -24,7 +24,7 @@ from ..core.gspread_wrapper import GspreadHandler
 APP_NAME = "expense"
 CACHE_PATH = pathlib.Path(user_cache_dir(APP_NAME))
 CACHE_PATH.mkdir(parents=True, exist_ok=True)
-N_RECORDS = 50
+N_RECORDS = 100
 
 app = FastAPI()
 
@@ -92,13 +92,17 @@ async def manifest() -> FileResponse:
 def read_root(request: Request) -> HTMLResponse:
     # トップページ
     items = generate_items()
-    recent_expenses = get_recent_expenses(N_RECORDS, drop_duplicates=False)
+    recent_expenses = get_recent_expenses(
+        N_RECORDS, drop_duplicates=False, with_date=True
+    )
     return templates.TemplateResponse(
-        "index.html", {
+        "index.html",
+        {
             "request": request,
+            "n_records": N_RECORDS,
             "items": items,
             "records": recent_expenses,
-        }
+        },
     )
 
 
@@ -120,31 +124,34 @@ def register_item(
             expense_type = data[0]
             expense_memo = ""
             expense_amount = data[1]
-    expense_amount = int(re.sub(r"[^\d]", "", expense_amount))
+    expense_amount_num = int(re.sub(r"[^\d]", "", expense_amount))
     print(f"Expense Type: {expense_type}")
-    print(f"Expense Amount: {expense_amount}")
+    print(f"Expense Amount: {expense_amount_num}")
     print(f"Expense Memo: {expense_memo}")
     if expense_type and expense_amount:
         toast("登録中..")
         current_fiscal_year = get_fiscal_year()
         bookname = f"CF ({current_fiscal_year}年度)"
         handler = GspreadHandler(bookname)
-        handler.register_expense(expense_type, expense_amount, expense_memo)
-        store_expense(expense_type, expense_memo, expense_amount)
+        handler.register_expense(expense_type, expense_amount_num, expense_memo)
+        store_expense(expense_type, expense_memo, expense_amount_num)
         notify(
             "家計簿への登録が完了しました。",
-            f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
+            f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount_num:,}",
         )
     items = generate_items()
-    recent_expenses = get_recent_expenses(N_RECORDS, drop_duplicates=False)
+    recent_expenses = get_recent_expenses(
+        N_RECORDS, drop_duplicates=False, with_date=True
+    )
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
+            "n_records": N_RECORDS,
             "items": items,
             "records": recent_expenses,
             "selected_type": expense_type,
-            "input_amount": expense_amount,
+            "input_amount": expense_amount_num,
             "input_memo": expense_memo,
         },
     )
@@ -157,7 +164,7 @@ def ocr(
     # OCRを実行するエンドポイント
     ocr_data = ocr_main()
     expense_type = ocr_data["expense_type"]
-    expense_amount = int(ocr_data["expense_amount"])
+    expense_amount: int | str = int(ocr_data["expense_amount"])
     expense_memo = ocr_data.get("expense_memo", "")
     latest_ocr_data = get_ocr_expense()
     if len(latest_ocr_data) and (
@@ -189,11 +196,16 @@ def ocr(
             f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
         )
     items = generate_items()
+    recent_expenses = get_recent_expenses(
+        N_RECORDS, drop_duplicates=False, with_date=True
+    )
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
+            "n_records": N_RECORDS,
             "items": items,
+            "records": recent_expenses,
             "selected_type": expense_type,
             "input_amount": expense_amount,
             "input_memo": expense_memo,

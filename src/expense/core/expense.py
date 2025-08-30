@@ -5,6 +5,7 @@ import asyncio
 import pathlib
 import argparse
 import datetime
+import pandas as pd
 import logging as log
 from collections import Counter
 from platformdirs import user_cache_dir, user_config_dir
@@ -15,7 +16,7 @@ from .termux_api import (
     notify,
     select_expense_type,
     enter_expense_amount,
-    enter_expense_memo
+    enter_expense_memo,
 )
 from .gspread_wrapper import GspreadHandler
 
@@ -150,7 +151,9 @@ def get_favorite_expenses() -> list[dict]:
             favorite_expenses: list[dict] = json.load(f)
     except FileNotFoundError:
         return []
-    log.debug(f"Favorite expenses: {json.dumps(favorite_expenses, indent=2, ensure_ascii=False)}")
+    log.debug(
+        f"Favorite expenses: {json.dumps(favorite_expenses, indent=2, ensure_ascii=False)}"
+    )
     log.info("end 'get_favorite_expenses' method")
     return favorite_expenses
 
@@ -192,46 +195,54 @@ def get_frequent_expenses(num_items: int = 3) -> list[dict]:
     frequent_expenses: list[dict] = [
         parse_row(row) for row in aggregated_lines[:num_items]
     ]
-    log.debug(f"Frequent expenses: {json.dumps(frequent_expenses, indent=2, ensure_ascii=False)}")
+    log.debug(
+        f"Frequent expenses: {json.dumps(frequent_expenses, indent=2, ensure_ascii=False)}"
+    )
     log.info("end 'get_frequent_expenses' method")
     return frequent_expenses
 
 
-def get_recent_expenses(num_items: int = 3, drop_duplicates: bool = True) -> list[dict]:
+def get_recent_expenses(
+    num_items: int = 3,
+    drop_duplicates: bool = True,
+    with_date: bool = False,
+) -> list[dict]:
     """
     get recent expenses
     """
     log.info("start 'get_recent_expenses' method")
-    if not os.path.exists(EXPENSE_HISTORY):
-        return []
-
-    def parse_row(row: str) -> dict:
-        data = row.strip().split(",")
-        if len(data) == 2:
-            return {
-                "expense_type": data[0],
-                "expense_memo": "",
-                "expense_amount": int(data[1]),
-            }
-        elif len(data) == 3:
-            return {
-                "expense_type": data[0],
-                "expense_memo": data[1],
-                "expense_amount": int(data[2]),
-            }
-        else:
-            return {}
-
     try:
-        with open(EXPENSE_HISTORY, "r") as f:
-            lines = f.readlines()[::-1]
+        df = pd.read_csv(EXPENSE_HISTORY, header=None)
     except FileNotFoundError:
         return []
-    lines = [",".join(line.split(",")[1:]) for line in lines]
+    df.columns = pd.Index(
+        ["date", "expense_type", "expense_memo", "expense_amount"]
+    )
+    df["expense_memo"] = df["expense_memo"].fillna("")
+    if not with_date:
+        df = df.drop(columns=["date"])
+    else:
+        df["date"] = (
+            pd.to_datetime(df["date"])
+            .dt.strftime("%Y-%m-%d(%a)")
+            .map(
+                lambda x: x.replace("Mon", "月")
+                .replace("Tue", "火")
+                .replace("Wed", "水")
+                .replace("Thu", "木")
+                .replace("Fri", "金")
+                .replace("Sat", "土")
+                .replace("Sun", "日")
+            )
+        )
     if drop_duplicates:
-        lines = list(dict.fromkeys(lines))  # remove duplicates
-    recent_expenses: list[dict] = [parse_row(row) for row in lines[:num_items]]
-    log.debug(f"Recent expenses: {json.dumps(recent_expenses, indent=2, ensure_ascii=False)}")
+        df = df.drop_duplicates(
+            subset=["expense_type", "expense_memo", "expense_amount"]
+        )
+    recent_expenses = df.iloc[::-1].iloc[:num_items].to_dict(orient="records")
+    log.debug(
+        f"Recent expenses: {json.dumps(recent_expenses, indent=2, ensure_ascii=False)}"
+    )
     log.info("end 'get_recent_expenses' method")
     return recent_expenses
 

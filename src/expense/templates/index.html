@@ -1,7 +1,8 @@
 <!doctype html>
-<html>
+<html lang="ja">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Expense</title>
     <link rel="stylesheet" href="/static/style.css" />
     <link rel="manifest" href="/static/manifest.json" />
@@ -13,7 +14,7 @@
 
       <div class="card">
         <form method="post" action="/register">
-          <label for="expense-type">支出タイプ</label>
+          <label for="expense-type">🚀 支出タイプ</label>
           <select id="expense-type" name="expense_type">
             {% for item in items %}
               <option
@@ -32,7 +33,7 @@
             id="expense-amount"
             name="expense_amount"
             value="{{ expense_amount or '' }}"
-            placeholder="💴 金額を入力"
+            placeholder="💰️ 金額を入力"
             {% if items | length and "/" in items[0] %}
               style="display: none;"
             {% else %}
@@ -45,7 +46,7 @@
             id="expense-memo"
             name="expense_memo"
             value="{{ expense_memo or '' }}"
-            placeholder="📝 メモを入力"
+            placeholder="✏️ メモを入力"
             {% if items | length and "/" in items[0] %}
               style="display: none;"
             {% endif %}
@@ -69,7 +70,7 @@
         </div>
       {% endif %}
 
-      <h2>📊 直近の支払履歴</h2>
+      <h2>📊 直近の支払履歴 ({{ n_records }}件)</h2>
       <div class="table-container">
         <table>
           <tr>
@@ -83,7 +84,7 @@
               <td>{{ record.date }}</td>
               <td>{{ record.expense_type }}</td>
               <td>¥{{ "{:,}".format(record.expense_amount) }}</td>
-              <td>{{ record.expense_memo }}</td>
+              <td class="memo">{{ record.expense_memo }}</td>
             </tr>
           {% endfor %}
         </table>
