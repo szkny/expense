@@ -29,7 +29,7 @@ CONFIG_PATH.mkdir(parents=True, exist_ok=True)
 EXPENSE_HISTORY = CACHE_PATH / f"{APP_NAME}_history.log"
 
 log.basicConfig(
-    level=log.DEBUG,
+    level=log.INFO,
     handlers=[
         log.StreamHandler(),
         log.FileHandler(CACHE_PATH / f"{APP_NAME}.log"),
@@ -151,9 +151,9 @@ def get_favorite_expenses() -> list[dict]:
             favorite_expenses: list[dict] = json.load(f)
     except FileNotFoundError:
         return []
-    log.debug(
-        f"Favorite expenses: {json.dumps(favorite_expenses, indent=2, ensure_ascii=False)}"
-    )
+    # log.debug(
+    #     f"Favorite expenses: {json.dumps(favorite_expenses, indent=2, ensure_ascii=False)}"
+    # )
     log.info("end 'get_favorite_expenses' method")
     return favorite_expenses
 
@@ -195,9 +195,9 @@ def get_frequent_expenses(num_items: int = 3) -> list[dict]:
     frequent_expenses: list[dict] = [
         parse_row(row) for row in aggregated_lines[:num_items]
     ]
-    log.debug(
-        f"Frequent expenses: {json.dumps(frequent_expenses, indent=2, ensure_ascii=False)}"
-    )
+    # log.debug(
+    #     f"Frequent expenses: {json.dumps(frequent_expenses, indent=2, ensure_ascii=False)}"
+    # )
     log.info("end 'get_frequent_expenses' method")
     return frequent_expenses
 
@@ -240,9 +240,9 @@ def get_recent_expenses(
             subset=["expense_type", "expense_memo", "expense_amount"]
         )
     recent_expenses = df.iloc[::-1].iloc[:num_items].to_dict(orient="records")
-    log.debug(
-        f"Recent expenses: {json.dumps(recent_expenses, indent=2, ensure_ascii=False)}"
-    )
+    # log.debug(
+    #     f"Recent expenses: {json.dumps(recent_expenses, indent=2, ensure_ascii=False)}"
+    # )
     log.info("end 'get_recent_expenses' method")
     return recent_expenses
 

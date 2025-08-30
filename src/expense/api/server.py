@@ -1,6 +1,7 @@
 import re
 import json
 import pathlib
+import logging as log
 from platformdirs import user_cache_dir
 
 from fastapi import FastAPI, Request, Form
@@ -127,9 +128,9 @@ def register_item(
             expense_memo = ""
             expense_amount = data[1]
     expense_amount_num = int(re.sub(r"[^\d]", "", expense_amount))
-    print(f"Expense Type: {expense_type}")
-    print(f"Expense Amount: {expense_amount_num}")
-    print(f"Expense Memo: {expense_memo}")
+    log.debug(f"Expense Type: {expense_type}")
+    log.debug(f"Expense Amount: {expense_amount_num}")
+    log.debug(f"Expense Memo: {expense_memo}")
     if expense_type and expense_amount:
         toast("登録中..")
         GSPREAD_HANDLER.register_expense(
