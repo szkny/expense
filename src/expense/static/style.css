@@ -1,9 +1,114 @@
 body {
-  font-family: sans-serif;
-  background: #f8f8f8;
-  text-align: center;
-  margin-top: 50px;
+  font-family: "Segoe UI", Roboto, sans-serif;
+  background: linear-gradient(135deg, #f0f4ff, #f9f9f9);
+  margin: 0;
+  padding: 20px;
+  color: #333;
 }
+
+.container {
+  max-width: 700px;
+  margin: auto;
+  text-align: center;
+}
+
 h1 {
-  color: steelblue;
+  color: #2563eb;
+  margin-bottom: 10px;
+}
+
+h2 {
+  margin-top: 40px;
+  color: #374151;
+}
+
+.card {
+  background: #fff;
+  padding: 20px;
+  margin: 20px 0;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  text-align: left;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 10px 12px;
+  margin: 8px 0;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+input:focus,
+select:focus {
+  border-color: #2563eb;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.btn {
+  display: inline-block;
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  font-size: 16px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn:hover {
+  background: #1e40af;
+}
+
+.btn.secondary {
+  background: #10b981;
+}
+
+.btn.secondary:hover {
+  background: #059669;
+}
+
+.success {
+  margin-top: 20px;
+  padding: 12px;
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+}
+
+.table-container {
+  overflow-x: auto;
+  margin-top: 20px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+th,
+td {
+  padding: 12px;
+  text-align: center;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+th {
+  background: #f3f4f6;
+  font-weight: 600;
+  color: #374151;
+}
+
+tr:nth-child(even) {
+  background: #fafafa;
 }

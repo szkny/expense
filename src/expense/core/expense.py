@@ -197,7 +197,7 @@ def get_frequent_expenses(num_items: int = 3) -> list[dict]:
     return frequent_expenses
 
 
-def get_recent_expenses(num_items: int = 3) -> list[dict]:
+def get_recent_expenses(num_items: int = 3, drop_duplicates: bool = True) -> list[dict]:
     """
     get recent expenses
     """
@@ -228,7 +228,8 @@ def get_recent_expenses(num_items: int = 3) -> list[dict]:
     except FileNotFoundError:
         return []
     lines = [",".join(line.split(",")[1:]) for line in lines]
-    lines = list(dict.fromkeys(lines))  # remove duplicates
+    if drop_duplicates:
+        lines = list(dict.fromkeys(lines))  # remove duplicates
     recent_expenses: list[dict] = [parse_row(row) for row in lines[:num_items]]
     log.debug(f"Recent expenses: {json.dumps(recent_expenses, indent=2, ensure_ascii=False)}")
     log.info("end 'get_recent_expenses' method")

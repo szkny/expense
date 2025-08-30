@@ -24,6 +24,7 @@ from ..core.gspread_wrapper import GspreadHandler
 APP_NAME = "expense"
 CACHE_PATH = pathlib.Path(user_cache_dir(APP_NAME))
 CACHE_PATH.mkdir(parents=True, exist_ok=True)
+N_RECORDS = 50
 
 app = FastAPI()
 
@@ -91,8 +92,13 @@ async def manifest() -> FileResponse:
 def read_root(request: Request) -> HTMLResponse:
     # トップページ
     items = generate_items()
+    recent_expenses = get_recent_expenses(N_RECORDS, drop_duplicates=False)
     return templates.TemplateResponse(
-        "index.html", {"request": request, "items": items}
+        "index.html", {
+            "request": request,
+            "items": items,
+            "records": recent_expenses,
+        }
     )
 
 
@@ -130,11 +136,13 @@ def register_item(
             f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
         )
     items = generate_items()
+    recent_expenses = get_recent_expenses(N_RECORDS, drop_duplicates=False)
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
             "items": items,
+            "records": recent_expenses,
             "selected_type": expense_type,
             "input_amount": expense_amount,
             "input_memo": expense_memo,
