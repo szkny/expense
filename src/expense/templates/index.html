@@ -71,23 +71,31 @@
         </div>
       {% endif %}
 
-      <h2>📊 直近の支払履歴 ({{ n_records }}件)</h2>
-      <div class="table-container">
+      <h2>
+        📊 直近の支払履歴 ({{ n_records }}件)
+        <button id="table-toggle" class="btn table">▼ テーブルを表示</button>
+      </h2>
+      
+      <div id="records-container" class="table-container">
         <table>
-          <tr>
-            <th>日付</th>
-            <th>支出タイプ</th>
-            <th>金額</th>
-            <th>メモ</th>
-          </tr>
-          {% for record in records %}
+          <thead>
             <tr>
-              <td>{{ record.date }}</td>
-              <td>{{ record.expense_type }}</td>
-              <td>¥{{ "{:,}".format(record.expense_amount) }}</td>
-              <td class="memo">{{ record.expense_memo }}</td>
+              <th>日付</th>
+              <th>支出タイプ</th>
+              <th>金額</th>
+              <th class="memo">メモ</th>
             </tr>
-          {% endfor %}
+          </thead>
+          <tbody>
+            {% for record in records %}
+              <tr>
+                <td>{{ record.date }}</td>
+                <td>{{ record.expense_type }}</td>
+                <td>¥{{ "{:,}".format(record.expense_amount) }}</td>
+                <td class="memo">{{ record.expense_memo }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
         </table>
       </div>
     </div>
@@ -109,20 +117,42 @@
       });
 
       // テーマ切り替え処理
-      const toggleBtn = document.getElementById("theme-toggle");
+      const toggleBtnTheme = document.getElementById("theme-toggle");
       const body = document.body;
 
       // ページ読み込み時に前回の設定を反映
       if (localStorage.getItem("theme") === "dark") {
         body.classList.add("dark");
-        toggleBtn.textContent = "☀️";
+        toggleBtnTheme.textContent = "☀️";
       }
 
-      toggleBtn.addEventListener("click", () => {
+      toggleBtnTheme.addEventListener("click", () => {
         body.classList.toggle("dark");
         const isDark = body.classList.contains("dark");
-        toggleBtn.textContent = isDark ? "☀️" : "🌙";
+        toggleBtnTheme.textContent = isDark ? "☀️" : "🌙";
         localStorage.setItem("theme", isDark ? "dark" : "light");
+      });
+
+      // テーブルの折りたたみ処理
+      const toggleBtnTable = document.getElementById("table-toggle");
+      const recordsContainer = document.getElementById("records-container");
+      // ページ読み込み時に前回の折りたたみ状態を復元
+      const collapsed = localStorage.getItem("recordsCollapsed") === "true";
+      if (collapsed) {
+        recordsContainer.style.display = "none";
+        toggleBtnTable.textContent = "▲ テーブルを非表示";
+      }
+      toggleBtnTable.addEventListener("click", () => {
+        const isCollapsed = recordsContainer.style.display === "none";
+        if (isCollapsed) {
+          recordsContainer.style.display = "block";
+          toggleBtnTable.textContent = "▼ テーブルを表示";
+          localStorage.setItem("recordsCollapsed", "false");
+        } else {
+          recordsContainer.style.display = "none";
+          toggleBtnTable.textContent = "▲ テーブルを非表示";
+          localStorage.setItem("recordsCollapsed", "true");
+        }
       });
     </script>
   </body>

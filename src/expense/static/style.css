@@ -80,6 +80,21 @@ select:focus {
   background: #059669;
 }
 
+.btn.table {
+  display: inline-block;
+}
+
+#table-toggle {
+  background-color: #eeeeee;
+  color: #000000;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.2s;
+}
+
 /* 登録完了メッセージ */
 .success {
   margin-top: 20px;
@@ -93,7 +108,11 @@ select:focus {
 
 /* テーブル */
 .table-container {
+  max-height: 400px;
   overflow-x: auto;
+  overflow-y: auto;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 table {
@@ -102,6 +121,24 @@ table {
   background: #fff;
   border-radius: 12px;
   overflow: hidden;
+}
+
+thead tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+tbody {
+  display: block;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+tbody tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
 }
 
 th,
@@ -232,4 +269,14 @@ body.dark .success {
   background: #064e3b;
   color: #d1fae5;
   border-color: #10b981;
+}
+
+body.dark .theme-toggle {
+  background: #374151;
+  color: #f3f4f6;
+}
+
+body.dark #table-toggle {
+  background: #1f2937;
+  color: #ffffff;
 }
