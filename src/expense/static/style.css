@@ -86,12 +86,12 @@ select:focus {
 
 #table-toggle {
   background-color: #eeeeee;
-  color: #000000;
+  color: #333333;
   border: none;
   border-radius: 8px;
-  padding: 6px 12px;
+  padding: 2px 12px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 10px;
   transition: background 0.2s;
 }
 
@@ -108,7 +108,6 @@ select:focus {
 
 /* テーブル */
 .table-container {
-  max-height: 400px;
   overflow-x: auto;
   overflow-y: auto;
   border-radius: 12px;
@@ -123,6 +122,11 @@ table {
   overflow: hidden;
 }
 
+thead {
+  display: block;
+  max-height: 50px;
+}
+
 thead tr {
   display: table;
   width: 100%;
@@ -131,7 +135,7 @@ thead tr {
 
 tbody {
   display: block;
-  max-height: 250px;
+  max-height: 200px;
   overflow-y: auto;
 }
 
@@ -160,8 +164,8 @@ td.memo {
 
 th {
   background: #f3f4f6;
-  font-weight: 600;
   color: #374151;
+  font-weight: 1000;
 }
 
 tr:nth-child(even) {
@@ -202,6 +206,13 @@ tr:nth-child(even) {
 .theme-toggle:hover {
   background: #d1d5db;
   transform: scale(1.1);
+}
+
+/* リンク */
+.link-spread {
+  color: #2563eb;
+  font-size: 0.95rem;
+  text-decoration: none;
 }
 
 /* ダークモード用テーマ */
@@ -278,5 +289,9 @@ body.dark .theme-toggle {
 
 body.dark #table-toggle {
   background: #1f2937;
-  color: #ffffff;
+  color: #cccccc;
+}
+
+body.dark .link-spread {
+  color: #88aacc;
 }
