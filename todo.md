@@ -12,12 +12,14 @@
 - [x] drop duplicates of favorite/frequent/recent items list
 - [x] scan screenshot of receipt
 - [x] scan memo from 2 lines in ocr mode
+- [x] implement web app (Django, Flask, FastAPI, Jinja2, etc.)
+- [x] add config file
+- [ ] change web UI to SPA
+- [ ] add a feature to aggregate/analyse/report past expenses
 - [ ] add a feature for fuzzy search of expense history
-- [ ] implement web app (Django, Flask, FastAPI, Jinja2, etc.)
 - [ ] add test scripts
 - [ ] add feature of undo
 - [ ] adapt to deficiencies of amount for instant registeration item
 - [ ] add feature of validation for usage history of credit card
-- [ ] add config file
 - [ ] analyse/improve processing time
   - [ ] desynchronization of toast and notification
