@@ -1,4 +1,8 @@
 import re
+import json
+import pathlib
+from platformdirs import user_cache_dir
+
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -10,10 +14,16 @@ from ..core.expense import (
     get_frequent_expenses,
     get_recent_expenses,
     filter_duplicates,
+    ocr_main,
+    get_ocr_expense,
     store_expense,
 )
 from ..core.termux_api import toast, notify
 from ..core.gspread_wrapper import GspreadHandler
+
+APP_NAME = "expense"
+CACHE_PATH = pathlib.Path(user_cache_dir(APP_NAME))
+CACHE_PATH.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI()
 
@@ -99,15 +109,67 @@ def register_item(
         if len(data) == 3:
             expense_type = data[0]
             expense_memo = data[1]
-            expense_amount = int(re.sub(r"[^\d]", "", data[2]))
+            expense_amount = data[2]
         elif len(data) == 2:
             expense_type = data[0]
             expense_memo = ""
-            expense_amount = int(re.sub(r"[^\d]", "", data[1]))
+            expense_amount = data[1]
+    expense_amount = int(re.sub(r"[^\d]", "", expense_amount))
     print(f"Expense Type: {expense_type}")
     print(f"Expense Amount: {expense_amount}")
     print(f"Expense Memo: {expense_memo}")
     if expense_type and expense_amount:
+        toast("登録中..")
+        current_fiscal_year = get_fiscal_year()
+        bookname = f"CF ({current_fiscal_year}年度)"
+        handler = GspreadHandler(bookname)
+        handler.register_expense(expense_type, expense_amount, expense_memo)
+        store_expense(expense_type, expense_memo, expense_amount)
+        notify(
+            "家計簿への登録が完了しました。",
+            f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
+        )
+    items = generate_items()
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "items": items,
+            "selected_type": expense_type,
+            "input_amount": expense_amount,
+            "input_memo": expense_memo,
+        },
+    )
+
+
+@app.post("/ocr", response_class=HTMLResponse)
+def ocr(
+    request: Request,
+) -> HTMLResponse:
+    # OCRを実行するエンドポイント
+    ocr_data = ocr_main()
+    expense_type = ocr_data["expense_type"]
+    expense_amount = int(ocr_data["expense_amount"])
+    expense_memo = ocr_data.get("expense_memo", "")
+    latest_ocr_data = get_ocr_expense()
+    if len(latest_ocr_data) and (
+        latest_ocr_data.get("screenshot_name")
+        == ocr_data.get("screenshot_name")
+    ):
+        notify(
+            "OCRデータは登録済のためスキップされました。",
+            f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
+        )
+        expense_type = ""
+        expense_amount = ""
+        expense_memo = ""
+    else:
+        json.dump(
+            ocr_data,
+            open(CACHE_PATH / "ocr_data.json", "w"),
+            ensure_ascii=False,
+            indent=2,
+        )
         toast("登録中..")
         current_fiscal_year = get_fiscal_year()
         bookname = f"CF ({current_fiscal_year}年度)"

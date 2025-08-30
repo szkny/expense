@@ -21,11 +21,18 @@
           </option>
         {% endfor %}
       </select>
-      <p><input type="text" name="expense_amount" value="{{ expense_amount }}" placeholder="金額を入力" /></p>
+      <p><input type="text" name="expense_amount" value="{{ expense_amount or '' }}" placeholder="金額を入力" /></p>
       <p><input type="text" name="expense_memo" value="{{ expense_memo or '' }}" placeholder="メモを入力" /></p>
-      <button type="submit">送信</button>
+      <button type="submit" name="register">登録</button>
     </form>
 
+    <br>
+    <form method="post" action="/ocr">
+      <p>決済アプリ画面のスクショから最新の支払情報を取得</p>
+      <button type="submit" name="ocr">実行</button>
+    </form>
+
+    <br>
     {% if selected_type and input_amount %}
       <p>家計簿への登録が完了しました。</p>
       <p><strong>{{ selected_type }}: {{ input_memo + ", " if input_memo else "" }}¥{{ "{:,}".format(input_amount) }}</strong></p>
