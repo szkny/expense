@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Expense</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <link rel="manifest" href="/static/manifest.json">
+  </head>
+  <body>
+    <h1>家計簿に登録する情報を入力</h1>
+    <form method="post" action="/register">
+      <select name="expense_type">
+        {% for item in items %}
+          <option
+            value="{{ item }}"
+            {% if selected_type and selected_type == item %}
+              selected_type
+            {% endif %}
+          >
+            {{ item }}
+          </option>
+        {% endfor %}
+      </select>
+      <p><input type="text" name="expense_amount" value="{{ expense_amount }}" placeholder="金額を入力" /></p>
+      <p><input type="text" name="expense_memo" value="{{ expense_memo or '' }}" placeholder="メモを入力" /></p>
+      <button type="submit">送信</button>
+    </form>
+
+    {% if selected_type and input_amount %}
+      <p>家計簿への登録が完了しました。</p>
+      <p><strong>{{ selected_type }}: {{ input_memo + ", " if input_memo else "" }}¥{{ "{:,}".format(input_amount) }}</strong></p>
+    {% endif %}
+  </body>
+</html>
+
