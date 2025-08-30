@@ -8,6 +8,7 @@
     <link rel="manifest" href="/static/manifest.json" />
   </head>
   <body>
+    <button id="theme-toggle" class="theme-toggle">🌙</button>
     <div class="container">
       <h1>📝 Expense </h1>
       <p>家計簿に登録する情報を入力してください</p>
@@ -105,6 +106,23 @@
           memoInput.style.display = "block";
           amountInput.required = true;
         }
+      });
+
+      // テーマ切り替え処理
+      const toggleBtn = document.getElementById("theme-toggle");
+      const body = document.body;
+
+      // ページ読み込み時に前回の設定を反映
+      if (localStorage.getItem("theme") === "dark") {
+        body.classList.add("dark");
+        toggleBtn.textContent = "☀️";
+      }
+
+      toggleBtn.addEventListener("click", () => {
+        body.classList.toggle("dark");
+        const isDark = body.classList.contains("dark");
+        toggleBtn.textContent = isDark ? "☀️" : "🌙";
+        localStorage.setItem("theme", isDark ? "dark" : "light");
       });
     </script>
   </body>
