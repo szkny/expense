@@ -43,6 +43,9 @@ class GspreadHandler:
         self.load_sheet()
         log.info("end 'GspreadHandler' constructor")
 
+    def get_spreadsheet_url(self) -> str:
+        return self.workbook.url
+
     @retry(stop=stop_after_attempt(3))
     def load_sheet(self) -> None:
         log.info("start 'load_sheet' method")

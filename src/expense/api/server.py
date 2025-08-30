@@ -25,15 +25,6 @@ APP_NAME = "expense"
 CACHE_PATH = pathlib.Path(user_cache_dir(APP_NAME))
 CACHE_PATH.mkdir(parents=True, exist_ok=True)
 N_RECORDS = 100
-
-app = FastAPI()
-
-# 静的ファイル
-app.mount("/static", StaticFiles(directory="src/expense/static"), name="static")
-
-# テンプレート
-templates = Jinja2Templates(directory="src/expense/templates")
-
 EXPENSE_TYPES = [
     "食費",
     "交通費",
@@ -49,6 +40,16 @@ EXPENSE_TYPES = [
     "給与",
     "雑所得",
 ]
+GSPREAD_HANDLER = GspreadHandler(f"CF ({get_fiscal_year()}年度)")
+GSPREAD_URL = GSPREAD_HANDLER.get_spreadsheet_url()
+
+app = FastAPI()
+
+# 静的ファイル
+app.mount("/static", StaticFiles(directory="src/expense/static"), name="static")
+
+# テンプレート
+templates = Jinja2Templates(directory="src/expense/templates")
 
 
 def generate_items() -> list[str]:
@@ -100,6 +101,7 @@ def read_root(request: Request) -> HTMLResponse:
         {
             "request": request,
             "n_records": N_RECORDS,
+            "gspread_url": GSPREAD_URL,
             "items": items,
             "records": recent_expenses,
         },
@@ -130,10 +132,9 @@ def register_item(
     print(f"Expense Memo: {expense_memo}")
     if expense_type and expense_amount:
         toast("登録中..")
-        current_fiscal_year = get_fiscal_year()
-        bookname = f"CF ({current_fiscal_year}年度)"
-        handler = GspreadHandler(bookname)
-        handler.register_expense(expense_type, expense_amount_num, expense_memo)
+        GSPREAD_HANDLER.register_expense(
+            expense_type, expense_amount_num, expense_memo
+        )
         store_expense(expense_type, expense_memo, expense_amount_num)
         notify(
             "家計簿への登録が完了しました。",
@@ -148,6 +149,7 @@ def register_item(
         {
             "request": request,
             "n_records": N_RECORDS,
+            "gspread_url": GSPREAD_URL,
             "items": items,
             "records": recent_expenses,
             "selected_type": expense_type,
@@ -186,10 +188,9 @@ def ocr(
             indent=2,
         )
         toast("登録中..")
-        current_fiscal_year = get_fiscal_year()
-        bookname = f"CF ({current_fiscal_year}年度)"
-        handler = GspreadHandler(bookname)
-        handler.register_expense(expense_type, expense_amount, expense_memo)
+        GSPREAD_HANDLER.register_expense(
+            expense_type, expense_amount, expense_memo
+        )
         store_expense(expense_type, expense_memo, expense_amount)
         notify(
             "家計簿への登録が完了しました。",
@@ -204,6 +205,7 @@ def ocr(
         {
             "request": request,
             "n_records": N_RECORDS,
+            "gspread_url": GSPREAD_URL,
             "items": items,
             "records": recent_expenses,
             "selected_type": expense_type,

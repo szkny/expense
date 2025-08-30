@@ -73,9 +73,10 @@
 
       <h2>
         📊 直近の支払履歴 ({{ n_records }}件)
+        <br><a href="{{ gspread_url }}" class="link-spread"> 🔗 スプレッドシートを開く </a>
         <button id="table-toggle" class="btn table">▼ テーブルを表示</button>
       </h2>
-      
+
       <div id="records-container" class="table-container">
         <table>
           <thead>
