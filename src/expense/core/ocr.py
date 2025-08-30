@@ -11,7 +11,7 @@ from PIL import Image
 from janome.tokenizer import Tokenizer
 from platformdirs import user_cache_dir, user_config_dir
 
-from expense.core.termux_api import exec_command, toast
+from .termux_api import exec_command, toast
 
 APP_NAME = "expense"
 CACHE_PATH = pathlib.Path(user_cache_dir(APP_NAME))

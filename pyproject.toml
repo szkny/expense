@@ -17,11 +17,19 @@ dependencies = [
     "tenacity>=9.0.0",
     "pytesseract>=0.3.0",
     "pandas>=2.0.0",
-    "janome>=0.5.0"
+    "janome>=0.5.0",
+    "fastapi>=0.116.0",
+    "uvicorn>=0.35.0",
+    "uvloop>=0.15.0",
+    "httptools>=0.6.0",
+    "python-multipart>=0.0.20",
+    "python-dotenv>=1.1.0",
+    "watchfiles>=0.13",
+    "jinja2>=3.1.0"
 ]
 
 [project.scripts]
-expense = "expense.main:main"
+expense = "expense.__main__:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

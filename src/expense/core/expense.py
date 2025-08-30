@@ -9,15 +9,15 @@ import logging as log
 from collections import Counter
 from platformdirs import user_cache_dir, user_config_dir
 
-from expense.core.ocr import ocr_main
-from expense.core.termux_api import (
+from .ocr import ocr_main
+from .termux_api import (
     toast,
     notify,
     select_expense_type,
     enter_expense_amount,
     enter_expense_memo
 )
-from expense.core.gspread_wrapper import GspreadHandler
+from .gspread_wrapper import GspreadHandler
 
 APP_NAME = "expense"
 CACHE_PATH = pathlib.Path(user_cache_dir(APP_NAME))
