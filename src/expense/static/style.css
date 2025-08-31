@@ -300,8 +300,8 @@ body.dark .btn.secondary:hover {
 }
 
 body.dark .btn.secondary:disabled {
-  background: #cccccc;
-  color: #666666;
+  background: #374151;
+  color: #f3f4f6;
   position: relative;
   z-index: 0;
 }
