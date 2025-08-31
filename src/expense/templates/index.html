@@ -63,7 +63,9 @@
         <div class="card">
           <form method="post" action="/ocr">
             <p>📷️ 決済アプリ画面のスクショから支払情報を取得</p>
-            <span style="font-size: 0.7rem;">▶️ 画像を確認 : {{ screenshot_name.split("/") | last }}</span>
+            <p style="font-size: 0.7rem;margin-left: 10px">
+              ▶️ 対象画像 : {{ screenshot_name.split("/") | last }}
+            </p>
             <img
               class="screenshot"
               alt="{{ screenshot_name.split("/") | last }}"
