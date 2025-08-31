@@ -1,7 +1,13 @@
 import re
+import io
+import os
 import json
+import base64
 import pathlib
 import logging as log
+from typing import Any
+
+# from plotly import express as px
 from platformdirs import user_cache_dir
 
 from fastapi import FastAPI, Request, Form
@@ -20,6 +26,7 @@ from ..core.expense import (
     store_expense,
 )
 from ..core.termux_api import toast, notify
+from ..core.ocr import get_latest_screenshot
 from ..core.gspread_wrapper import GspreadHandler
 
 APP_NAME = "expense"
@@ -54,6 +61,10 @@ templates = Jinja2Templates(directory="src/expense/templates")
 
 
 def generate_items() -> list[str]:
+    """
+    インスタント登録用のアイテムを生成
+    """
+    log.info("start 'generate_items' method")
     items = []
     favorite_expenses = get_favorite_expenses()
     frequent_expenses = get_frequent_expenses(8)
@@ -81,30 +92,76 @@ def generate_items() -> list[str]:
             item_str = item_str.replace("//", "/")
             items.append(item_str)
     items += EXPENSE_TYPES
+    log.info("end 'generate_items' method")
     return items
+
+
+def generate_commons() -> dict[str, Any]:
+    """
+    テンプレートに渡す共通データを生成
+    """
+    log.info("start 'generate_commons' method")
+    # 最新のスクリーンショットを取得してBase64エンコード
+    screenshot_name = get_latest_screenshot()
+    buf = io.BytesIO()
+    with open(screenshot_name, "rb") as f:
+        buf.write(f.read())
+    buf.seek(0)
+    img_base64 = base64.b64encode(buf.read()).decode("utf-8")
+
+    # 最新のOCRデータを取得して、最新のスクリーンショットと同じならOCR登録済みとみなす
+    latest_ocr_data = get_ocr_expense()
+    disable_ocr = len(latest_ocr_data) and (
+        latest_ocr_data.get("screenshot_name")
+        == os.path.basename(screenshot_name)
+    )
+
+    # インスタント登録用のアイテムを取得
+    items = generate_items()
+
+    # 最近の支出履歴を取得
+    recent_expenses = get_recent_expenses(
+        N_RECORDS, drop_duplicates=False, with_date=True
+    )
+    # Plotlyのグラフを生成
+    # df = px.data.iris()
+    # fig = px.scatter(df, x="sepal_width", y="sepal_length", color="species")
+    # graph_html = fig.to_html(full_html=False)
+    log.info("end 'generate_commons' method")
+    return {
+        "n_records": N_RECORDS,
+        "gspread_url": GSPREAD_URL,
+        "items": items,
+        "records": recent_expenses,
+        "screenshot_name": screenshot_name,
+        "screenshot_base64": img_base64,
+        "disable_ocr": disable_ocr,
+        # "graph": graph_html,
+    }
 
 
 @app.get("/manifest.json")
 async def manifest() -> FileResponse:
-    # manifest.json を返すエンドポイント
+    """
+    manifest.json を返すエンドポイント
+    """
+    log.info("Serving manifest.json")
     return FileResponse("static/manifest.json")
 
 
 @app.get("/", response_class=HTMLResponse)
 def read_root(request: Request) -> HTMLResponse:
-    # トップページ
-    items = generate_items()
-    recent_expenses = get_recent_expenses(
-        N_RECORDS, drop_duplicates=False, with_date=True
-    )
+    """
+    トップページ
+    """
+    log.info("start 'read_root' method")
+    commons = generate_commons()
+    log.info("end 'read_root' method")
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
-            "n_records": N_RECORDS,
-            "gspread_url": GSPREAD_URL,
-            "items": items,
-            "records": recent_expenses,
+            **commons,
         },
     )
 
@@ -116,7 +173,10 @@ def register_item(
     expense_amount: str = Form(...),
     expense_memo: str = Form(...),
 ) -> HTMLResponse:
-    # フォーム送信を受け取るエンドポイント
+    """
+    フォーム送信を受け取るエンドポイント
+    """
+    log.info("start 'register_item' method")
     if any([emoji in expense_type for emoji in "⭐🔥🕒️"]):
         data = re.sub("(⭐|🔥|🕒️) ", "", expense_type).split("/")
         if len(data) == 3:
@@ -141,21 +201,16 @@ def register_item(
             "家計簿への登録が完了しました。",
             f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount_num:,}",
         )
-    items = generate_items()
-    recent_expenses = get_recent_expenses(
-        N_RECORDS, drop_duplicates=False, with_date=True
-    )
+    commons = generate_commons()
+    log.info("end 'register_item' method")
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
-            "n_records": N_RECORDS,
-            "gspread_url": GSPREAD_URL,
-            "items": items,
-            "records": recent_expenses,
             "selected_type": expense_type,
             "input_amount": expense_amount_num,
             "input_memo": expense_memo,
+            **commons,
         },
     )
 
@@ -164,16 +219,19 @@ def register_item(
 def ocr(
     request: Request,
 ) -> HTMLResponse:
-    # OCRを実行するエンドポイント
-    ocr_data = ocr_main()
-    expense_type = ocr_data["expense_type"]
-    expense_amount: int | str = int(ocr_data["expense_amount"])
-    expense_memo = ocr_data.get("expense_memo", "")
+    """
+    OCRを実行するエンドポイント
+    """
+    log.info("start 'ocr' method")
+    recent_screenshot = os.path.basename(get_latest_screenshot())
     latest_ocr_data = get_ocr_expense()
     if len(latest_ocr_data) and (
-        latest_ocr_data.get("screenshot_name")
-        == ocr_data.get("screenshot_name")
+        latest_ocr_data.get("screenshot_name") == recent_screenshot
     ):
+        log.info("OCR data already exists, skipping registration.")
+        expense_type = latest_ocr_data["expense_type"]
+        expense_amount = int(latest_ocr_data["expense_amount"])
+        expense_memo = latest_ocr_data.get("expense_memo", "")
         notify(
             "OCRデータは登録済のためスキップされました。",
             f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
@@ -182,6 +240,10 @@ def ocr(
         expense_amount = ""
         expense_memo = ""
     else:
+        ocr_data = ocr_main()
+        expense_type = ocr_data["expense_type"]
+        expense_amount: int | str = int(ocr_data["expense_amount"])
+        expense_memo = ocr_data.get("expense_memo", "")
         json.dump(
             ocr_data,
             open(CACHE_PATH / "ocr_data.json", "w"),
@@ -197,20 +259,15 @@ def ocr(
             "家計簿への登録が完了しました。",
             f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
         )
-    items = generate_items()
-    recent_expenses = get_recent_expenses(
-        N_RECORDS, drop_duplicates=False, with_date=True
-    )
+    commons = generate_commons()
+    log.info("end 'ocr' method")
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
-            "n_records": N_RECORDS,
-            "gspread_url": GSPREAD_URL,
-            "items": items,
-            "records": recent_expenses,
             "selected_type": expense_type,
             "input_amount": expense_amount,
             "input_memo": expense_memo,
+            **commons,
         },
     )

@@ -10,7 +10,7 @@ import logging as log
 from collections import Counter
 from platformdirs import user_cache_dir, user_config_dir
 
-from .ocr import ocr_main
+from .ocr import ocr_main, get_latest_screenshot
 from .termux_api import (
     toast,
     notify,
@@ -64,21 +64,25 @@ async def expense_main(args: argparse.Namespace) -> None:
             expense_amount = int(data["amount"])
             expense_memo = data.get("memo", "")
         elif args.ocr_image:
-            ocr_data = ocr_main()
-            expense_type = ocr_data["expense_type"]
-            expense_amount = int(ocr_data["expense_amount"])
-            expense_memo = ocr_data.get("expense_memo", "")
+            recent_screenshot = get_latest_screenshot()
             latest_ocr_data = get_ocr_expense()
             if len(latest_ocr_data) and (
                 latest_ocr_data.get("screenshot_name")
-                == ocr_data.get("screenshot_name")
+                == os.path.basename(recent_screenshot)
             ):
                 log.info("OCR data already exists, skipping registration.")
+                expense_type = latest_ocr_data["expense_type"]
+                expense_amount = int(latest_ocr_data["expense_amount"])
+                expense_memo = latest_ocr_data.get("expense_memo", "")
                 notify(
                     "OCRデータは登録済のためスキップされました。",
                     f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
                 )
                 return
+            ocr_data = ocr_main()
+            expense_type = ocr_data["expense_type"]
+            expense_amount = int(ocr_data["expense_amount"])
+            expense_memo = ocr_data.get("expense_memo", "")
             json.dump(
                 ocr_data,
                 open(CACHE_PATH / "ocr_data.json", "w"),

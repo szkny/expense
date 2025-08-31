@@ -59,12 +59,27 @@
         </form>
       </div>
 
-      <div class="card">
-        <form method="post" action="/ocr">
-          <p>📷️ 決済アプリ画面のスクショから支払情報を取得</p>
-          <button type="submit" class="btn secondary">OCR 実行</button>
-        </form>
-      </div>
+      {% if screenshot_name %}
+        <div class="card">
+          <form method="post" action="/ocr">
+            <p>📷️ 決済アプリ画面のスクショから支払情報を取得</p>
+            <span style="font-size: 0.7rem;">▶️ 画像を確認 : {{ screenshot_name.split("/") | last }}</span>
+            <img
+              class="screenshot"
+              alt="{{ screenshot_name.split("/") | last }}"
+              src="data:image/png;base64,{{ screenshot_base64 }}"
+              onclick="this.style.transform = (this.style.transform === 'scale(10)' ? 'scale(1)' : 'scale(10)')"
+            >
+            <button
+              type="submit"
+              class="btn secondary"
+              {% if disable_ocr %}
+                disabled
+              {% endif %}
+            > {% if disable_ocr %} 登録済 {% else %} OCR 実行 {% endif %}</button>
+          </form>
+        </div>
+      {% endif %}
 
       {% if selected_type and input_amount %}
         <div class="success">
@@ -72,6 +87,11 @@
           <p><strong>{{ selected_type }}: {{ input_memo + ", " if input_memo else "" }}¥{{ "{:,}".format(input_amount) }}</strong></p>
         </div>
       {% endif %}
+
+      <!-- <div class="report"> -->
+      <!--   <h2>📅 月次レポート</h2> -->
+      <!--   {{ graph | safe }} -->
+      <!-- </div> -->
 
       <h2>
         📊 直近の支払履歴 ({{ n_records }}件)
