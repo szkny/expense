@@ -105,19 +105,27 @@ def generate_commons() -> dict[str, Any]:
     """
     log.info("start 'generate_commons' method")
     # 最新のスクリーンショットを取得してBase64エンコード
-    screenshot_name = get_latest_screenshot()
-    buf = io.BytesIO()
-    with open(screenshot_name, "rb") as f:
-        buf.write(f.read())
-    buf.seek(0)
-    img_base64 = base64.b64encode(buf.read()).decode("utf-8")
-
-    # 最新のOCRデータを取得して、最新のスクリーンショットと同じならOCR登録済みとみなす
-    latest_ocr_data = get_ocr_expense()
-    disable_ocr = len(latest_ocr_data) and (
-        latest_ocr_data.get("screenshot_name")
-        == os.path.basename(screenshot_name)
-    )
+    try:
+        screenshot_name = get_latest_screenshot()
+        if screenshot_name:
+            buf = io.BytesIO()
+            with open(screenshot_name, "rb") as f:
+                buf.write(f.read())
+            buf.seek(0)
+            img_base64 = base64.b64encode(buf.read()).decode("utf-8")
+            # 最新のOCRデータを取得して、最新のスクリーンショットと同じならOCR登録済みとみなす
+            latest_ocr_data = get_ocr_expense()
+            disable_ocr = len(latest_ocr_data) and (
+                latest_ocr_data.get("screenshot_name")
+                == os.path.basename(screenshot_name)
+            )
+        else:
+            img_base64 = ""
+            disable_ocr = True
+    except Exception:
+        screenshot_name = ""
+        img_base64 = ""
+        disable_ocr = True
 
     # インスタント登録用のアイテムを取得
     items = generate_items()
@@ -129,37 +137,42 @@ def generate_commons() -> dict[str, Any]:
 
     # 今日の支出合計を計算
     df_records = pd.DataFrame(recent_expenses)
-    df_records = df_records.query("expense_type not in @INCOME_TYPES")
-    df_records.loc[:, "date"] = pd.to_datetime(
-        df_records.loc[:, "date"].map(lambda s: re.sub(r"[^\d\-]+", "", s))
-    )
     t = dt.datetime.today()
     today_str = t.date().isoformat()
-    month_start = dt.date(t.year, t.month, 1).isoformat()
-    prev_month_start = dt.date(
-        t.year if t.month > 1 else t.year - 1,
-        t.month - 1 if t.month > 1 else 12,
-        1,
-    ).isoformat()
-    today_total = (
-        df_records.query(f"date == '{today_str}'")
-        .loc[:, "expense_amount"]
-        .sum()
-    )
-    monthly_total = (
-        df_records.query(
-            f"date >= @pd.Timestamp('{month_start}') and date <= @pd.Timestamp('{today_str}')"
+    if not df_records.empty:
+        df_records = df_records.query("expense_type not in @INCOME_TYPES")
+        df_records.loc[:, "date"] = pd.to_datetime(
+            df_records.loc[:, "date"].map(lambda s: re.sub(r"[^\d\-]+", "", s))
         )
-        .loc[:, "expense_amount"]
-        .sum()
-    )
-    prev_monthly_total = (
-        df_records.query(
-            f"date >= @pd.Timestamp('{prev_month_start}') and date < @pd.Timestamp('{month_start}')"
+        month_start = dt.date(t.year, t.month, 1).isoformat()
+        prev_month_start = dt.date(
+            t.year if t.month > 1 else t.year - 1,
+            t.month - 1 if t.month > 1 else 12,
+            1,
+        ).isoformat()
+        today_total = (
+            df_records.query(f"date == @pd.Timestamp('{today_str}')")
+            .loc[:, "expense_amount"]
+            .sum()
         )
-        .loc[:, "expense_amount"]
-        .sum()
-    )
+        monthly_total = (
+            df_records.query(
+                f"date >= @pd.Timestamp('{month_start}') and date <= @pd.Timestamp('{today_str}')"
+            )
+            .loc[:, "expense_amount"]
+            .sum()
+        )
+        prev_monthly_total = (
+            df_records.query(
+                f"date >= @pd.Timestamp('{prev_month_start}') and date < @pd.Timestamp('{month_start}')"
+            )
+            .loc[:, "expense_amount"]
+            .sum()
+        )
+    else:
+        today_total = 0
+        monthly_total = 0
+        prev_monthly_total = 0
     # Plotlyのグラフを生成
     # df = px.data.iris()
     # fig = px.scatter(df, x="sepal_width", y="sepal_length", color="species")
@@ -233,15 +246,21 @@ def register_item(
     log.debug(f"Expense Amount: {expense_amount_num}")
     log.debug(f"Expense Memo: {expense_memo}")
     if expense_type and expense_amount:
-        toast("登録中..")
+        try:
+            toast("登録中..")
+        except Exception:
+            pass
         GSPREAD_HANDLER.register_expense(
             expense_type, expense_amount_num, expense_memo
         )
         store_expense(expense_type, expense_memo, expense_amount_num)
-        notify(
-            "家計簿への登録が完了しました。",
-            f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount_num:,}",
-        )
+        try:
+            notify(
+                "家計簿への登録が完了しました。",
+                f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount_num:,}",
+            )
+        except Exception:
+            pass
     commons = generate_commons()
     log.info("end 'register_item' method")
     return templates.TemplateResponse(
@@ -291,15 +310,21 @@ def ocr(
             ensure_ascii=False,
             indent=2,
         )
-        toast("登録中..")
+        try:
+            toast("登録中..")
+        except Exception:
+            pass
         GSPREAD_HANDLER.register_expense(
             expense_type, expense_amount, expense_memo
         )
         store_expense(expense_type, expense_memo, expense_amount)
-        notify(
-            "家計簿への登録が完了しました。",
-            f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
-        )
+        try:
+            notify(
+                "家計簿への登録が完了しました。",
+                f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
+            )
+        except Exception:
+            pass
     commons = generate_commons()
     log.info("end 'ocr' method")
     return templates.TemplateResponse(
