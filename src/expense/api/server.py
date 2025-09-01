@@ -230,7 +230,7 @@ def ocr(
     ):
         log.info("OCR data already exists, skipping registration.")
         expense_type = latest_ocr_data["expense_type"]
-        expense_amount = int(latest_ocr_data["expense_amount"])
+        expense_amount: int | str = int(latest_ocr_data["expense_amount"])
         expense_memo = latest_ocr_data.get("expense_memo", "")
         notify(
             "OCRデータは登録済のためスキップされました。",
