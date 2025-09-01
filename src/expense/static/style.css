@@ -129,16 +129,21 @@ select:focus {
 
 img.screenshot {
   width: auto;
-  height: 80px;
+  height: 150px;
   transition: transform 0.2s;
   transform-origin: center;
   margin: 5px auto 20px;
   display: block;
-  align-items: center;
+  cursor: zoom-in;
   border-radius: 2px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   position: relative;
   z-index: 10;
+}
+img.screenshot.is-zoomed {
+  transform: scale(5.5);
+  margin: 5px auto 20px;
+  cursor: zoom-out;
 }
 
 /* 登録完了メッセージ */

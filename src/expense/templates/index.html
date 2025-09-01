@@ -48,7 +48,8 @@
         </p>
         <img class="screenshot" alt="{{ screenshot_name.split(" /") | last }}"
           src="data:image/png;base64,{{ screenshot_base64 }}"
-          onclick="this.style.transform = (this.style.transform === 'scale(10)' ? 'scale(1)' : 'scale(10)')">
+          onclick="this.classList.toggle('is-zoomed')"
+        >
         <button type="submit" class="btn secondary" {% if disable_ocr %} disabled {% endif %}> {% if disable_ocr %} 登録済
           {% else %} 読取実行 {% endif %}</button>
       </form>
