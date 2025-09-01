@@ -68,10 +68,12 @@ function fuzzyMatch(pattern, text) {
   }
   return patternIdx === pattern.length ? score : 0;
 }
+// 検索入力に応じてテーブルをフィルタリング
 function filterTable() {
   const input = document.getElementById("search-input").value.trim();
   const table = document.querySelector("table tbody");
   const rows = table.getElementsByTagName("tr");
+  let total = 0;
   for (let i = 0; i < rows.length; i++) {
     const cells = rows[i].getElementsByTagName("td");
     if (cells.length < 4) continue;
@@ -81,16 +83,28 @@ function filterTable() {
     const score = fuzzyMatch(input, text);
     if (!input || score > 0) {
       rows[i].style.display = "";
+      // 金額を数値化して加算
+      const amountText = cells[2].textContent.replace(/[^\d]/g, "");
+      total += parseInt(amountText, 10) || 0;
     } else {
       rows[i].style.display = "none";
     }
   }
+  // 合計を表示
+  totalAmount = document.getElementById("total-amount");
+  if (input && total) {
+    totalAmount.textContent = `合計: ¥${total.toLocaleString()}`;
+    totalAmount.hidden = false;
+  } else {
+    totalAmount.textContent = "";
+    totalAmount.hidden = true;
+  }
 }
+// 検索入力窓をクリア
 document.getElementById("clear-search").addEventListener("click", () => {
   const input = document.getElementById("search-input");
   input.value = "";
   filterTable();
-  input.focus();
 });
 
 // Service Worker 登録
