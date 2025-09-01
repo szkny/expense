@@ -52,6 +52,41 @@ toggleBtnTable.addEventListener("click", () => {
   }
 });
 
+// ファジーマッチによる検索
+function fuzzyMatch(pattern, text) {
+  pattern = pattern.toLowerCase();
+  text = text.toLowerCase();
+  let patternIdx = 0;
+  let textIdx = 0;
+  let score = 0;
+  while (patternIdx < pattern.length && textIdx < text.length) {
+    if (pattern[patternIdx] === text[textIdx]) {
+      score += 1;
+      patternIdx++;
+    }
+    textIdx++;
+  }
+  return patternIdx === pattern.length ? score : 0;
+}
+function filterTable() {
+  const input = document.getElementById("search-input").value.trim();
+  const table = document.querySelector("table tbody");
+  const rows = table.getElementsByTagName("tr");
+  for (let i = 0; i < rows.length; i++) {
+    const cells = rows[i].getElementsByTagName("td");
+    if (cells.length < 4) continue;
+    const expenseType = cells[1].textContent || "";
+    const memo = cells[3].textContent || "";
+    const text = expenseType + " " + memo;
+    const score = fuzzyMatch(input, text);
+    if (!input || score > 0) {
+      rows[i].style.display = "";
+    } else {
+      rows[i].style.display = "none";
+    }
+  }
+}
+
 // Service Worker 登録
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/static/service-worker.js");

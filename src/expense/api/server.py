@@ -32,7 +32,7 @@ from ..core.gspread_wrapper import GspreadHandler
 APP_NAME = "expense"
 CACHE_PATH = pathlib.Path(user_cache_dir(APP_NAME))
 CACHE_PATH.mkdir(parents=True, exist_ok=True)
-N_RECORDS = 100
+N_RECORDS = 200
 EXPENSE_TYPES = [
     "食費",
     "交通費",

@@ -102,6 +102,12 @@
       </h2>
 
       <div id="records-container" class="table-container">
+        <input
+          type="text"
+          id="search-input"
+          placeholder="🔍️ 支出タイプ or メモで検索"
+          onkeyup="filterTable()"
+        />
         <table>
           <thead>
             <tr>
