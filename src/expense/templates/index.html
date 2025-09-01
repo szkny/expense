@@ -1,143 +1,112 @@
 <!doctype html>
 <html lang="ja">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Expense</title>
-    <link rel="stylesheet" href="/static/style.css" />
-    <link rel="manifest" href="/static/manifest.json" />
-    <meta name="theme-color" content="#111827">
-  </head>
-  <body>
-    <button id="theme-toggle" class="theme-toggle">🌙</button>
-    <button id="install-btn" class="btn install" style="display: none;">📲 インストール</button>
-    <div class="container">
-      <h1>📝 Expense </h1>
-      <p>家計簿に登録する情報を入力してください</p>
 
-      <div class="card">
-        <form method="post" action="/register">
-          <label for="expense-type">🚀 支出タイプ</label>
-          <select id="expense-type" name="expense_type">
-            {% for item in items %}
-              <option
-                value="{{ item }}"
-                {% if selected_type and selected_type == item %}
-                  selected
-                {% endif %}
-              >
-                {{ item }}
-              </option>
-            {% endfor %}
-          </select>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Expense</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="manifest" href="/static/manifest.json" />
+  <meta name="theme-color" content="#111827">
+</head>
 
-          <input
-            type="number"
-            id="expense-amount"
-            name="expense_amount"
-            value="{{ expense_amount or '' }}"
-            placeholder="💴 金額を入力"
-            {% if items | length and "/" in items[0] %}
-              style="display: none;"
-            {% else %}
-              required
-            {% endif %}
-          />
+<body>
+  <button id="theme-toggle" class="theme-toggle">🌙</button>
+  <button id="install-btn" class="btn install" style="display: none;">📲 インストール</button>
+  <div class="container">
+    <h1>📝 Expense </h1>
+    <p>家計簿に登録する情報を入力してください</p>
 
-          <input
-            type="text"
-            id="expense-memo"
-            name="expense_memo"
-            value="{{ expense_memo or '' }}"
-            placeholder="✏️ メモを入力"
-            {% if items | length and "/" in items[0] %}
-              style="display: none;"
-            {% endif %}
-          />
+    <div class="card">
+      <form method="post" action="/register">
+        <label for="expense-type">🚀 支出タイプ</label>
+        <select id="expense-type" name="expense_type">
+          {% for item in items %}
+          <option value="{{ item }}" {% if selected_type and selected_type==item %} selected {% endif %}>
+            {{ item }}
+          </option>
+          {% endfor %}
+        </select>
 
-          <button type="submit" class="btn">＋ 登録</button>
-        </form>
-      </div>
+        <input type="number" id="expense-amount" name="expense_amount" value="{{ expense_amount or '' }}"
+          placeholder="💴 金額を入力" {% if items | length and "/" in items[0] %} style="display: none;" {% else %} required
+          {% endif %} />
 
-      {% if screenshot_name %}
-        <div class="card">
-          <form method="post" action="/ocr">
-            <p>📷️ 決済アプリ画面のスクショから支払情報を取得</p>
-            <p style="font-size: 0.7rem;margin-left: 10px">
-              ▶️ 対象画像 : {{ screenshot_name.split("/") | last }}
-            </p>
-            <img
-              class="screenshot"
-              alt="{{ screenshot_name.split("/") | last }}"
-              src="data:image/png;base64,{{ screenshot_base64 }}"
-              onclick="this.style.transform = (this.style.transform === 'scale(10)' ? 'scale(1)' : 'scale(10)')"
-            >
-            <button
-              type="submit"
-              class="btn secondary"
-              {% if disable_ocr %}
-                disabled
-              {% endif %}
-            > {% if disable_ocr %} 登録済 {% else %} 読取実行 {% endif %}</button>
-          </form>
-        </div>
-      {% endif %}
+        <input type="text" id="expense-memo" name="expense_memo" value="{{ expense_memo or '' }}" placeholder="✏️ メモを入力"
+          {% if items | length and "/" in items[0] %} style="display: none;" {% endif %} />
 
-      {% if selected_type and input_amount %}
-        <div class="success">
-          ✅ 家計簿への登録が完了しました。
-          <p><strong>{{ selected_type }}: {{ input_memo + ", " if input_memo else "" }}¥{{ "{:,}".format(input_amount) }}</strong></p>
-        </div>
-      {% endif %}
-
-      <div class="report">
-        <h2>📊 支出レポート ({{today}})</h2>
-        <div class="summary-list">
-          <li> 本日の支出金額 : ¥{{ "{:,}".format(today_total) }} </li>
-          <li> 今月の支出金額 : ¥{{ "{:,}".format(monthly_total) }} </li>
-          <li> 前月の支出金額 : ¥{{ "{:,}".format(prev_monthly_total) }} </li>
-        </div>
-        <!-- {{ graph | safe }} -->
-      </div>
-
-      <h2>
-        🧾 直近の支出履歴 ({{ n_records }}件)
-      </h2>
-      <a href="{{ gspread_url }}" class="link-spread"> 🔗 スプレッドシートを開く </a>
-      <button id="table-toggle" class="btn table">▼ テーブルを表示</button>
-      <div id="records-container" class="table-container">
-        <div class="search-wrapper">
-          <input
-            type="text"
-            id="search-input"
-            placeholder="🔍️ 支出タイプ or メモで検索"
-            onkeyup="filterTable()"
-          />
-          <button id="clear-search" type="button">✕</button>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>日付</th>
-              <th>支出タイプ</th>
-              <th>金額</th>
-              <th class="memo">メモ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for record in records %}
-              <tr>
-                <td>{{ record.date }}</td>
-                <td>{{ record.expense_type }}</td>
-                <td>¥{{ "{:,}".format(record.expense_amount) }}</td>
-                <td class="memo">{{ record.expense_memo }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-        <div id="total-amount" style="margin-top: 8px; font-weight: bold; text-align: right;" hidden></div>
-      </div>
+        <button type="submit" class="btn">＋ 登録</button>
+      </form>
     </div>
-  </body>
-  <script src="/static/main.js"></script>
+
+    {% if screenshot_name %}
+    <div class="card">
+      <form method="post" action="/ocr">
+        <p>📷️ 決済アプリ画面のスクショから支払情報を取得</p>
+        <p style="font-size: 0.7rem;margin-left: 10px">
+          ▶️ 対象画像 : {{ screenshot_name.split("/") | last }}
+        </p>
+        <img class="screenshot" alt="{{ screenshot_name.split(" /") | last }}"
+          src="data:image/png;base64,{{ screenshot_base64 }}"
+          onclick="this.style.transform = (this.style.transform === 'scale(10)' ? 'scale(1)' : 'scale(10)')">
+        <button type="submit" class="btn secondary" {% if disable_ocr %} disabled {% endif %}> {% if disable_ocr %} 登録済
+          {% else %} 読取実行 {% endif %}</button>
+      </form>
+    </div>
+    {% endif %}
+
+    {% if selected_type and input_amount %}
+    <div class="success">
+      ✅ 家計簿への登録が完了しました。
+      <p><strong>{{ selected_type }}: {{ input_memo + ", " if input_memo else "" }}¥{{ "{:,}".format(input_amount)
+          }}</strong></p>
+    </div>
+    {% endif %}
+
+    <div class="report">
+      <h2>📊 支出レポート ({{today}})</h2>
+      <div class="summary-list">
+        <li> 本日の支出金額 : ¥{{ "{:,}".format(today_total) }} </li>
+        <li> 今月の支出金額 : ¥{{ "{:,}".format(monthly_total) }} </li>
+        <li> 前月の支出金額 : ¥{{ "{:,}".format(prev_monthly_total) }} </li>
+      </div>
+      {{ graph | safe }}
+    </div>
+
+    <h2>
+      🧾 直近の支出履歴 ({{ n_records }}件)
+    </h2>
+    <a href="{{ gspread_url }}" class="link-spread"> 🔗 スプレッドシートを開く </a>
+    <button id="table-toggle" class="btn table">▼ テーブルを表示</button>
+    <div id="records-container" class="table-container">
+      <div class="search-wrapper">
+        <input type="text" id="search-input" placeholder="🔍️ 支出タイプ or メモで検索" onkeyup="filterTable()" />
+        <button id="clear-search" type="button">✕</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>日付</th>
+            <th>支出タイプ</th>
+            <th>金額</th>
+            <th class="memo">メモ</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in records %}
+          <tr>
+            <td>{{ record.date }}</td>
+            <td>{{ record.expense_type }}</td>
+            <td>¥{{ "{:,}".format(record.expense_amount) }}</td>
+            <td class="memo">{{ record.expense_memo }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div id="total-amount" style="margin-top: 8px; font-weight: bold; text-align: right;" hidden></div>
+    </div>
+  </div>
+</body>
+<script src="/static/main.js"></script>
+
 </html>
