@@ -148,8 +148,6 @@ def get_favorite_expenses() -> list[dict]:
     get favorite expenses
     """
     log.info("start 'get_favorite_expenses' method")
-    if not os.path.exists(EXPENSE_HISTORY):
-        return []
     try:
         with open(CONFIG_PATH / "favorites.json", "r") as f:
             favorite_expenses: list[dict] = json.load(f)
