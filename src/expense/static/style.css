@@ -1,6 +1,7 @@
 /* 全体（モバイル前提） */
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: #f9fafb;
   margin: 0;
   padding: 16px;
@@ -51,6 +52,27 @@ select:focus {
   border-color: #2563eb;
   outline: none;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+#search-input {
+  flex: 1;
+  padding-right: 30px; /* ボタン分の余白 */
+}
+
+#clear-search {
+  position: absolute;
+  right: 10px;
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  cursor: not-allowed;
+  color: #666666;
 }
 
 /* ボタン */

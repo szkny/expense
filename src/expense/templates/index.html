@@ -78,7 +78,7 @@
               {% if disable_ocr %}
                 disabled
               {% endif %}
-            > {% if disable_ocr %} 登録済 {% else %} OCR 実行 {% endif %}</button>
+            > {% if disable_ocr %} 登録済 {% else %} 読取実行 {% endif %}</button>
           </form>
         </div>
       {% endif %}
@@ -102,12 +102,15 @@
       </h2>
 
       <div id="records-container" class="table-container">
-        <input
-          type="text"
-          id="search-input"
-          placeholder="🔍️ 支出タイプ or メモで検索"
-          onkeyup="filterTable()"
-        />
+        <div class="search-wrapper">
+          <input
+            type="text"
+            id="search-input"
+            placeholder="🔍️ 支出タイプ or メモで検索"
+            onkeyup="filterTable()"
+          />
+          <button id="clear-search" type="button">✕</button>
+        </div>
         <table>
           <thead>
             <tr>

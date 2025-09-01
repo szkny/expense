@@ -1,7 +1,7 @@
 const typeSelect = document.getElementById("expense-type");
 const amountInput = document.getElementById("expense-amount");
 const memoInput = document.getElementById("expense-memo");
-typeSelect.addEventListener("change", function () {
+typeSelect.addEventListener("change", function() {
   if (this.value.includes("/")) {
     amountInput.style.display = "none";
     memoInput.style.display = "none";
@@ -86,6 +86,12 @@ function filterTable() {
     }
   }
 }
+document.getElementById("clear-search").addEventListener("click", () => {
+  const input = document.getElementById("search-input");
+  input.value = "";
+  filterTable();
+  input.focus();
+});
 
 // Service Worker 登録
 if ("serviceWorker" in navigator) {
