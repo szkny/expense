@@ -242,7 +242,7 @@ def ocr(
     else:
         ocr_data = ocr_main()
         expense_type = ocr_data["expense_type"]
-        expense_amount: int | str = int(ocr_data["expense_amount"])
+        expense_amount = int(ocr_data["expense_amount"])
         expense_memo = ocr_data.get("expense_memo", "")
         json.dump(
             ocr_data,
