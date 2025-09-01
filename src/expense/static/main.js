@@ -99,12 +99,14 @@ function filterTable() {
     totalAmount.textContent = "";
     totalAmount.hidden = true;
   }
+  document.getElementById("clear-search").style.display = "block";
 }
 // 検索入力窓をクリア
 document.getElementById("clear-search").addEventListener("click", () => {
   const input = document.getElementById("search-input");
   input.value = "";
   filterTable();
+  document.getElementById("clear-search").style.display = "none";
 });
 
 // Service Worker 登録

@@ -4,6 +4,8 @@ import os
 import json
 import base64
 import pathlib
+import pandas as pd
+import datetime as dt
 import logging as log
 from typing import Any
 
@@ -48,6 +50,7 @@ EXPENSE_TYPES = [
     "給与",
     "雑所得",
 ]
+INCOME_TYPES = ["給与", "雑所得"]
 GSPREAD_HANDLER = GspreadHandler(f"CF ({get_fiscal_year()}年度)")
 GSPREAD_URL = GSPREAD_HANDLER.get_spreadsheet_url()
 
@@ -123,6 +126,40 @@ def generate_commons() -> dict[str, Any]:
     recent_expenses = get_recent_expenses(
         N_RECORDS, drop_duplicates=False, with_date=True
     )
+
+    # 今日の支出合計を計算
+    df_records = pd.DataFrame(recent_expenses)
+    df_records = df_records.query("expense_type not in @INCOME_TYPES")
+    df_records.loc[:, "date"] = pd.to_datetime(
+        df_records.loc[:, "date"].map(lambda s: re.sub(r"[^\d\-]+", "", s))
+    )
+    t = dt.datetime.today()
+    today_str = t.date().isoformat()
+    month_start = dt.date(t.year, t.month, 1).isoformat()
+    prev_month_start = dt.date(
+        t.year if t.month > 1 else t.year - 1,
+        t.month - 1 if t.month > 1 else 12,
+        1,
+    ).isoformat()
+    today_total = (
+        df_records.query(f"date == '{today_str}'")
+        .loc[:, "expense_amount"]
+        .sum()
+    )
+    monthly_total = (
+        df_records.query(
+            f"date >= @pd.Timestamp('{month_start}') and date <= @pd.Timestamp('{today_str}')"
+        )
+        .loc[:, "expense_amount"]
+        .sum()
+    )
+    prev_monthly_total = (
+        df_records.query(
+            f"date >= @pd.Timestamp('{prev_month_start}') and date < @pd.Timestamp('{month_start}')"
+        )
+        .loc[:, "expense_amount"]
+        .sum()
+    )
     # Plotlyのグラフを生成
     # df = px.data.iris()
     # fig = px.scatter(df, x="sepal_width", y="sepal_length", color="species")
@@ -136,6 +173,10 @@ def generate_commons() -> dict[str, Any]:
         "screenshot_name": screenshot_name,
         "screenshot_base64": img_base64,
         "disable_ocr": disable_ocr,
+        "today": today_str,
+        "today_total": today_total,
+        "monthly_total": monthly_total,
+        "prev_monthly_total": prev_monthly_total,
         # "graph": graph_html,
     }
 

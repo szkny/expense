@@ -90,15 +90,20 @@
         </div>
       {% endif %}
 
-      <!-- <div class="report"> -->
-      <!--   <h2>📅 月次レポート</h2> -->
-      <!--   {{ graph | safe }} -->
-      <!-- </div> -->
+      <div class="report">
+        <h2>📊 支出レポート ({{today}})</h2>
+        <div class="summary-list">
+          <li> 本日の支出金額 : ¥{{ "{:,}".format(today_total) }} </li>
+          <li> 今月の支出金額 : ¥{{ "{:,}".format(monthly_total) }} </li>
+          <li> 前月の支出金額 : ¥{{ "{:,}".format(prev_monthly_total) }} </li>
+        </div>
+        <!-- {{ graph | safe }} -->
+      </div>
 
       <h2>
-        📊 直近の支払履歴 ({{ n_records }}件)
-        <br><a href="{{ gspread_url }}" class="link-spread"> 🔗 スプレッドシートを開く </a>
+        🧾 直近の支出履歴 ({{ n_records }}件)
       </h2>
+      <a href="{{ gspread_url }}" class="link-spread"> 🔗 スプレッドシートを開く </a>
       <button id="table-toggle" class="btn table">▼ テーブルを表示</button>
       <div id="records-container" class="table-container">
         <div class="search-wrapper">

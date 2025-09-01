@@ -73,6 +73,7 @@ select:focus {
   font-size: 12px;
   cursor: not-allowed;
   color: #666666;
+  display: none;
 }
 
 /* ボタン */
@@ -123,13 +124,13 @@ select:focus {
   padding: 2px 0px 2px 0px;
   cursor: pointer;
   font-size: 10px;
-  transition: background 0.1s;
+  transition: background 0.2s;
 }
 
 img.screenshot {
   width: auto;
   height: 80px;
-  transition: transform 0.1s;
+  transition: transform 0.2s;
   transform-origin: center;
   margin: 5px auto 20px;
   display: block;
@@ -149,6 +150,12 @@ img.screenshot {
   border: 1px solid #a7f3d0;
   border-radius: 8px;
   font-size: 0.95rem;
+}
+
+/* 支出レポート */
+.summary-list {
+  font-size: 0.95rem;
+  margin-left: 20px;
 }
 
 /* テーブル */
@@ -257,6 +264,7 @@ tr:nth-child(even) {
 .link-spread {
   color: #2563eb;
   font-size: 0.95rem;
+  margin-left: 20px;
   text-decoration: none;
 }
 
