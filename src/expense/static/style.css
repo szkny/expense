@@ -116,14 +116,14 @@ select:focus {
 }
 
 #table-toggle {
-  background-color: #eeeeee;
+  background: transparent;
   color: #333333;
   border: none;
   border-radius: 8px;
-  padding: 2px 12px;
+  padding: 2px 0px 2px 0px;
   cursor: pointer;
   font-size: 10px;
-  transition: background 0.2s;
+  transition: background 0.1s;
 }
 
 img.screenshot {
@@ -340,7 +340,7 @@ body.dark .theme-toggle {
 }
 
 body.dark #table-toggle {
-  background: #1f2937;
+  background: transparent;
   color: #cccccc;
 }
 
