@@ -69,9 +69,18 @@ def generate_items() -> list[str]:
     """
     log.info("start 'generate_items' method")
     items = []
-    favorite_expenses = get_favorite_expenses()
-    frequent_expenses = get_frequent_expenses(8)
-    recent_expenses = get_recent_expenses(8)
+    try:
+        favorite_expenses = get_favorite_expenses()
+    except Exception:
+        favorite_expenses = []
+    try:
+        frequent_expenses = get_frequent_expenses(8)
+    except Exception:
+        frequent_expenses = []
+    try:
+        recent_expenses = get_recent_expenses(8)
+    except Exception:
+        recent_expenses = []
     (
         favorite_expenses,
         frequent_expenses,
@@ -131,9 +140,12 @@ def generate_commons() -> dict[str, Any]:
     items = generate_items()
 
     # 最近の支出履歴を取得
-    recent_expenses = get_recent_expenses(
-        N_RECORDS, drop_duplicates=False, with_date=True
-    )
+    try:
+        recent_expenses = get_recent_expenses(
+            N_RECORDS, drop_duplicates=False, with_date=True
+        )
+    except Exception:
+        recent_expenses = []
 
     # 今日の支出合計を計算
     df_records = pd.DataFrame(recent_expenses)
