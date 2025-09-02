@@ -53,10 +53,27 @@ sectionTable.addEventListener("click", () => {
   }
 });
 
+// カタカナ -> ひらがな
+const HIRAGANA_START = "ぁ".charCodeAt(0);
+const KATAKANA_START = "ァ".charCodeAt(0);
+const KATAKANA_END = "ヶ".charCodeAt(0);
+const OFFSET = KATAKANA_START - HIRAGANA_START;
+function katakanaToHiragana(str) {
+  return str
+    .split("")
+    .map((ch) => {
+      const code = ch.charCodeAt(0);
+      if (code >= KATAKANA_START && code <= KATAKANA_END) {
+        return String.fromCharCode(code - OFFSET);
+      }
+      return ch;
+    })
+    .join("");
+}
 // ファジーマッチによる検索
 function fuzzyMatch(pattern, text) {
-  pattern = pattern.toLowerCase();
-  text = text.toLowerCase();
+  pattern = katakanaToHiragana(pattern.toLowerCase());
+  text = katakanaToHiragana(text.toLowerCase());
   let patternIdx = 0;
   let textIdx = 0;
   let score = 0;
