@@ -31,23 +31,24 @@ toggleBtnTheme.addEventListener("click", () => {
 });
 
 // テーブルの折りたたみ処理
+const sectionTable = document.getElementById("table-section");
 const toggleBtnTable = document.getElementById("table-toggle");
 const recordsContainer = document.getElementById("records-container");
 // ページ読み込み時に前回の折りたたみ状態を復元
 const collapsed = localStorage.getItem("recordsCollapsed") === "true";
 if (collapsed) {
   recordsContainer.style.display = "none";
-  toggleBtnTable.textContent = "▲ テーブルを非表示";
+  toggleBtnTable.textContent = "▲";
 }
-toggleBtnTable.addEventListener("click", () => {
+sectionTable.addEventListener("click", () => {
   const isCollapsed = recordsContainer.style.display === "none";
   if (isCollapsed) {
     recordsContainer.style.display = "block";
-    toggleBtnTable.textContent = "▼ テーブルを表示";
+    toggleBtnTable.textContent = "▼";
     localStorage.setItem("recordsCollapsed", "false");
   } else {
     recordsContainer.style.display = "none";
-    toggleBtnTable.textContent = "▲ テーブルを非表示";
+    toggleBtnTable.textContent = "▲";
     localStorage.setItem("recordsCollapsed", "true");
   }
 });
@@ -74,6 +75,7 @@ function filterTable() {
   const table = document.querySelector("table tbody");
   const rows = table.getElementsByTagName("tr");
   let total = 0;
+  let n_match = 0;
   for (let i = 0; i < rows.length; i++) {
     const cells = rows[i].getElementsByTagName("td");
     if (cells.length < 4) continue;
@@ -86,6 +88,7 @@ function filterTable() {
       // 金額を数値化して加算
       const amountText = cells[2].textContent.replace(/[^\d]/g, "");
       total += parseInt(amountText, 10) || 0;
+      n_match += 1;
     } else {
       rows[i].style.display = "none";
     }
@@ -93,7 +96,7 @@ function filterTable() {
   // 合計を表示
   totalAmount = document.getElementById("total-amount");
   if (input && total) {
-    totalAmount.textContent = `合計: ¥${total.toLocaleString()}`;
+    totalAmount.textContent = `合計: ¥${total.toLocaleString()}  (${n_match}件)`;
     totalAmount.hidden = false;
   } else {
     totalAmount.textContent = "";

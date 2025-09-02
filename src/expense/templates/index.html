@@ -19,7 +19,7 @@
 
     <div class="card">
       <form method="post" action="/register">
-        <label for="expense-type">🚀 支出タイプ</label>
+        <h3>🚀 支出タイプ</h3>
         <select id="expense-type" name="expense_type">
           {% for item in items %}
           <option value="{{ item }}" {% if selected_type and selected_type==item %} selected {% endif %}>
@@ -42,8 +42,8 @@
     {% if screenshot_name %}
     <div class="card">
       <form method="post" action="/ocr">
-        <p>📷️ 決済アプリ画面のスクショから支払情報を取得</p>
-        <p style="font-size: 0.7rem;margin-left: 10px">
+        <h3> 📷️ 決済アプリのスクショから支払情報を取得 </h3>
+        <p style="font-size: 0.8rem;margin-left: 10px">
           ▶️ 対象画像 : {{ screenshot_name.split("/") | last }}
         </p>
         <img class="screenshot" alt="{{ screenshot_name.split(" /") | last }}"
@@ -64,8 +64,8 @@
     </div>
     {% endif %}
 
-    <div class="report">
-      <h2>📊 支出レポート ({{today}})</h2>
+    <div class="card">
+      <h3>📊 支出レポート ({{today}})</h3>
       <div class="summary-list">
         <li> 本日の支出金額 : ¥{{ "{:,}".format(today_total) }} </li>
         <li> 今月の支出金額 : ¥{{ "{:,}".format(monthly_total) }} </li>
@@ -74,11 +74,11 @@
       {{ graph | safe }}
     </div>
 
-    <h2>
-      🧾 直近の支出履歴 ({{ n_records }}件)
+    <h2 id="table-section">
+      <span> 🧾 直近の支出履歴 ({{n_records}}件) </span>
+      <span id="table-toggle"> ▼ </span>
     </h2>
     <a href="{{ gspread_url }}" class="link-spread"> 🔗 スプレッドシートを開く </a>
-    <button id="table-toggle" class="btn table">▼ テーブルを表示</button>
     <div id="records-container" class="table-container">
       <div class="search-wrapper">
         <input type="text" id="search-input" placeholder="🔍️ 支出タイプ or メモで検索" onkeyup="filterTable()" />
