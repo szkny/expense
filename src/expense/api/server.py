@@ -191,6 +191,7 @@ def generate_graph(df: pd.DataFrame, theme: str = "light") -> str:
         yaxis_title="金額(¥)",
         title_y=0.98,
         legend_title="支出タイプ",
+        xaxis=dict(tickmode="array"),
         yaxis=dict(
             tickprefix="¥",
             tickformat=",",
