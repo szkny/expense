@@ -14,8 +14,12 @@
 - [x] scan memo from 2 lines in ocr mode
 - [x] implement web app (Django, Flask, FastAPI, Jinja2, etc.)
 - [x] add config file
+- [x] add a feature to aggregate/analyse/report past expenses
+- [ ] register past record with datetime
+- [ ] add feature to edit records
+- [ ] data migration from spreadsheet records
 - [ ] change web UI to SPA
-- [ ] add a feature to aggregate/analyse/report past expenses
+- [ ] desynchronization of loading graph
 - [ ] add a feature for fuzzy search of expense history
 - [ ] add test scripts
 - [ ] add feature of undo
