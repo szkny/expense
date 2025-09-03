@@ -8,8 +8,7 @@ import pandas as pd
 import datetime as dt
 import logging as log
 from typing import Any
-
-# from plotly import express as px
+from plotly import express as px
 from platformdirs import user_cache_dir
 
 from fastapi import FastAPI, Request, Form
@@ -108,7 +107,109 @@ def generate_items() -> list[str]:
     return items
 
 
-def generate_commons() -> dict[str, Any]:
+def generate_report_summary(df: pd.DataFrame) -> dict[str, Any]:
+    """
+    generate report summary from dataframe
+    """
+    log.info("start 'generate_report_summary' method")
+    t = dt.datetime.today()
+    today_str = t.date().isoformat()
+    month_start = dt.date(t.year, t.month, 1).isoformat()
+    prev_month_start = dt.date(
+        t.year if t.month > 1 else t.year - 1,
+        t.month - 1 if t.month > 1 else 12,
+        1,
+    ).isoformat()
+
+    def calc_total(start: str, end: str = None) -> int:
+        operator = ">=" if end else "=="
+        condition1 = f"date {operator} @pd.Timestamp('{start}')"
+        condition2 = f" and date <= @pd.Timestamp('{end}')" if end else ""
+        return df.query(condition1 + condition2).loc[:, "expense_amount"].sum()
+
+    today_total = calc_total(today_str)
+    monthly_total = calc_total(month_start, today_str)
+    prev_monthly_total = calc_total(prev_month_start, month_start)
+    log.info("end 'generate_report_summary' method")
+    return {
+        "today_total": today_total,
+        "monthly_total": monthly_total,
+        "prev_monthly_total": prev_monthly_total,
+    }
+
+
+def generate_monthly_df(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    create monthly dataframe from daily dataframe
+    """
+    log.info("start 'generate_monthly_df' method")
+    df_new = df.copy()
+    df_new.loc[:, "date"] = pd.to_datetime(df_new.loc[:, "date"])
+    df_new.loc[:, "month"] = pd.to_datetime(df_new.loc[:, "date"]).dt.strftime(
+        "%Y-%m"
+    )
+    df_new = (
+        df_new.groupby(["month", "expense_type"])["expense_amount"]
+        .sum()
+        .reset_index()
+    )
+    log.debug(f"Monthly DataFrame:\n{df_new}")
+    log.info("end 'generate_monthly_df' method")
+    return df_new
+
+
+def generate_graph(df: pd.DataFrame, theme: str = "light") -> str:
+    """
+    create graph from dataframe
+    """
+    log.info("start 'generate_graph' method")
+    df_graph = df.copy()
+    df_graph.loc[:, "label"] = df_graph.loc[:, "expense_amount"].map(
+        lambda x: f"¥{x:,}" if 10000 <= x else ""
+    )
+    fig = px.bar(
+        df_graph,
+        x="month",
+        y="expense_amount",
+        color="expense_type",
+        text="label",
+        labels=dict(
+            month="Month",
+            expense_amount="Amount",
+            expense_type="Category",
+            label="Label",
+        ),
+        title="支出内訳（月別）",
+        hover_data=dict(expense_amount=":,"),
+        range_y=[0, None],
+        category_orders={"expense_type": EXPENSE_TYPES},
+    )
+    fig.update_traces(textposition="auto", textfont=dict(size=10))
+    fig.update_layout(
+        height=500,
+        xaxis_title="",
+        yaxis_title="金額(¥)",
+        title_y=0.98,
+        legend_title="支出タイプ",
+        yaxis=dict(
+            tickprefix="¥",
+            tickformat=",",
+        ),
+        dragmode=False,
+        margin=dict(l=10, r=10, t=100, b=0),
+        paper_bgcolor="rgba(0, 0, 0, 0)",
+        plot_bgcolor="rgba(0, 0, 0, 0)",
+        legend=dict(
+            orientation="h", yanchor="bottom", y=1.0, xanchor="left", x=-0
+        ),
+        template="plotly_dark" if theme == "dark" else "plotly_white",
+    )
+    graph_html = fig.to_html(full_html=False)
+    log.info("end 'generate_graph' method")
+    return graph_html
+
+
+def generate_commons(request: Request) -> dict[str, Any]:
     """
     テンプレートに渡す共通データを生成
     """
@@ -147,48 +248,25 @@ def generate_commons() -> dict[str, Any]:
     except Exception:
         recent_expenses = []
 
-    # 今日の支出合計を計算
+    # 支出レポートを計算
     df_records = pd.DataFrame(recent_expenses)
-    t = dt.datetime.today()
-    today_str = t.date().isoformat()
     if not df_records.empty:
         df_records = df_records.query("expense_type not in @INCOME_TYPES")
         df_records.loc[:, "date"] = pd.to_datetime(
             df_records.loc[:, "date"].map(lambda s: re.sub(r"[^\d\-]+", "", s))
         )
-        month_start = dt.date(t.year, t.month, 1).isoformat()
-        prev_month_start = dt.date(
-            t.year if t.month > 1 else t.year - 1,
-            t.month - 1 if t.month > 1 else 12,
-            1,
-        ).isoformat()
-        today_total = (
-            df_records.query(f"date == @pd.Timestamp('{today_str}')")
-            .loc[:, "expense_amount"]
-            .sum()
-        )
-        monthly_total = (
-            df_records.query(
-                f"date >= @pd.Timestamp('{month_start}') and date <= @pd.Timestamp('{today_str}')"
-            )
-            .loc[:, "expense_amount"]
-            .sum()
-        )
-        prev_monthly_total = (
-            df_records.query(
-                f"date >= @pd.Timestamp('{prev_month_start}') and date < @pd.Timestamp('{month_start}')"
-            )
-            .loc[:, "expense_amount"]
-            .sum()
-        )
+        report_summary = generate_report_summary(df_records)
+        # グラフを生成
+        theme = request.cookies.get("theme", "light")
+        df_graph = generate_monthly_df(df_records)
+        graph_html = generate_graph(df_graph, theme)
     else:
-        today_total = 0
-        monthly_total = 0
-        prev_monthly_total = 0
-    # Plotlyのグラフを生成
-    # df = px.data.iris()
-    # fig = px.scatter(df, x="sepal_width", y="sepal_length", color="species")
-    # graph_html = fig.to_html(full_html=False)
+        report_summary = {
+            "today_total": 0,
+            "monthly_total": 0,
+            "prev_monthly_total": 0,
+        }
+        graph_html = ""
     log.info("end 'generate_commons' method")
     return {
         "n_records": N_RECORDS,
@@ -198,11 +276,9 @@ def generate_commons() -> dict[str, Any]:
         "screenshot_name": screenshot_name,
         "screenshot_base64": img_base64,
         "disable_ocr": disable_ocr,
-        "today": today_str,
-        "today_total": today_total,
-        "monthly_total": monthly_total,
-        "prev_monthly_total": prev_monthly_total,
-        # "graph": graph_html,
+        "today": dt.datetime.today().date().isoformat(),
+        "graph_html": graph_html,
+        **report_summary,
     }
 
 
@@ -221,7 +297,7 @@ def read_root(request: Request) -> HTMLResponse:
     トップページ
     """
     log.info("start 'read_root' method")
-    commons = generate_commons()
+    commons = generate_commons(request)
     log.info("end 'read_root' method")
     return templates.TemplateResponse(
         "index.html",
@@ -273,7 +349,7 @@ def register_item(
             )
         except Exception:
             pass
-    commons = generate_commons()
+    commons = generate_commons(request)
     log.info("end 'register_item' method")
     return templates.TemplateResponse(
         "index.html",
@@ -337,7 +413,7 @@ def ocr(
             )
         except Exception:
             pass
-    commons = generate_commons()
+    commons = generate_commons(request)
     log.info("end 'ocr' method")
     return templates.TemplateResponse(
         "index.html",

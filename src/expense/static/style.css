@@ -32,6 +32,12 @@ h3 {
   color: #374151;
 }
 
+hr {
+  border: none;
+  border-top: 1px solid #dddddd;
+  margin: 16px 0;
+}
+
 /* カード */
 .card {
   background: #fff;
@@ -294,6 +300,10 @@ body.dark h2 {
 
 body.dark h3 {
   color: #d1d5db;
+}
+
+body.dark hr {
+  border-top: 1px solid #4b5563;
 }
 
 body.dark .card {

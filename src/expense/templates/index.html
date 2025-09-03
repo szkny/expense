@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Expense</title>
-  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/style.css?v={{ range(100000, 999999) | random }}" />
   <link rel="manifest" href="/static/manifest.json" />
   <meta name="theme-color" content="#111827">
 </head>
@@ -59,8 +59,7 @@
     {% if selected_type and input_amount %}
     <div class="success">
       ✅ 家計簿への登録が完了しました。
-      <p><strong>{{ selected_type }}: {{ input_memo + ", " if input_memo else "" }}¥{{ "{:,}".format(input_amount)
-          }}</strong></p>
+      <p><strong>{{ selected_type }}: {{ input_memo + ", " if input_memo else "" }}¥{{ "{:,}".format(input_amount)}}</strong></p>
     </div>
     {% endif %}
 
@@ -71,7 +70,12 @@
         <li> 今月の支出金額 : ¥{{ "{:,}".format(monthly_total) }} </li>
         <li> 前月の支出金額 : ¥{{ "{:,}".format(prev_monthly_total) }} </li>
       </div>
-      {{ graph | safe }}
+      {% if graph_html %}
+        <hr>
+        <div class="graph-container">
+          {{ graph_html | safe }}
+        </div>
+      {% endif %}
     </div>
 
     <h2 id="table-section">
@@ -108,6 +112,6 @@
     </div>
   </div>
 </body>
-<script src="/static/main.js"></script>
+<script src="/static/main.js?v={{ range(100000, 999999) | random }}"></script>
 
 </html>
