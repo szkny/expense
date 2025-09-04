@@ -15,28 +15,19 @@ typeSelect.addEventListener("change", function() {
 
 // テーマ切り替え処理
 const toggleBtnTheme = document.getElementById("theme-toggle");
-const body = document.body;
-function applyTheme(theme) {
-  if (theme === "dark") {
-    body.classList.add("dark");
-    toggleBtnTheme.textContent = "☀️";
-  } else {
-    body.classList.remove("dark");
-    toggleBtnTheme.textContent = "🌙";
-  }
-  // Cookieにテーマを保存
-  document.cookie = `theme=${theme};path=/;max-age=31536000`;
+// ページ読み込み時のテーマ反映（ボタンのテキストのみ更新）
+// クラスの付与はHTMLのインラインスクリプトが行う
+if (localStorage.getItem("theme") === "dark") {
+  toggleBtnTheme.textContent = "☀️";
+} else {
+  toggleBtnTheme.textContent = "🌙";
 }
-// ページ読み込み時に前回の設定を反映
-// localStorageから読み込み、Cookieをセット
-const savedTheme = localStorage.getItem("theme") || "light";
-applyTheme(savedTheme);
 toggleBtnTheme.addEventListener("click", () => {
-  const isDark = body.classList.contains("dark");
-  const newTheme = isDark ? "light" : "dark";
-  applyTheme(newTheme);
+  const isDark = document.documentElement.classList.toggle("dark");
+  const newTheme = isDark ? "dark" : "light";
+  toggleBtnTheme.textContent = isDark ? "☀️" : "🌙";
   localStorage.setItem("theme", newTheme);
-  // グラフを更新するためにページをリロード
+  document.cookie = `theme=${newTheme};path=/;max-age=31536000`;
   location.reload();
 });
 
