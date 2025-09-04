@@ -15,12 +15,14 @@
 - [x] implement web app (Django, Flask, FastAPI, Jinja2, etc.)
 - [x] add config file
 - [x] add a feature to aggregate/analyse/report past expenses
+- [x] add a feature for fuzzy search of expense history
 - [ ] register past record with datetime
 - [ ] add feature to edit records
 - [ ] data migration from spreadsheet records
 - [ ] change web UI to SPA
+- [ ] add a feature of asset management
+- [ ] add a feature of sorting cards in the Web UI
 - [ ] desynchronization of loading graph
-- [ ] add a feature for fuzzy search of expense history
 - [ ] add test scripts
 - [ ] add feature of undo
 - [ ] adapt to deficiencies of amount for instant registeration item
