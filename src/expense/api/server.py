@@ -215,6 +215,10 @@ def generate_commons(request: Request) -> dict[str, Any]:
     テンプレートに渡す共通データを生成
     """
     log.info("start 'generate_commons' method")
+
+    # テーマを取得
+    theme = request.cookies.get("theme", "light")
+
     # 最新のスクリーンショットを取得してBase64エンコード
     try:
         screenshot_name = get_latest_screenshot()
@@ -258,7 +262,6 @@ def generate_commons(request: Request) -> dict[str, Any]:
         )
         report_summary = generate_report_summary(df_records)
         # グラフを生成
-        theme = request.cookies.get("theme", "light")
         df_graph = generate_monthly_df(df_records)
         graph_html = generate_graph(df_graph, theme)
     else:
@@ -270,6 +273,7 @@ def generate_commons(request: Request) -> dict[str, Any]:
         graph_html = ""
     log.info("end 'generate_commons' method")
     return {
+        "theme": theme,
         "n_records": N_RECORDS,
         "gspread_url": GSPREAD_URL,
         "items": items,

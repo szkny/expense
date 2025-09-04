@@ -14,18 +14,10 @@ typeSelect.addEventListener("change", function() {
 });
 
 // テーマ切り替え処理
-const toggleBtnTheme = document.getElementById("theme-toggle");
-// ページ読み込み時のテーマ反映（ボタンのテキストのみ更新）
-// クラスの付与はHTMLのインラインスクリプトが行う
-if (localStorage.getItem("theme") === "dark") {
-  toggleBtnTheme.textContent = "☀️";
-} else {
-  toggleBtnTheme.textContent = "🌙";
-}
-toggleBtnTheme.addEventListener("click", () => {
+document.getElementById("theme-toggle").addEventListener("click", () => {
   const isDark = document.documentElement.classList.toggle("dark");
   const newTheme = isDark ? "dark" : "light";
-  toggleBtnTheme.textContent = isDark ? "☀️" : "🌙";
+  document.getElementById("theme-toggle").textContent = isDark ? "☀️" : "🌙";
   localStorage.setItem("theme", newTheme);
   document.cookie = `theme=${newTheme};path=/;max-age=31536000`;
   location.reload();
