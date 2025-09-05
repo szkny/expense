@@ -1,50 +1,64 @@
-const typeSelect = document.getElementById("expense-type");
-const amountInput = document.getElementById("expense-amount");
-const memoInput = document.getElementById("expense-memo");
-typeSelect.addEventListener("change", function() {
-  if (this.value.includes("/")) {
-    amountInput.style.display = "none";
-    memoInput.style.display = "none";
-    amountInput.required = false;
-  } else {
-    amountInput.style.display = "block";
-    memoInput.style.display = "block";
-    amountInput.required = true;
-  }
-});
+// 経費タイプ選択に応じた入力欄の表示・非表示
+(function() {
+  const typeSelect = document.getElementById("expense-type");
+  const amountInput = document.getElementById("expense-amount");
+  const memoInput = document.getElementById("expense-memo");
+  typeSelect.addEventListener("change", function() {
+    if (this.value.includes("/")) {
+      amountInput.style.display = "none";
+      memoInput.style.display = "none";
+      amountInput.required = false;
+    } else {
+      amountInput.style.display = "block";
+      memoInput.style.display = "block";
+      amountInput.required = true;
+    }
+  });
+})();
+
+// フォーム送信時にローディング表示
+(function() {
+  document.querySelectorAll("form").forEach((form) => {
+    form.addEventListener("submit", () => {
+      document.getElementById("loader").style.display = "flex";
+    });
+  });
+})();
 
 // テーマ切り替え処理
-document.getElementById("theme-toggle").addEventListener("click", () => {
-  const isDark = document.documentElement.classList.toggle("dark");
-  const newTheme = isDark ? "dark" : "light";
-  document.getElementById("theme-toggle").textContent = isDark ? "☀️" : "🌙";
-  localStorage.setItem("theme", newTheme);
-  document.cookie = `theme=${newTheme};path=/;max-age=31536000`;
-  location.reload();
-});
+(function() {
+  document.getElementById("theme-toggle").addEventListener("click", () => {
+    const isDark = document.documentElement.classList.toggle("dark");
+    const newTheme = isDark ? "dark" : "light";
+    document.getElementById("theme-toggle").textContent = isDark ? "☀️" : "🌙";
+    localStorage.setItem("theme", newTheme);
+    document.cookie = `theme=${newTheme};path=/;max-age=31536000`;
+    location.reload();
+  });
 
-// テーブルの折りたたみ処理
-const sectionTable = document.getElementById("table-section");
-const toggleBtnTable = document.getElementById("table-toggle");
-const recordsContainer = document.getElementById("records-container");
-// ページ読み込み時に前回の折りたたみ状態を復元
-const collapsed = localStorage.getItem("recordsCollapsed") === "true";
-if (collapsed) {
-  recordsContainer.style.display = "none";
-  toggleBtnTable.textContent = "▲";
-}
-sectionTable.addEventListener("click", () => {
-  const isCollapsed = recordsContainer.style.display === "none";
-  if (isCollapsed) {
-    recordsContainer.style.display = "block";
-    toggleBtnTable.textContent = "▼";
-    localStorage.setItem("recordsCollapsed", "false");
-  } else {
+  // テーブルの折りたたみ処理
+  const sectionTable = document.getElementById("table-section");
+  const toggleBtnTable = document.getElementById("table-toggle");
+  const recordsContainer = document.getElementById("records-container");
+  // ページ読み込み時に前回の折りたたみ状態を復元
+  const collapsed = localStorage.getItem("recordsCollapsed") === "true";
+  if (collapsed) {
     recordsContainer.style.display = "none";
     toggleBtnTable.textContent = "▲";
-    localStorage.setItem("recordsCollapsed", "true");
   }
-});
+  sectionTable.addEventListener("click", () => {
+    const isCollapsed = recordsContainer.style.display === "none";
+    if (isCollapsed) {
+      recordsContainer.style.display = "block";
+      toggleBtnTable.textContent = "▼";
+      localStorage.setItem("recordsCollapsed", "false");
+    } else {
+      recordsContainer.style.display = "none";
+      toggleBtnTable.textContent = "▲";
+      localStorage.setItem("recordsCollapsed", "true");
+    }
+  });
+})();
 
 // カタカナ -> ひらがな
 const HIRAGANA_START = "ぁ".charCodeAt(0);
@@ -114,26 +128,32 @@ function filterTable() {
   }
   document.getElementById("clear-search").style.display = "block";
 }
-// 検索入力窓をクリア
-document.getElementById("clear-search").addEventListener("click", () => {
-  const input = document.getElementById("search-input");
-  input.value = "";
-  filterTable();
-  document.getElementById("clear-search").style.display = "none";
-});
 
-// Service Worker 登録
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/static/service-worker.js");
-}
-// インストールイベント処理
-let deferredPrompt;
-window.addEventListener("beforeinstallprompt", (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  document.getElementById("install-btn").style.display = "block";
-});
-document.getElementById("install-btn").addEventListener("click", () => {
-  deferredPrompt.prompt();
-  deferredPrompt.userChoice.then(() => (deferredPrompt = null));
-});
+// 検索入力窓をクリア
+(function() {
+  document.getElementById("clear-search").addEventListener("click", () => {
+    const input = document.getElementById("search-input");
+    input.value = "";
+    filterTable();
+    document.getElementById("clear-search").style.display = "none";
+  });
+})();
+
+// PWA インストール処理
+(function() {
+  // Service Worker 登録
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/static/service-worker.js");
+  }
+  // インストールイベント処理
+  let deferredPrompt;
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById("install-btn").style.display = "block";
+  });
+  document.getElementById("install-btn").addEventListener("click", () => {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => (deferredPrompt = null));
+  });
+})();
