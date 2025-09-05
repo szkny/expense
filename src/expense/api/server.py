@@ -158,33 +158,77 @@ def generate_monthly_df(df: pd.DataFrame) -> pd.DataFrame:
     return df_new
 
 
-def generate_graph(df: pd.DataFrame, theme: str = "light") -> str:
+def generate_pie_chart(df: pd.DataFrame, theme: str = "light") -> str:
+    """
+    create pie chart from dataframe
+    """
+    log.info("start 'generate_pie_chart' method")
+    df_pie = df.copy()
+    df_pie = df_pie.loc[
+        df_pie.loc[:, "month"] == dt.datetime.today().strftime("%Y-%m")
+    ]
+    fig = px.pie(
+        df_pie,
+        names="expense_type",
+        values="expense_amount",
+        title="支出内訳（今月）",
+        category_orders={"expense_type": EXPENSE_TYPES},
+    )
+    fig.update_traces(
+        texttemplate="¥%{value:,} (%{percent})",
+        hovertemplate="%{label}<br>¥%{value:,}",
+        textfont=dict(size=14),
+    )
+    fig.update_layout(
+        height=500,
+        title_y=0.98,
+        legend_title="支出タイプ",
+        dragmode=False,
+        margin=dict(l=10, r=10, t=50, b=0),
+        paper_bgcolor="rgba(0, 0, 0, 0)",
+        plot_bgcolor="rgba(0, 0, 0, 0)",
+        legend=dict(orientation="h"),
+        template="plotly_dark" if theme == "dark" else "plotly_white",
+    )
+    graph_html = fig.to_html(full_html=False)
+    log.info("end 'generate_pie_chart' method")
+    return graph_html
+
+
+def generate_bar_chart(
+    df: pd.DataFrame, theme: str = "light", max_monthes: int = 12
+) -> str:
     """
     create graph from dataframe
     """
-    log.info("start 'generate_graph' method")
+    log.info("start 'generate_bar_chart' method")
     df_graph = df.copy()
     df_graph.loc[:, "label"] = df_graph.loc[:, "expense_amount"].map(
         lambda x: f"¥{x:,}" if 10000 <= x else ""
     )
+    df_graph["month"] = pd.to_datetime(df_graph["month"])
+    cutoff_date = dt.datetime.today() - dt.timedelta(
+        days=30 * (max_monthes - 1)
+    )
+    cutoff_date = cutoff_date.strftime("%Y-%m-01")
+    df_graph = df_graph.query("month >= @pd.Timestamp(@cutoff_date)")
+    df_graph["month"] = df_graph["month"].dt.strftime("%Y-%m")
     fig = px.bar(
         df_graph,
         x="month",
         y="expense_amount",
         color="expense_type",
         text="label",
-        labels=dict(
-            month="Month",
-            expense_amount="Amount",
-            expense_type="Category",
-            label="Label",
-        ),
         title="支出内訳（月別）",
         hover_data=dict(expense_amount=":,"),
         range_y=[0, None],
         category_orders={"expense_type": EXPENSE_TYPES},
     )
-    fig.update_traces(textposition="auto", textfont=dict(size=10))
+    fig.update_traces(
+        textposition="auto",
+        hovertemplate="%{label}<br>¥%{value:,}",
+        textfont=dict(size=14),
+    )
     fig.update_layout(
         height=500,
         xaxis_title="",
@@ -197,16 +241,14 @@ def generate_graph(df: pd.DataFrame, theme: str = "light") -> str:
             tickformat=",",
         ),
         dragmode=False,
-        margin=dict(l=10, r=10, t=100, b=0),
+        margin=dict(l=10, r=10, t=30, b=0),
         paper_bgcolor="rgba(0, 0, 0, 0)",
         plot_bgcolor="rgba(0, 0, 0, 0)",
-        legend=dict(
-            orientation="h", yanchor="bottom", y=1.0, xanchor="left", x=-0
-        ),
+        legend=dict(orientation="h"),
         template="plotly_dark" if theme == "dark" else "plotly_white",
     )
     graph_html = fig.to_html(full_html=False)
-    log.info("end 'generate_graph' method")
+    log.info("end 'generate_bar_chart' method")
     return graph_html
 
 
@@ -263,7 +305,9 @@ def generate_commons(request: Request) -> dict[str, Any]:
         report_summary = generate_report_summary(df_records)
         # グラフを生成
         df_graph = generate_monthly_df(df_records)
-        graph_html = generate_graph(df_graph, theme)
+        graph_html = generate_pie_chart(df_graph, theme)
+        graph_html += "<hr>"
+        graph_html += generate_bar_chart(df_graph, theme)
     else:
         report_summary = {
             "today_total": 0,
