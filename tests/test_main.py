@@ -55,15 +55,13 @@ class TestMain(unittest.TestCase):
 
     def test_get_favorite_expenses(self) -> None:
         with (
-            patch("src.expense.core.expense.os.path.exists") as mock_exists,
             patch(
                 "builtins.open",
                 unittest.mock.mock_open(
                     read_data='[{"expense_type": "食費", "expense_memo": "", "expense_amount": 1000}]'
                 ),
-            ),
+            ) as mock_open,
         ):
-            mock_exists.return_value = True
             self.assertEqual(
                 get_favorite_expenses(),
                 [
@@ -75,7 +73,7 @@ class TestMain(unittest.TestCase):
                 ],
             )
 
-            mock_exists.return_value = False
+            mock_open.side_effect = FileNotFoundError
             self.assertEqual(get_favorite_expenses(), [])
 
     def test_get_frequent_expenses(self) -> None:
@@ -105,15 +103,20 @@ class TestMain(unittest.TestCase):
 
     def test_get_recent_expenses(self) -> None:
         with (
-            patch("src.expense.core.expense.os.path.exists") as mock_exists,
             patch(
-                "builtins.open",
-                unittest.mock.mock_open(
-                    read_data="2023-01-01,食費,,1000\n2023-01-02,交通費,,500\n2023-01-03,遊興費,,2000"
+                "src.expense.core.expense.pd.read_csv",
+                unittest.mock.Mock(
+                    return_value=pd.DataFrame(
+                        {
+                            "date": ["2023-01-01", "2023-01-02", "2023-01-03"],
+                            "expense_type": ["食費", "交通費", "遊興費"],
+                            "expense_memo": ["", "", ""],
+                            "expense_amount": [1000, 500, 2000],
+                        }
+                    )
                 ),
-            ),
+            ) as mock_read_csv,
         ):
-            mock_exists.return_value = True
             self.assertEqual(
                 get_recent_expenses(2),
                 [
@@ -130,7 +133,7 @@ class TestMain(unittest.TestCase):
                 ],
             )
 
-            mock_exists.return_value = False
+            mock_read_csv.side_effect = FileNotFoundError
             self.assertEqual(get_recent_expenses(2), [])
 
     def test_store_expense(self) -> None:
