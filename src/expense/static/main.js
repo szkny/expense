@@ -35,8 +35,35 @@
     document.cookie = `theme=${newTheme};path=/;max-age=31536000`;
     location.reload();
   });
+})();
 
-  // テーブルの折りたたみ処理
+// レポートの折りたたみ処理
+(function() {
+  const sectionReport = document.getElementById("report-section");
+  const toggleBtnReport = document.getElementById("report-toggle");
+  const reportContainer = document.getElementById("report-container");
+  // ページ読み込み時に前回の折りたたみ状態を復元
+  const collapsed = localStorage.getItem("reportCollapsed") === "true";
+  if (collapsed) {
+    reportContainer.style.display = "none";
+    toggleBtnReport.textContent = "▲";
+  }
+  sectionReport.addEventListener("click", () => {
+    const isCollapsed = reportContainer.style.display === "none";
+    if (isCollapsed) {
+      reportContainer.style.display = "block";
+      toggleBtnReport.textContent = "▼";
+      localStorage.setItem("reportCollapsed", "false");
+    } else {
+      reportContainer.style.display = "none";
+      toggleBtnReport.textContent = "▲";
+      localStorage.setItem("reportCollapsed", "true");
+    }
+  });
+})();
+
+// テーブルの折りたたみ処理
+(function() {
   const sectionTable = document.getElementById("table-section");
   const toggleBtnTable = document.getElementById("table-toggle");
   const recordsContainer = document.getElementById("records-container");

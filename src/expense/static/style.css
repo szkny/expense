@@ -187,6 +187,20 @@ img.screenshot.is-zoomed {
 }
 
 /* 支出レポート */
+#report-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#report-toggle {
+  background: transparent;
+  color: #333333;
+  cursor: pointer;
+  font-size: 8px;
+  transition: background 0.2s;
+}
+
 .summary-list {
   font-size: 0.95rem;
   margin-left: 20px;
@@ -403,7 +417,7 @@ tr:nth-child(even) {
   color: #f3f4f6;
 }
 
-.dark #table-toggle {
+.dark #report-toggle {
   color: #cccccc;
 }
 

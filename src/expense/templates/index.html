@@ -65,51 +65,58 @@
     {% endif %}
 
     <div class="card">
-      <h3>📊 支出レポート ({{today}})</h3>
-      <div class="summary-list">
-        <li> 本日の支出金額 : ¥{{ "{:,}".format(today_total) }} </li>
-        <li> 今月の支出金額 : ¥{{ "{:,}".format(monthly_total) }} </li>
-        <li> 前月の支出金額 : ¥{{ "{:,}".format(prev_monthly_total) }} </li>
-      </div>
-      {% if graph_html %}
-        <hr>
-        <div class="graph-container">
-          {{ graph_html | safe }}
+      <h3 id="report-section">
+        <span> 📊 支出レポート ({{today}}) </span>
+        <span id="report-toggle"> ▼ </span>
+      </h3>
+      <div id="report-container">
+        <div class="summary-list">
+          <li> 本日の支出金額 : ¥{{ "{:,}".format(today_total) }} </li>
+          <li> 今月の支出金額 : ¥{{ "{:,}".format(monthly_total) }} </li>
+          <li> 前月の支出金額 : ¥{{ "{:,}".format(prev_monthly_total) }} </li>
         </div>
-      {% endif %}
+        {% if graph_html %}
+          <div class="graph-container">
+            <hr>
+            {{ graph_html | safe }}
+          </div>
+        {% endif %}
+      </div>
     </div>
 
-    <h2 id="table-section">
-      <span> 🧾 直近の支出履歴 ({{n_records}}件) </span>
-      <span id="table-toggle"> ▼ </span>
-    </h2>
-    <a href="{{ gspread_url }}" class="link-spread"> 🔗 スプレッドシートを開く </a>
-    <div id="records-container" class="table-container">
-      <div class="search-wrapper">
-        <input type="text" id="search-input" placeholder="🔍️ 支出タイプ or メモで検索" onkeyup="filterTable()" />
-        <button id="clear-search" type="button">✕</button>
+    <div class="card">
+      <h3 id="table-section">
+        <span> 🧾 直近の支出履歴 ({{n_records}}件) </span>
+        <span id="table-toggle"> ▼ </span>
+      </h3>
+      <a href="{{ gspread_url }}" class="link-spread"> 🔗 スプレッドシートを開く </a>
+      <div id="records-container" class="table-container">
+        <div class="search-wrapper">
+          <input type="text" id="search-input" placeholder="🔍️ 支出タイプ or メモで検索" onkeyup="filterTable()" />
+          <button id="clear-search" type="button">✕</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>日付</th>
+              <th>支出タイプ</th>
+              <th>金額</th>
+              <th class="memo">メモ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for record in records %}
+            <tr>
+              <td>{{ record.date }}</td>
+              <td>{{ record.expense_type }}</td>
+              <td>¥{{ "{:,}".format(record.expense_amount) }}</td>
+              <td class="memo">{{ record.expense_memo }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <div id="total-amount" style="margin-top: 8px; font-weight: bold; text-align: right;" hidden></div>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>日付</th>
-            <th>支出タイプ</th>
-            <th>金額</th>
-            <th class="memo">メモ</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for record in records %}
-          <tr>
-            <td>{{ record.date }}</td>
-            <td>{{ record.expense_type }}</td>
-            <td>¥{{ "{:,}".format(record.expense_amount) }}</td>
-            <td class="memo">{{ record.expense_memo }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      <div id="total-amount" style="margin-top: 8px; font-weight: bold; text-align: right;" hidden></div>
     </div>
   </div>
   <div id="loader" class="loader-overlay" style="display: none;">
