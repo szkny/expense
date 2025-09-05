@@ -29,7 +29,7 @@ CONFIG_PATH.mkdir(parents=True, exist_ok=True)
 EXPENSE_HISTORY = CACHE_PATH / f"{APP_NAME}_history.log"
 
 log.basicConfig(
-    level=log.INFO,
+    level=os.environ.get("LOG_LEVEL", "INFO").upper(),
     handlers=[
         log.StreamHandler(),
         log.FileHandler(CACHE_PATH / f"{APP_NAME}.log"),

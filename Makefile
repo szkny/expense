@@ -27,7 +27,7 @@ webui:
 
 test:
 	@echo "Running tests..."
-	python -m unittest tests/test_*.py
+	LOG_LEVEL=DEBUG python -m unittest tests/test_*.py
 	@echo
 
 clean:
