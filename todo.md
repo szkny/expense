@@ -16,7 +16,7 @@
 - [x] add config file
 - [x] add a feature to aggregate/analyse/report past expenses
 - [x] add a feature for fuzzy search of expense history
-- [ ] register past record with datetime
+- [x] register past record with datetime
 - [ ] add feature to edit records
 - [ ] data migration from spreadsheet records
 - [ ] change web UI to SPA

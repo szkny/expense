@@ -47,7 +47,7 @@ class GspreadHandler:
         return self.workbook.url
 
     @retry(stop=stop_after_attempt(3))
-    def load_sheet(self) -> None:
+    def load_sheet(self, date_str: str = "") -> None:
         log.info("start 'load_sheet' method")
         sheetname_list: list[str] = [
             "Jan",
@@ -64,7 +64,8 @@ class GspreadHandler:
             "Dec",
         ]
         today = dt.datetime.today()
-        sheetname = sheetname_list[today.month - 1]
+        date = dt.datetime.fromisoformat(date_str) if date_str else today
+        sheetname = sheetname_list[date.month - 1]
         sheets = self.workbook.worksheets()
         if not any([sheetname == s.title for s in sheets]):
             raise ValueError(f"sheetname '{sheetname}' not found.")
@@ -72,19 +73,18 @@ class GspreadHandler:
         self.sheet = self.workbook.worksheet(self.sheetname)
         log.info("end 'load_sheet' method")
 
-    def get_column(self) -> str:
+    def get_column(self, date_str: str = "") -> str:
         log.info("start 'get_column' method")
         try:
-            t = dt.datetime.today()
-            today_str = t.date().isoformat()
-            today_str = today_str.replace("-", "/")
-            cell = self.sheet.find(today_str)
+            date_str = date_str if date_str else dt.date.today().isoformat()
+            date_str = date_str.replace("-", "/")
+            cell = self.sheet.find(date_str)
             if cell:
                 match_result = re.match("[A-Z]+", cell.address)
                 if match_result:
                     return match_result[0]
             raise ValueError(
-                f"'{today_str}' not found in sheet '{self.sheetname}'."
+                f"'{date_str}' not found in sheet '{self.sheetname}'."
             )
         finally:
             log.info("end 'get_column' method")
@@ -145,10 +145,10 @@ class GspreadHandler:
         self.sheet.update_acell(address, new_value)
 
     def register_expense(
-        self, expense_type: str, amount: int, memo: str = ""
+        self, expense_type: str, amount: int, memo: str = "", date_str: str = ""
     ) -> None:
         log.info("start 'register_expense' method")
-        column = self.get_column()
+        column = self.get_column(date_str)
         row = self.get_row(expense_type)
         label = f"{column}{row}"
         self.add_amount_data(label, amount)

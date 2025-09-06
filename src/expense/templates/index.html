@@ -16,11 +16,13 @@
   <button id="install-btn" class="btn install" style="display: none;">📲 インストール</button>
   <div class="container">
     <h1>📝 Expense </h1>
-    <p>家計簿に登録する情報を入力してください</p>
 
     <div class="card">
       <form method="post" action="/register">
-        <h3>🚀 支出タイプ</h3>
+        <h3>🚀 家計簿に登録する情報を入力</h3>
+
+        <input type="date" id="expense-date" name="expense_date" value="{{ expense_date or today }}" required />
+
         <select id="expense-type" name="expense_type">
           {% for item in items %}
           <option value="{{ item }}" {% if selected_type and selected_type==item %} selected {% endif %}>
@@ -60,7 +62,7 @@
     {% if selected_type and input_amount %}
     <div class="success">
       ✅ 家計簿への登録が完了しました。
-      <p><strong>{{ selected_type }}: {{ input_memo + ", " if input_memo else "" }}¥{{ "{:,}".format(input_amount)}}</strong></p>
+      <p><strong> {{ input_date }}, {{ selected_type }}, {{ input_memo + ", " if input_memo else "" }}¥{{ "{:,}".format(input_amount)}}</strong></p>
     </div>
     {% endif %}
 

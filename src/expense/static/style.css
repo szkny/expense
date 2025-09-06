@@ -52,7 +52,7 @@ input,
 select {
   width: 100%;
   padding: 14px;
-  margin: 10px 0;
+  margin: 0 0 10px 0;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   font-size: 16px;
@@ -74,7 +74,8 @@ select:focus {
 
 #search-input {
   flex: 1;
-  padding-right: 30px; /* ボタン分の余白 */
+  padding-right: 30px;
+  margin-top: 10px;
 }
 
 #clear-search {

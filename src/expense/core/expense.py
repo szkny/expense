@@ -29,7 +29,7 @@ CONFIG_PATH.mkdir(parents=True, exist_ok=True)
 EXPENSE_HISTORY = CACHE_PATH / f"{APP_NAME}_history.log"
 
 log.basicConfig(
-    level=os.environ.get("LOG_LEVEL", "INFO").upper(),
+    level=os.environ.get("LOG_LEVEL", "DEBUG").upper(),
     handlers=[
         log.StreamHandler(),
         log.FileHandler(CACHE_PATH / f"{APP_NAME}.log"),
@@ -221,6 +221,7 @@ def get_recent_expenses(
         ["date", "expense_type", "expense_memo", "expense_amount"]
     )
     df["expense_memo"] = df["expense_memo"].fillna("")
+    df.sort_values(by="date", ascending=False, inplace=True)
     if not with_date:
         df = df.drop(columns=["date"])
     else:
@@ -241,7 +242,7 @@ def get_recent_expenses(
         df = df.drop_duplicates(
             subset=["expense_type", "expense_memo", "expense_amount"]
         )
-    recent_expenses = df.iloc[::-1].iloc[:num_items].to_dict(orient="records")
+    recent_expenses = df.iloc[:num_items].to_dict(orient="records")
     # log.debug(
     #     f"Recent expenses: {json.dumps(recent_expenses, indent=2, ensure_ascii=False)}"
     # )
@@ -308,16 +309,28 @@ def filter_duplicates(
 
 
 def store_expense(
-    expense_type: str, expense_memo: str, expense_amount: int
+    expense_type: str,
+    expense_memo: str,
+    expense_amount: int,
+    expense_date: str = "",
 ) -> None:
     """
     store expense
     """
     log.info("start 'store_expense' method")
+    expense_date_iso = (
+        pd.Timestamp(expense_date).strftime("%Y-%m-%dT%H:%M:%S.%f")
+        if expense_date
+        and pd.Timestamp(expense_date).date() != datetime.date.today()
+        else datetime.datetime.today().isoformat()
+    )
     with open(EXPENSE_HISTORY, "a") as f:
         f.write(
-            f"{datetime.datetime.today().isoformat()},{expense_type},{expense_memo},{expense_amount}\n"
+            f"{expense_date_iso},{expense_type},{expense_memo},{expense_amount}\n"
         )
+    log.debug(
+        f"Stored expense: {expense_date_iso}, {expense_type}, {expense_memo}, {expense_amount}"
+    )
     log.info("end 'store_expense' method")
     return
 

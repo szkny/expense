@@ -154,7 +154,6 @@ def generate_monthly_df(df: pd.DataFrame) -> pd.DataFrame:
         .sum()
         .reset_index()
     )
-    log.debug(f"Monthly DataFrame:\n{df_new}")
     log.info("end 'generate_monthly_df' method")
     return df_new
 
@@ -561,6 +560,7 @@ def register_item(
     expense_type: str = Form(...),
     expense_amount: str = Form(...),
     expense_memo: str = Form(...),
+    expense_date: str = Form(...),
 ) -> HTMLResponse:
     """
     フォーム送信を受け取るエンドポイント
@@ -580,21 +580,32 @@ def register_item(
     log.debug(f"Expense Type: {expense_type}")
     log.debug(f"Expense Amount: {expense_amount_num}")
     log.debug(f"Expense Memo: {expense_memo}")
-    if expense_type and expense_amount:
+    log.debug(f"Expense Date: {expense_date}")
+    if expense_type and expense_amount and expense_date:
         try:
             toast("登録中..")
         except Exception:
+            log.info("Toast notification failed.")
             pass
+        GSPREAD_HANDLER.load_sheet(expense_date)
         GSPREAD_HANDLER.register_expense(
-            expense_type, expense_amount_num, expense_memo
+            expense_type, expense_amount_num, expense_memo, expense_date
         )
-        store_expense(expense_type, expense_memo, expense_amount_num)
+        store_expense(
+            expense_type, expense_memo, expense_amount_num, expense_date
+        )
         try:
             notify(
                 "家計簿への登録が完了しました。",
-                f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount_num:,}",
+                (
+                    f"[{expense_date}] "
+                    f"{expense_type}"
+                    f"{': '+expense_memo if expense_memo else ''}"
+                    f", ¥{expense_amount_num:,}"
+                ),
             )
         except Exception:
+            log.info("Notification failed.")
             pass
     commons = generate_commons(request)
     log.info("end 'register_item' method")
@@ -602,6 +613,7 @@ def register_item(
         "index.html",
         {
             "request": request,
+            "input_date": expense_date,
             "selected_type": expense_type,
             "input_amount": expense_amount_num,
             "input_memo": expense_memo,
@@ -627,10 +639,13 @@ def ocr(
         expense_type = latest_ocr_data["expense_type"]
         expense_amount: int | str = int(latest_ocr_data["expense_amount"])
         expense_memo = latest_ocr_data.get("expense_memo", "")
-        notify(
-            "OCRデータは登録済のためスキップされました。",
-            f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
-        )
+        try:
+            notify(
+                "OCRデータは登録済のためスキップされました。",
+                f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
+            )
+        except Exception:
+            log.info("Notification failed.")
         expense_type = ""
         expense_amount = ""
         expense_memo = ""
@@ -648,6 +663,7 @@ def ocr(
         try:
             toast("登録中..")
         except Exception:
+            log.info("Toast notification failed.")
             pass
         GSPREAD_HANDLER.register_expense(
             expense_type, expense_amount, expense_memo
@@ -659,6 +675,7 @@ def ocr(
                 f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
             )
         except Exception:
+            log.info("Notification failed.")
             pass
     commons = generate_commons(request)
     log.info("end 'ocr' method")
