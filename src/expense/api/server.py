@@ -185,6 +185,7 @@ def generate_daily_chart(
     _update_layout(fig_bar, theme)
     fig_bar.add_traces(fig_line.data)
     fig_bar.add_traces(fig_predict.data)
+    _add_bar_chart_labels(fig_bar, df_bar, "date", theme, fontsize=10)
     graph_html = fig_bar.to_html(full_html=False)
     log.info("end 'generate_daily_chart' method")
     return graph_html
@@ -337,6 +338,27 @@ def _create_prediction_figure(df_predict: pd.DataFrame, theme: str) -> px.line:
     )
 
 
+def _add_bar_chart_labels(
+    fig: px.bar,
+    df_bar: pd.DataFrame,
+    key: str, theme: str,
+    fontsize: int = 14
+) -> None:
+    log.info(f"df_bar:\n{df_bar}")
+    totals = df_bar.groupby(key, as_index=False)["expense_amount"].sum()
+    totals["label"] = totals["expense_amount"].map(lambda x: f"¥{x:,}")
+    log.info(f"totals:\n{totals}")
+    fig.add_trace(go.Scatter(
+        x=totals[key],
+        y=totals["expense_amount"],
+        text=totals["label"],
+        mode="text",
+        textposition="top center",
+        textfont=dict(size=fontsize, color="#dddddd" if theme == "dark" else "#222222"),
+        showlegend=False
+    ))
+
+
 def _update_traces(
     fig_bar: px.bar, fig_line: px.line, fig_predict: px.line
 ) -> None:
@@ -437,11 +459,11 @@ def generate_bar_chart(
         category_orders={"expense_type": EXPENSE_TYPES},
     )
     fig.update_traces(
-        textposition="auto",
         hovertemplate="%{label}<br>¥%{value:,}",
         textfont=dict(size=14),
     )
     _update_layout(fig, theme)
+    _add_bar_chart_labels(fig, df_graph, "month", theme, fontsize=14)
     graph_html = fig.to_html(full_html=False)
     log.info("end 'generate_bar_chart' method")
     return graph_html
