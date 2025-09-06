@@ -9,6 +9,7 @@ import datetime as dt
 import logging as log
 from typing import Any
 from plotly import express as px
+from plotly import graph_objects as go
 from platformdirs import user_cache_dir
 
 from fastapi import FastAPI, Request, Form
@@ -158,11 +159,230 @@ def generate_monthly_df(df: pd.DataFrame) -> pd.DataFrame:
     return df_new
 
 
+def generate_daily_chart(
+    df: pd.DataFrame, theme: str = "light", min_yrange: int = 50000
+) -> str:
+    """
+    累積折れ線グラフを生成
+    """
+    log.info("start 'generate_daily_chart' method")
+    if df.empty:
+        log.info("DataFrame is empty, skipping graph generation.")
+        return ""
+    t = dt.datetime.today()
+    month_start, month_end = _get_month_boundaries(t)
+    df_graph = _prepare_graph_dataframe(df, month_start, INCOME_TYPES)
+    df_bar = _prepare_bar_dataframe(df_graph)
+    df_graph = _add_month_start_point(df_graph, month_start)
+    df_graph, df_predict = _handle_predictions(
+        df_graph, t, month_start, month_end
+    )
+    fig_bar = _create_bar_figure(
+        df_bar, month_start, month_end, min_yrange, df_graph, df_predict
+    )
+    fig_line = _create_line_figure(df_graph, theme)
+    fig_predict = _create_prediction_figure(df_predict, theme)
+    _update_traces(fig_bar, fig_line, fig_predict)
+    _update_layout(fig_bar, theme)
+    fig_bar.add_traces(fig_line.data)
+    fig_bar.add_traces(fig_predict.data)
+    graph_html = fig_bar.to_html(full_html=False)
+    log.info("end 'generate_daily_chart' method")
+    return graph_html
+
+
+def _get_month_boundaries(t: dt.datetime) -> tuple[str, str]:
+    month_start = dt.date(t.year, t.month, 1).isoformat()
+    month_end = (
+        dt.date(
+            t.year if t.month < 12 else t.year + 1,
+            t.month + 1 if t.month < 12 else 1,
+            1,
+        )
+        - dt.timedelta(days=1)
+    ).isoformat()
+    return month_start, month_end
+
+
+def _prepare_graph_dataframe(
+    df: pd.DataFrame, month_start: str, income_types: list
+) -> pd.DataFrame:
+    df_graph = df.copy()
+    df_graph = df_graph.query("expense_type not in @income_types")
+    df_graph["date"] = pd.to_datetime(df_graph["date"])
+    df_graph = df_graph.query(f"date >= @pd.Timestamp('{month_start}')")
+    df_graph = df_graph.sort_values("date")
+    df_graph["cumsum"] = df_graph["expense_amount"].cumsum()
+    return df_graph
+
+
+def _prepare_bar_dataframe(df_graph: pd.DataFrame) -> pd.DataFrame:
+    df_bar = (
+        df_graph.groupby(["date", "expense_type"])["expense_amount"]
+        .sum()
+        .reset_index()
+    )
+    df_bar["date"] = pd.to_datetime(df_bar["date"]) + pd.Timedelta(hours=12)
+    return df_bar
+
+
+def _add_month_start_point(
+    df_graph: pd.DataFrame, month_start: str
+) -> pd.DataFrame:
+    if pd.to_datetime(month_start) < df_graph["date"].iloc[0]:
+        df_graph = pd.concat(
+            [
+                pd.DataFrame(
+                    {
+                        "date": [pd.to_datetime(month_start)],
+                        "cumsum": [0],
+                    }
+                ),
+                df_graph,
+            ],
+            ignore_index=True,
+        )
+    return df_graph
+
+
+def _handle_predictions(
+    df_graph: pd.DataFrame, t: dt.datetime, month_start: str, month_end: str
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    if t < pd.to_datetime(month_end):
+        df_graph = pd.concat(
+            [
+                df_graph,
+                pd.DataFrame(
+                    {
+                        "date": [pd.to_datetime(month_end)],
+                        "cumsum": [df_graph["cumsum"].iloc[-1]],
+                    }
+                ),
+            ],
+            ignore_index=True,
+        )
+        total_monthly_expense = df_graph["expense_amount"].sum()
+        days_passed = (
+            pd.to_datetime(t.date()) - pd.to_datetime(month_start)
+        ).days + 1
+        df_predict = pd.DataFrame(
+            {
+                "date": [
+                    pd.to_datetime(month_start),
+                    pd.to_datetime(month_end),
+                ],
+                "predict": [
+                    0,
+                    df_graph["cumsum"].iloc[-1]
+                    + (
+                        pd.to_datetime(month_end) - pd.to_datetime(t.date())
+                    ).days
+                    * total_monthly_expense
+                    / days_passed,
+                ],
+            }
+        )
+    else:
+        df_predict = pd.DataFrame(columns=["date", "predict"])
+    return df_graph, df_predict
+
+
+def _create_bar_figure(
+    df_bar: pd.DataFrame,
+    month_start: str,
+    month_end: str,
+    min_yrange: int,
+    df_graph: pd.DataFrame,
+    df_predict: pd.DataFrame,
+) -> px.bar:
+    return px.bar(
+        df_bar,
+        x="date",
+        y="expense_amount",
+        color="expense_type",
+        title="支出内訳（日別）",
+        hover_data=dict(expense_amount=":,"),
+        category_orders={"expense_type": EXPENSE_TYPES},
+        barmode="stack",
+        range_x=[
+            pd.to_datetime(month_start),
+            pd.to_datetime(month_end),
+        ],
+        range_y=[
+            0,
+            max(
+                min_yrange,
+                df_graph["cumsum"].max() * 1.2,
+                df_predict["predict"].max() * 1.2,
+            ),
+        ],
+    )
+
+
+def _create_line_figure(df_graph: pd.DataFrame, theme: str) -> px.line:
+    return px.line(
+        df_graph,
+        x="date",
+        y="cumsum",
+        line_shape="hv",
+        color_discrete_sequence=["#3b82f6" if theme == "dark" else "#223377"],
+    )
+
+
+def _create_prediction_figure(df_predict: pd.DataFrame, theme: str) -> px.line:
+    return px.line(
+        df_predict,
+        x="date",
+        y="predict",
+        color_discrete_sequence=["#dd4433" if theme == "dark" else "#ff5544"],
+    )
+
+
+def _update_traces(
+    fig_bar: px.bar, fig_line: px.line, fig_predict: px.line
+) -> None:
+    fig_bar.update_traces(
+        hovertemplate="¥%{y:,}",
+        textfont=dict(size=14),
+    )
+    fig_line.update_traces(
+        line=dict(dash="solid", width=1.5),
+        hovertemplate="¥%{y:,}",
+    )
+    fig_predict.update_traces(
+        line=dict(dash="dot", width=1.5),
+        hovertemplate="¥%{y:,}",
+    )
+
+
+def _update_layout(fig: go.Figure, theme: str) -> None:
+    fig.update_layout(
+        height=500,
+        xaxis_title="",
+        yaxis_title="金額(¥)",
+        title_y=0.98,
+        legend_title="",
+        yaxis=dict(
+            tickprefix="¥",
+            tickformat=",",
+        ),
+        dragmode=False,
+        legend=dict(orientation="h"),
+        margin=dict(l=10, r=10, t=50, b=0),
+        paper_bgcolor="rgba(0, 0, 0, 0)",
+        plot_bgcolor="rgba(0, 0, 0, 0)",
+        template="plotly_dark" if theme == "dark" else "plotly_white",
+    )
+
+
 def generate_pie_chart(df: pd.DataFrame, theme: str = "light") -> str:
     """
     円グラフを生成
     """
     log.info("start 'generate_pie_chart' method")
+    if df.empty:
+        log.info("DataFrame is empty, skipping graph generation.")
+        return ""
     df_pie = df.copy()
     df_pie = df_pie.loc[
         df_pie.loc[:, "month"] == dt.datetime.today().strftime("%Y-%m")
@@ -179,17 +399,7 @@ def generate_pie_chart(df: pd.DataFrame, theme: str = "light") -> str:
         hovertemplate="%{label}<br>¥%{value:,}",
         textfont=dict(size=14),
     )
-    fig.update_layout(
-        height=500,
-        title_y=0.98,
-        legend_title="支出タイプ",
-        dragmode=False,
-        margin=dict(l=10, r=10, t=50, b=0),
-        paper_bgcolor="rgba(0, 0, 0, 0)",
-        plot_bgcolor="rgba(0, 0, 0, 0)",
-        legend=dict(orientation="h"),
-        template="plotly_dark" if theme == "dark" else "plotly_white",
-    )
+    _update_layout(fig, theme)
     graph_html = fig.to_html(full_html=False)
     log.info("end 'generate_pie_chart' method")
     return graph_html
@@ -202,6 +412,9 @@ def generate_bar_chart(
     月別の棒グラフを生成
     """
     log.info("start 'generate_bar_chart' method")
+    if df.empty:
+        log.info("DataFrame is empty, skipping graph generation.")
+        return ""
     df_graph = df.copy()
     df_graph.loc[:, "label"] = df_graph.loc[:, "expense_amount"].map(
         lambda x: f"¥{x:,}" if 10000 <= x else ""
@@ -229,24 +442,7 @@ def generate_bar_chart(
         hovertemplate="%{label}<br>¥%{value:,}",
         textfont=dict(size=14),
     )
-    fig.update_layout(
-        height=500,
-        xaxis_title="",
-        yaxis_title="金額(¥)",
-        title_y=0.98,
-        legend_title="支出タイプ",
-        xaxis=dict(tickmode="array"),
-        yaxis=dict(
-            tickprefix="¥",
-            tickformat=",",
-        ),
-        dragmode=False,
-        margin=dict(l=10, r=10, t=30, b=0),
-        paper_bgcolor="rgba(0, 0, 0, 0)",
-        plot_bgcolor="rgba(0, 0, 0, 0)",
-        legend=dict(orientation="h"),
-        template="plotly_dark" if theme == "dark" else "plotly_white",
-    )
+    _update_layout(fig, theme)
     graph_html = fig.to_html(full_html=False)
     log.info("end 'generate_bar_chart' method")
     return graph_html
@@ -305,8 +501,10 @@ def generate_commons(request: Request) -> dict[str, Any]:
         report_summary = generate_report_summary(df_records)
         # グラフを生成
         df_graph = generate_monthly_df(df_records)
-        graph_html = generate_pie_chart(df_graph, theme)
-        graph_html += "<hr>"
+        graph_html = generate_daily_chart(df_records, theme)
+        graph_html += "<hr>" if graph_html else ""
+        graph_html += generate_pie_chart(df_graph, theme)
+        graph_html += "<hr>" if graph_html else ""
         graph_html += generate_bar_chart(df_graph, theme)
     else:
         report_summary = {
