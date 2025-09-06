@@ -109,7 +109,7 @@ def generate_items() -> list[str]:
 
 def generate_report_summary(df: pd.DataFrame) -> dict[str, Any]:
     """
-    generate report summary from dataframe
+    レポートのサマリーを生成
     """
     log.info("start 'generate_report_summary' method")
     t = dt.datetime.today()
@@ -140,7 +140,7 @@ def generate_report_summary(df: pd.DataFrame) -> dict[str, Any]:
 
 def generate_monthly_df(df: pd.DataFrame) -> pd.DataFrame:
     """
-    create monthly dataframe from daily dataframe
+    月別のDataFrameを生成
     """
     log.info("start 'generate_monthly_df' method")
     df_new = df.copy()
@@ -160,7 +160,7 @@ def generate_monthly_df(df: pd.DataFrame) -> pd.DataFrame:
 
 def generate_pie_chart(df: pd.DataFrame, theme: str = "light") -> str:
     """
-    create pie chart from dataframe
+    円グラフを生成
     """
     log.info("start 'generate_pie_chart' method")
     df_pie = df.copy()
@@ -199,7 +199,7 @@ def generate_bar_chart(
     df: pd.DataFrame, theme: str = "light", max_monthes: int = 12
 ) -> str:
     """
-    create graph from dataframe
+    月別の棒グラフを生成
     """
     log.info("start 'generate_bar_chart' method")
     df_graph = df.copy()
