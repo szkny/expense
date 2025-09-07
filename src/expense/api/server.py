@@ -397,6 +397,7 @@ def _update_layout(fig: go.Figure, theme: str) -> None:
         yaxis=dict(
             tickprefix="¥",
             tickformat=",",
+            autorange=True,
         ),
         dragmode=False,
         legend=dict(orientation="h"),
