@@ -170,7 +170,9 @@ def generate_daily_chart(
         return ""
     t = dt.datetime.today()
     month_start, month_end = _get_month_boundaries(t)
-    df_graph = _prepare_graph_dataframe(df, month_start, INCOME_TYPES)
+    df_graph = _prepare_graph_dataframe(
+        df, month_start, month_end, INCOME_TYPES
+    )
     df_bar = _prepare_bar_dataframe(df_graph)
     df_graph = _add_month_start_point(df_graph, month_start)
     df_graph, df_predict = _handle_predictions(
@@ -205,12 +207,14 @@ def _get_month_boundaries(t: dt.datetime) -> tuple[str, str]:
 
 
 def _prepare_graph_dataframe(
-    df: pd.DataFrame, month_start: str, income_types: list
+    df: pd.DataFrame, month_start: str, month_end: str, income_types: list
 ) -> pd.DataFrame:
     df_graph = df.copy()
     df_graph = df_graph.query("expense_type not in @income_types")
     df_graph["date"] = pd.to_datetime(df_graph["date"])
-    df_graph = df_graph.query(f"date >= @pd.Timestamp('{month_start}')")
+    df_graph = df_graph.query(
+        f"date >= @pd.Timestamp('{month_start}') and date <= @pd.Timestamp('{month_end}')"
+    )
     df_graph = df_graph.sort_values("date")
     df_graph["cumsum"] = df_graph["expense_amount"].cumsum()
     return df_graph
@@ -248,7 +252,9 @@ def _add_month_start_point(
 def _handle_predictions(
     df_graph: pd.DataFrame, t: dt.datetime, month_start: str, month_end: str
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    if t < pd.to_datetime(month_end):
+    latest_date = df_graph.iloc[-1]["date"]
+    latest_date = t if t > latest_date else latest_date
+    if latest_date < pd.to_datetime(month_end):
         df_graph = pd.concat(
             [
                 df_graph,
@@ -263,7 +269,7 @@ def _handle_predictions(
         )
         total_monthly_expense = df_graph["expense_amount"].sum()
         days_passed = (
-            pd.to_datetime(t.date()) - pd.to_datetime(month_start)
+            pd.to_datetime(latest_date.date()) - pd.to_datetime(month_start)
         ).days + 1
         df_predict = pd.DataFrame(
             {
@@ -275,7 +281,8 @@ def _handle_predictions(
                     0,
                     df_graph["cumsum"].iloc[-1]
                     + (
-                        pd.to_datetime(month_end) - pd.to_datetime(t.date())
+                        pd.to_datetime(month_end)
+                        - pd.to_datetime(latest_date.date())
                     ).days
                     * total_monthly_expense
                     / days_passed,
@@ -295,18 +302,19 @@ def _create_bar_figure(
     df_graph: pd.DataFrame,
     df_predict: pd.DataFrame,
 ) -> px.bar:
+    month_str = pd.Timestamp(month_start).strftime("%Y年%-m月")
     return px.bar(
         df_bar,
         x="date",
         y="expense_amount",
         color="expense_type",
-        title="支出内訳（日別）",
+        title=f"支出内訳 日別（{month_str}）",
         hover_data=dict(expense_amount=":,"),
         category_orders={"expense_type": EXPENSE_TYPES},
         barmode="stack",
         range_x=[
-            pd.to_datetime(month_start),
-            pd.to_datetime(month_end),
+            pd.Timestamp(month_start),
+            pd.Timestamp(month_end),
         ],
         range_y=[
             0,
@@ -411,11 +419,12 @@ def generate_pie_chart(df: pd.DataFrame, theme: str = "light") -> str:
     df_pie = df_pie.loc[
         df_pie.loc[:, "month"] == dt.datetime.today().strftime("%Y-%m")
     ]
+    month_str = pd.Timestamp(df_pie.iloc[-1]["month"]).strftime("%Y年%-m月")
     fig = px.pie(
         df_pie,
         names="expense_type",
         values="expense_amount",
-        title="支出内訳（今月）",
+        title=f"支出内訳（{month_str}）",
         category_orders={"expense_type": EXPENSE_TYPES},
     )
     fig.update_traces(
