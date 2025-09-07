@@ -364,16 +364,16 @@ def _update_traces(
     fig_bar: px.bar, fig_line: px.line, fig_predict: px.line
 ) -> None:
     fig_bar.update_traces(
-        hovertemplate="¥%{y:,}",
+        hovertemplate="¥%{y:,.0f}",
         textfont=dict(size=14),
     )
     fig_line.update_traces(
         line=dict(dash="solid", width=1.5),
-        hovertemplate="¥%{y:,}",
+        hovertemplate="¥%{y:,.0f}",
     )
     fig_predict.update_traces(
         line=dict(dash="dot", width=1.5),
-        hovertemplate="¥%{y:,}",
+        hovertemplate="¥%{y:,.0f}",
     )
 
 
@@ -418,7 +418,7 @@ def generate_pie_chart(df: pd.DataFrame, theme: str = "light") -> str:
     )
     fig.update_traces(
         texttemplate="¥%{value:,} (%{percent})",
-        hovertemplate="%{label}<br>¥%{value:,}",
+        hovertemplate="%{label}<br>¥%{value:,.0f}",
         textfont=dict(size=14),
     )
     _update_layout(fig, theme)
@@ -460,7 +460,7 @@ def generate_bar_chart(
         category_orders={"expense_type": EXPENSE_TYPES},
     )
     fig.update_traces(
-        hovertemplate="%{label}<br>¥%{value:,}",
+        hovertemplate="%{label}<br>¥%{value:,.0f}",
         textfont=dict(size=14),
     )
     _update_layout(fig, theme)
