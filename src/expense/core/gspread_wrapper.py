@@ -63,8 +63,10 @@ class GspreadHandler:
             "Nov",
             "Dec",
         ]
-        today = dt.datetime.today()
-        date = dt.datetime.fromisoformat(date_str) if date_str else today
+        try:
+            date = dt.datetime.fromisoformat(date_str)
+        except ValueError:
+            date = dt.datetime.today()
         sheetname = sheetname_list[date.month - 1]
         sheets = self.workbook.worksheets()
         if not any([sheetname == s.title for s in sheets]):
@@ -76,8 +78,16 @@ class GspreadHandler:
     def get_column(self, date_str: str = "") -> str:
         log.info("start 'get_column' method")
         try:
-            date_str = date_str if date_str else dt.date.today().isoformat()
+            try:
+                date_str = (
+                    dt.datetime.fromisoformat(date_str).date().isoformat()
+                )
+            except ValueError:
+                pass
             date_str = date_str.replace("-", "/")
+            if not re.match(r"^\d{4}/\d{1,2}/\d{1,2}$", date_str):
+                date_str = dt.date.today().isoformat()
+                date_str = date_str.replace("-", "/")
             cell = self.sheet.find(date_str)
             if cell:
                 match_result = re.match("[A-Z]+", cell.address)

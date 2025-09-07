@@ -6,7 +6,7 @@ from typing import Any
 TITLE = "家計簿"
 
 
-def exec_command(command: list, timeout: int = 60) -> Any:
+def exec_command(command: list, timeout: int = 60, env: dict = {}) -> Any:
     """
     utility method for shell command execution
     """
@@ -18,6 +18,7 @@ def exec_command(command: list, timeout: int = 60) -> Any:
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         timeout=timeout,
+        env=env if env else None,
     )
     json_str = res.stdout.decode("utf-8")
     log.debug(f"command output: {json_str}")

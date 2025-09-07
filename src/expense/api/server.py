@@ -496,13 +496,14 @@ def generate_commons(request: Request) -> dict[str, Any]:
             # 最新のOCRデータを取得して、最新のスクリーンショットと同じならOCR登録済みとみなす
             latest_ocr_data = get_ocr_expense()
             disable_ocr = len(latest_ocr_data) and (
-                latest_ocr_data.get("screenshot_name")
+                latest_ocr_data.get("screenshot_name", "")
                 == os.path.basename(screenshot_name)
             )
         else:
             img_base64 = ""
             disable_ocr = True
-    except Exception:
+    except Exception as e:
+        log.error(f"Error occured in screenshot process: {e}")
         screenshot_name = ""
         img_base64 = ""
         disable_ocr = True
@@ -620,6 +621,7 @@ def register_item(
         GSPREAD_HANDLER.register_expense(
             expense_type, expense_amount_num, expense_memo, expense_date
         )
+        GSPREAD_HANDLER.load_sheet()
         store_expense(
             expense_type, expense_memo, expense_amount_num, expense_date
         )
@@ -683,25 +685,33 @@ def ocr(
         expense_type = ocr_data["expense_type"]
         expense_amount = int(ocr_data["expense_amount"])
         expense_memo = ocr_data.get("expense_memo", "")
+        expense_date = ocr_data.get("expense_date", "")
+        try:
+            toast("登録中..")
+        except Exception:
+            log.info("Toast notification failed.")
+            pass
+        GSPREAD_HANDLER.load_sheet(expense_date)
+        GSPREAD_HANDLER.register_expense(
+            expense_type, expense_amount, expense_memo, expense_date
+        )
+        GSPREAD_HANDLER.load_sheet()
         json.dump(
             ocr_data,
             open(CACHE_PATH / "ocr_data.json", "w"),
             ensure_ascii=False,
             indent=2,
         )
-        try:
-            toast("登録中..")
-        except Exception:
-            log.info("Toast notification failed.")
-            pass
-        GSPREAD_HANDLER.register_expense(
-            expense_type, expense_amount, expense_memo
-        )
-        store_expense(expense_type, expense_memo, expense_amount)
+        store_expense(expense_type, expense_memo, expense_amount, expense_date)
         try:
             notify(
                 "家計簿への登録が完了しました。",
-                f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
+                (
+                    f"[{expense_date}] "
+                    f"{expense_type}"
+                    f"{': '+expense_memo if expense_memo else ''}"
+                    f", ¥{expense_amount:,}"
+                ),
             )
         except Exception:
             log.info("Notification failed.")
@@ -713,6 +723,7 @@ def ocr(
         {
             "request": request,
             "selected_type": expense_type,
+            "input_date": expense_date,
             "input_amount": expense_amount,
             "input_memo": expense_memo,
             **commons,

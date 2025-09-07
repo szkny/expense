@@ -31,9 +31,10 @@ def ocr_main(offset: int = 0, enable_toast: bool = True) -> dict:
         toast("画像解析中..")
     screenshot_name = get_latest_screenshot(offset)
     ocr_text = ocr_image(screenshot_name)
-    expense_data = parse_ocr_text(ocr_text)
+    expense_data = parse_ocr_text(ocr_text, screenshot_name)
     expense_amount = expense_data.get("amount", "")
     expense_memo = expense_data.get("memo", "")
+    expense_date = expense_data.get("date", "")
     if enable_toast:
         toast("支出項目解析中..")
     try:
@@ -42,7 +43,8 @@ def ocr_main(offset: int = 0, enable_toast: bool = True) -> dict:
                 "expense_type_classifier",
                 "--json",
                 f'{{"amount": {expense_amount}, "memo": "{expense_memo}"}}',
-            ]
+            ],
+            env=dict(LOG_LEVEL="ERROR"),
         )
     except json.decoder.JSONDecodeError as e:
         log.error(f"JSON decode error: {e}")
@@ -53,6 +55,7 @@ def ocr_main(offset: int = 0, enable_toast: bool = True) -> dict:
         "expense_type": expense_type,
         "expense_amount": expense_amount,
         "expense_memo": expense_memo,
+        "expense_date": expense_date,
         "screenshot_name": os.path.basename(screenshot_name),
     }
 
@@ -144,7 +147,7 @@ def ocr_image(screenshot_name: str) -> str:
     return text
 
 
-def parse_ocr_text(ocr_text: str) -> dict:
+def parse_ocr_text(ocr_text: str, screenshot_name: str) -> dict:
     """
     Extract expense data (amount and memo) from OCR text
     """
@@ -158,15 +161,72 @@ def parse_ocr_text(ocr_text: str) -> dict:
     expense_data = {
         "amount": extract_amount(text_rows, date_pattern),
         "memo": extract_memo(text_rows, date_pattern),
+        "date": extract_date(text_rows, date_pattern, screenshot_name),
     }
 
     if expense_data["amount"]:
         log.debug(f"Extracted Expense Amount: {expense_data['amount']}")
     if expense_data["memo"]:
         log.debug(f"Extracted Expense Memo: {expense_data['memo']}")
+    if expense_data["date"]:
+        log.debug(f"Extracted Date: {expense_data['date']}")
 
     log.info("end 'parse_ocr_text' method")
     return expense_data
+
+
+def normalize_date_string(date_str: str) -> str:
+    """
+    Normalize date string to a format that can be parsed by pd.Timestamp
+    """
+    log.info("start 'normalize_date_string' method")
+    date_str = re.sub(r"[年月/]", "-", date_str)
+    date_str = re.sub(r"[日]", " ", date_str)
+    date_str = re.sub(r"[\(月火水木金土日\)]+", " ", date_str)
+    date_str = re.sub(r"[時分]", ":", date_str)
+    date_str = re.sub(r" +", " ", date_str)
+    date_str = re.sub(r":$", "", date_str)
+    if re.match(r"^\d{1,2}:\d{1,2}$", date_str):
+        today_str = pd.Timestamp.now().strftime("%Y-%m-%d")
+        date_str = f"{today_str} {date_str}"
+    log.info("end 'normalize_date_string' method")
+    return date_str
+
+
+def extract_date(
+    text_rows: list[str], date_pattern: re.Pattern, screenshot_name: str
+) -> str:
+    """
+    Extract date from text rows
+    """
+    log.info("start 'extract_date' method")
+    date_str = ""
+    dates = []
+    for i, row in enumerate(text_rows):
+        row = row.replace(" ", "")
+        if date_pattern.search(row):
+            log.debug(f"Processing row {i} for date: {row}")
+            dates.append(row)
+    if dates:
+        try:
+            log.debug(f"Extracted date strings: {dates[0]}")
+            date_str = normalize_date_string(dates[0])
+            log.debug(f"Normalized date string: {date_str}")
+            date_str = pd.Timestamp(date_str).isoformat()
+        except ValueError:
+            pass
+    if not date_str:
+        if match := re.search(r"(\d{8})_(\d{6})", screenshot_name):
+            try:
+                date_str = f"{match.group(1)} {match.group(2)}"
+                date_str = pd.Timestamp(date_str).isoformat()
+            except ValueError:
+                pass
+    if not date_str:
+        log.debug("日時の抽出に失敗しました。")
+        toast("日時の抽出に失敗しました。")
+    log.info("end 'extract_date' method")
+    return date_str
 
 
 def extract_amount(

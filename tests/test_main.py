@@ -2,6 +2,7 @@ import os
 import unittest
 import datetime
 import pandas as pd
+import logging as log
 from unittest.mock import patch
 from src.expense.core.expense import (
     get_fiscal_year,
@@ -148,21 +149,24 @@ class TestMain(unittest.TestCase):
             try:
                 screenshot_name = get_latest_screenshot(offset + i)
                 expense_data = ocr_main(offset + i, enable_toast=False)
+                log.info(f"OCR result (No.{i}): {expense_data}")
                 expense_amount = expense_data.get("expense_amount", "")
                 expense_memo = expense_data.get("expense_memo", "")
                 expense_type = expense_data.get("expense_type", "")
+                expense_date = expense_data.get("expense_date", "")
                 result.append(
                     {
                         "screenshot_name": os.path.basename(screenshot_name),
+                        "expense_date": expense_date,
                         "expense_type": expense_type,
                         "expense_amount": expense_amount,
                         "expense_memo": expense_memo,
                     }
                 )
             except Exception as e:
-                print(f"Error processing screenshot (No.{i}):\n{e}\n")
+                log.error(f"Error processing screenshot (No.{i}):\n{e}\n")
         df_result = pd.DataFrame(result)
-        print(f"OCR results:\n{df_result}")
+        log.info(f"OCR results:\n{df_result}")
 
 
 if __name__ == "__main__":

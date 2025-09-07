@@ -261,6 +261,9 @@ def get_ocr_expense() -> dict:
     except FileNotFoundError:
         log.debug("OCR data not found.")
         return {}
+    except ValueError:
+        log.error("OCR data is invalid.")
+        return {}
     ocr_expense = {
         "expense_type": data.get("expense_type", ""),
         "expense_memo": data.get("expense_memo", ""),
