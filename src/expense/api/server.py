@@ -351,7 +351,9 @@ def _add_bar_chart_labels(
             mode="text",
             textposition="top center",
             textfont=dict(
-                size=fontsize, color="#dddddd" if theme == "dark" else "#222222"
+                size=fontsize,
+                weight="bold",
+                color="#ffffff" if theme == "dark" else "#000000",
             ),
             showlegend=False,
             hoverlabel=dict(namelength=0),
