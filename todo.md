@@ -17,8 +17,10 @@
 - [x] add a feature to aggregate/analyse/report past expenses
 - [x] add a feature for fuzzy search of expense history
 - [x] register past record with datetime
+- [ ] recognize date text in ocr mode
 - [ ] add feature to edit records
 - [ ] data migration from spreadsheet records
+- [ ] add a feature to change monthes on daily chart
 - [ ] change web UI to SPA
 - [ ] add a feature of asset management
 - [ ] add a feature of sorting cards in the Web UI
