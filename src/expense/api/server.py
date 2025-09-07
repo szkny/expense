@@ -479,6 +479,11 @@ def generate_commons(request: Request) -> dict[str, Any]:
     # テーマを取得
     theme = request.cookies.get("theme", "light")
 
+    expense_date_range = (
+        dt.date(get_fiscal_year(), 4, 1).isoformat(),
+        dt.date(get_fiscal_year() + 1, 3, 31).isoformat(),
+    )
+
     # 最新のスクリーンショットを取得してBase64エンコード
     try:
         screenshot_name = get_latest_screenshot()
@@ -537,6 +542,7 @@ def generate_commons(request: Request) -> dict[str, Any]:
         graph_html = ""
     log.info("end 'generate_commons' method")
     return {
+        "expense_date_range": expense_date_range,
         "theme": theme,
         "n_records": N_RECORDS,
         "gspread_url": GSPREAD_URL,

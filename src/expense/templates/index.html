@@ -21,7 +21,15 @@
       <form method="post" action="/register">
         <h3>🚀 家計簿に登録する情報を入力</h3>
 
-        <input type="date" id="expense-date" name="expense_date" value="{{ expense_date or today }}" required />
+        <input
+          type="date"
+          id="expense-date"
+          name="expense_date"
+          value="{{ expense_date or today }}"
+          min="{{ expense_date_range[0] }}"
+          max="{{ expense_date_range[1] }}"
+          required
+        />
 
         <select id="expense-type" name="expense_type">
           {% for item in items %}
