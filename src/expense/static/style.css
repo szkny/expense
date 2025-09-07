@@ -317,6 +317,7 @@ tr:nth-child(even) {
   transition:
     background 0.2s,
     transform 0.2s;
+  z-index: 1000;
 }
 .theme-toggle:hover {
   background: #d1d5db;

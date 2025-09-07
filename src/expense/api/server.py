@@ -339,24 +339,25 @@ def _create_prediction_figure(df_predict: pd.DataFrame, theme: str) -> px.line:
 
 
 def _add_bar_chart_labels(
-    fig: px.bar,
-    df_bar: pd.DataFrame,
-    key: str, theme: str,
-    fontsize: int = 14
+    fig: px.bar, df_bar: pd.DataFrame, key: str, theme: str, fontsize: int = 14
 ) -> None:
-    log.info(f"df_bar:\n{df_bar}")
     totals = df_bar.groupby(key, as_index=False)["expense_amount"].sum()
     totals["label"] = totals["expense_amount"].map(lambda x: f"¥{x:,}")
-    log.info(f"totals:\n{totals}")
-    fig.add_trace(go.Scatter(
-        x=totals[key],
-        y=totals["expense_amount"],
-        text=totals["label"],
-        mode="text",
-        textposition="top center",
-        textfont=dict(size=fontsize, color="#dddddd" if theme == "dark" else "#222222"),
-        showlegend=False
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=totals[key],
+            y=totals["expense_amount"],
+            text=totals["label"],
+            mode="text",
+            textposition="top center",
+            textfont=dict(
+                size=fontsize, color="#dddddd" if theme == "dark" else "#222222"
+            ),
+            showlegend=False,
+            hoverlabel=dict(namelength=0),
+            hovertemplate="%{text}",
+        )
+    )
 
 
 def _update_traces(
@@ -390,8 +391,8 @@ def _update_layout(fig: go.Figure, theme: str) -> None:
         dragmode=False,
         legend=dict(orientation="h"),
         margin=dict(l=10, r=10, t=50, b=0),
-        paper_bgcolor="rgba(0, 0, 0, 0)",
-        plot_bgcolor="rgba(0, 0, 0, 0)",
+        paper_bgcolor="#1f2937" if theme == "dark" else "#ffffff",
+        plot_bgcolor="#1f2937" if theme == "dark" else "#ffffff",
         template="plotly_dark" if theme == "dark" else "plotly_white",
     )
 
