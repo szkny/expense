@@ -220,12 +220,30 @@ def _prepare_graph_dataframe(
     return df_graph
 
 
-def _prepare_bar_dataframe(df_graph: pd.DataFrame) -> pd.DataFrame:
+def _prepare_bar_dataframe(df_graph: pd.DataFrame, len_memo_text: int = 20) -> pd.DataFrame:
+    df_graph = df_graph.sort_values(['date', 'expense_type', 'expense_amount'])
     df_bar = (
         df_graph.groupby(["date", "expense_type"])["expense_amount"]
         .sum()
         .reset_index()
     )
+    df_bar.index = pd.Index(range(len(df_bar)))
+
+    # extract memos for hover text of bar chart
+    for i, r in df_bar.iterrows():
+        date = r["date"]
+        expense_type = r["expense_type"]
+        _data = df_graph.query(f"date==@pd.Timestamp('{date}') and expense_type=='{expense_type}'")
+        _add_memo = ""
+        for memo in _data["expense_memo"].iloc[::-1]:
+            if len(_add_memo + memo) > len_memo_text:
+                _add_memo += ", ⋯"
+                break
+            if len(memo) > 0:
+                _add_memo += ",<br>" + memo if len(_add_memo) else memo
+        df_bar.loc[i, "expense_memo"] = _add_memo
+
+    # add offset to `date` column
     df_bar["date"] = pd.to_datetime(df_bar["date"]) + pd.Timedelta(hours=12)
     return df_bar
 
@@ -309,7 +327,7 @@ def _create_bar_figure(
         y="expense_amount",
         color="expense_type",
         title=f"支出内訳 日別（{month_str}）",
-        hover_data=dict(expense_amount=":,"),
+        hover_data=["expense_memo"],
         category_orders={"expense_type": EXPENSE_TYPES},
         barmode="stack",
         range_x=[
@@ -374,7 +392,7 @@ def _update_traces(
     fig_bar: px.bar, fig_line: px.line, fig_predict: px.line
 ) -> None:
     fig_bar.update_traces(
-        hovertemplate="¥%{y:,.0f}",
+        hovertemplate="¥%{y:,.0f}<br>%{customdata[0]}",
         textfont=dict(size=14),
     )
     fig_line.update_traces(
