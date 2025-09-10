@@ -26,6 +26,7 @@ from ..core.expense import (
     ocr_main,
     get_ocr_expense,
     store_expense,
+    delete_expense
 )
 from ..core.termux_api import toast, notify
 from ..core.ocr import get_latest_screenshot
@@ -220,8 +221,10 @@ def _prepare_graph_dataframe(
     return df_graph
 
 
-def _prepare_bar_dataframe(df_graph: pd.DataFrame, len_memo_text: int = 20) -> pd.DataFrame:
-    df_graph = df_graph.sort_values(['date', 'expense_type', 'expense_amount'])
+def _prepare_bar_dataframe(
+    df_graph: pd.DataFrame, len_memo_text: int = 20
+) -> pd.DataFrame:
+    df_graph = df_graph.sort_values(["date", "expense_type", "expense_amount"])
     df_bar = (
         df_graph.groupby(["date", "expense_type"])["expense_amount"]
         .sum()
@@ -233,7 +236,9 @@ def _prepare_bar_dataframe(df_graph: pd.DataFrame, len_memo_text: int = 20) -> p
     for i, r in df_bar.iterrows():
         date = r["date"]
         expense_type = r["expense_type"]
-        _data = df_graph.query(f"date==@pd.Timestamp('{date}') and expense_type=='{expense_type}'")
+        _data = df_graph.query(
+            f"date==@pd.Timestamp('{date}') and expense_type=='{expense_type}'"
+        )
         _add_memo = ""
         for memo in _data["expense_memo"].iloc[::-1]:
             if len(_add_memo + memo) > len_memo_text:
@@ -615,7 +620,7 @@ def read_root(request: Request) -> HTMLResponse:
 
 
 @app.post("/register", response_class=HTMLResponse)
-def register_item(
+def register(
     request: Request,
     expense_type: str = Form(...),
     expense_amount: str = Form(...),
@@ -623,9 +628,9 @@ def register_item(
     expense_date: str = Form(...),
 ) -> HTMLResponse:
     """
-    フォーム送信を受け取るエンドポイント
+    レコード登録を実行するエンドポイント
     """
-    log.info("start 'register_item' method")
+    log.info("start 'register' method")
     if any([emoji in expense_type for emoji in "⭐🔥🕒️"]):
         data = re.sub("(⭐|🔥|🕒️) ", "", expense_type).split("/")
         if len(data) == 3:
@@ -647,11 +652,9 @@ def register_item(
         except Exception:
             log.info("Toast notification failed.")
             pass
-        GSPREAD_HANDLER.load_sheet(expense_date)
         GSPREAD_HANDLER.register_expense(
             expense_type, expense_amount_num, expense_memo, expense_date
         )
-        GSPREAD_HANDLER.load_sheet()
         store_expense(
             expense_type, expense_memo, expense_amount_num, expense_date
         )
@@ -669,7 +672,7 @@ def register_item(
             log.info("Notification failed.")
             pass
     commons = generate_commons(request)
-    log.info("end 'register_item' method")
+    log.info("end 'register' method")
     return templates.TemplateResponse(
         "index.html",
         {
@@ -721,11 +724,9 @@ def ocr(
         except Exception:
             log.info("Toast notification failed.")
             pass
-        GSPREAD_HANDLER.load_sheet(expense_date)
         GSPREAD_HANDLER.register_expense(
             expense_type, expense_amount, expense_memo, expense_date
         )
-        GSPREAD_HANDLER.load_sheet()
         json.dump(
             ocr_data,
             open(CACHE_PATH / "ocr_data.json", "w"),
@@ -756,6 +757,46 @@ def ocr(
             "input_date": expense_date,
             "input_amount": expense_amount,
             "input_memo": expense_memo,
+            **commons,
+        },
+    )
+
+
+@app.post("/delete", response_class=HTMLResponse)
+def delete(
+    request: Request,
+    expense_date: str = Form(...),
+    expense_type: str = Form(...),
+    expense_amount: str = Form(...),
+    expense_memo: str = Form(...),
+) -> HTMLResponse:
+    """
+    登録レコードを削除するエンドポイント
+    """
+    log.info("start 'delete' method")
+    status = True
+    if not GSPREAD_HANDLER.delete_expense(
+        expense_date,
+        expense_type,
+        expense_amount,
+        expense_memo,
+    ):
+        status = False
+    if status and not delete_expense(
+        expense_type, expense_memo, expense_amount, expense_date
+    ):
+        status = False
+    commons = generate_commons(request)
+    log.info("end 'delete' method")
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "delete_status": status,
+            "delete_type": expense_type,
+            "delete_date": expense_date,
+            "delete_amount": expense_amount,
+            "delete_memo": expense_memo,
             **commons,
         },
     )

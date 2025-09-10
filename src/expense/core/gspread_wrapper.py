@@ -3,6 +3,7 @@ import pathlib
 import gspread
 import datetime as dt
 import logging as log
+from typing import Any
 from platformdirs import user_config_dir
 from tenacity import retry, stop_after_attempt
 from google.oauth2 import service_account
@@ -158,13 +159,17 @@ class GspreadHandler:
         self, expense_type: str, amount: int, memo: str = "", date_str: str = ""
     ) -> None:
         log.info("start 'register_expense' method")
-        column = self.get_column(date_str)
-        row = self.get_row(expense_type)
-        label = f"{column}{row}"
-        self.add_amount_data(label, amount)
-        if memo:
-            self.add_memo(column, expense_type, memo)
-        log.info("end 'register_expense' method")
+        try:
+            self.load_sheet(date_str)
+            column = self.get_column(date_str)
+            row = self.get_row(expense_type)
+            label = f"{column}{row}"
+            self.add_amount_data(label, amount)
+            if memo:
+                self.add_memo(column, expense_type, memo)
+        finally:
+            self.load_sheet()
+            log.info("end 'register_expense' method")
 
     @retry(stop=stop_after_attempt(3))
     def get_todays_expenses(self, offset: int = 31) -> str:
@@ -241,6 +246,218 @@ class GspreadHandler:
         result = f"💰️残予算: ¥{budget_left1:,}  (¥{budget_left2:,}/日)"
         log.info("end 'get_budget_left' method")
         return result
+
+    @retry(stop=stop_after_attempt(3))
+    def delete_amount(
+        self,
+        column: str,
+        target_type: str,
+        target_amount: int,
+    ) -> bool:
+        log.info("start 'delete_amount' method")
+        row = self.get_row(target_type)
+        address = f"{column}{row}"
+        cell = self.sheet.acell(
+            address,
+            value_render_option=gspread.worksheet.ValueRenderOption.formula,
+        )
+
+        if isinstance(cell.value, int):
+            if cell.value == target_amount:
+                log.debug(
+                    f"Deleting amount: `{target_amount}` of {address} in {self.sheetname}"
+                )
+                self.sheet.update_acell(address, 0)
+            else:
+                log.debug(
+                    f"Deleting amount failed: target not found. (target_amount={target_amount}, cell.value={cell.value})"
+                )
+                return False
+        elif isinstance(cell.value, str):
+            # 最後にマッチした部分を探す
+            new_value: str | int = ""
+            s = str(cell.value)
+            if matches := list(re.finditer(f"[=+] *{target_amount}", s)):
+                last_match = matches[-1]
+                start, end = last_match.span()
+                new_value = s[:start] + s[end:]
+            else:
+                new_value = s
+            new_value = new_value.strip()
+            if len(new_value) == 0:
+                new_value = 0
+            elif new_value[0] == "+":
+                new_value = "=" + new_value[1:]
+            log.debug(f"Generated new_value: '{new_value}'")
+            if cell.value != new_value:
+                log.debug(
+                    (
+                        f"Deleting amount: `{target_amount}` of {address} in {self.sheetname}\n"
+                        f"\tBefore: '{cell.value}'\n\tAfter : '{new_value}'"
+                    )
+                )
+                self.sheet.update_acell(address, new_value)
+            else:
+                log.debug(
+                    f"Deleting amount failed: target not found in the cell formula. (target_amount={target_amount}, cell.value={cell.value})"
+                )
+                return False
+        else:
+            return False
+        log.info("end 'delete_amount' method")
+        return True
+
+    @retry(stop=stop_after_attempt(3))
+    def delete_memo(
+        self, column: str, target_type: str, target_memo: str, offset: int = 51
+    ) -> bool:
+        log.info("start 'delete_memo' method")
+        cell_range = f"{column}{offset}:{column}{offset+3}"
+        cells = self.sheet.range(cell_range)
+        cells = list(
+            filter(
+                lambda c: isinstance(c.value, str) and target_type in c.value,
+                cells,
+            )
+        )
+        if len(cells):
+            cell = cells[0]
+            address = cell.address
+
+            # 最後にマッチした部分を探す
+            new_value: str = ""
+            s = str(cell.value)
+            if matches := list(
+                re.finditer(f"({target_type}:|,) *{target_memo}", s)
+            ):
+                last_match = matches[-1]
+                start, end = last_match.span()
+                new_value = s[:start] + s[end:]
+            else:
+                new_value = s
+            new_value = new_value.strip()
+            if len(new_value) == 0:
+                new_value = ""
+            elif new_value[0] == ",":
+                new_value = target_type + ":" + new_value[1:]
+            log.debug(f"Generated new_value: '{new_value}'")
+            if cell.value != new_value:
+                log.debug(
+                    (
+                        f"Deleting memo: '{target_memo}' of {address} in {self.sheetname}\n"
+                        f"\tBefore: '{cell.value}'\n\tAfter : '{new_value}'"
+                    )
+                )
+                self.sheet.update_acell(address, new_value)
+            else:
+                log.debug(
+                    f"Deleting memo failed: target not found in the cell. (target_memo={target_memo}, cell.value={cell.value})"
+                )
+                return False
+        else:
+            log.debug(
+                f"Deleting memo failed: target not found in the cell. (target_memo={target_memo})"
+            )
+            return False
+        log.info("end 'delete_memo' method")
+        return True
+
+    @retry(stop=stop_after_attempt(3))
+    def delete_expense(
+        self,
+        target_date: str,
+        target_type: str,
+        target_amount: str | int,
+        target_memo: str = "",
+    ) -> bool:
+        log.info("start 'delete_expense' method")
+        try:
+            log.debug(f"target_date: {target_date}")
+            log.debug(f"target_type: {target_type}")
+            log.debug(f"target_amount: {target_amount}")
+            log.debug(f"target_memo: {target_memo}")
+            if not target_date:
+                log.debug(
+                    "Failed to delete record. target_date must be specified."
+                )
+                return False
+            if not target_type:
+                log.debug(
+                    "Failed to delete record. target_type must be specified."
+                )
+                return False
+            if not target_amount:
+                log.debug(
+                    "Failed to delete record. target_amount must be specified."
+                )
+                return False
+
+            target_amount = int(re.sub(r"[^\d]", "", str(target_amount)))
+
+            self.load_sheet(target_date)
+            column = self.get_column(target_date)
+            if not self.delete_amount(column, target_type, target_amount):
+                return False
+
+            if target_memo and not self.delete_memo(
+                column, target_type, target_memo
+            ):
+                return False
+            return True
+        finally:
+            self.load_sheet()
+            log.info("end 'delete_expense' method")
+
+    @retry(stop=stop_after_attempt(3))
+    def replace_expense(
+        self,
+        target_expense: dict[str, Any],
+        new_expense: dict[str, Any],
+    ) -> bool:
+        # TODO: WIP
+        log.info("start 'replace_record' method")
+        target_date = target_expense.get("expense_date")
+        target_type = target_expense.get("expense_type")
+        target_amount = target_expense.get("expense_amount")
+        target_memo = target_expense.get("expense_memo")
+        if not target_date or not target_amount or not target_type:
+            log.debug(
+                f"Failed to replace record. target_expense: {target_expense}"
+            )
+            return False
+
+        new_amount = new_expense.get("expense_amount", target_amount)
+        new_type = new_expense.get("expense_type", target_type)
+        new_memo = new_expense.get("expense_memo", target_memo)
+
+        target_amount = int(re.sub(r"[^\d]", "", target_amount))
+        new_amount = int(re.sub(r"[^\d]", "", new_amount))
+
+        column = self.get_column(target_date)
+        row = self.get_row(target_type)
+        address = f"{column}{row}"
+        cell = self.sheet.acell(
+            address,
+            value_render_option=gspread.worksheet.ValueRenderOption.formula,
+        )
+
+        # case1: replace amount only
+        new_value = cell.value
+        if isinstance(new_value, int) and target_amount == new_value:
+            new_value = new_amount
+        elif isinstance(new_value, str):
+            new_value = re.sub(str(target_amount), str(new_amount), new_value)
+        if address and new_value:
+            log.debug(
+                f"writing: '{new_value}' to {address} in {self.sheetname}"
+            )
+            self.sheet.update_acell(address, new_value)
+        else:
+            return False
+
+        # case2: change type
+        log.info("end 'replace_record' method")
+        return True
 
 
 if __name__ == "__main__":

@@ -338,6 +338,46 @@ def store_expense(
     return
 
 
+def delete_expense(
+    target_date: str,
+    target_type: str,
+    target_amount: int,
+    target_memo: str,
+) -> bool:
+    """
+    delete expense
+    """
+    log.info("start 'delete_expense' method")
+    status = True
+    try:
+        df = pd.read_csv(EXPENSE_HISTORY, header=None)
+        columns = ["datetime", "type", "memo", "amount"]
+        df.columns = pd.Index(columns)
+        df.loc[:, "date"] = pd.to_datetime(df.loc[:, "datetime"]).dt.date
+    except FileNotFoundError:
+        log.debug(f"File not found. {EXPENSE_HISTORY}")
+        return False
+    condition = f"date == @pd.Timestamp('{target_date}').date()"
+    condition += " and type == @target_type" if target_type else ""
+    condition += " and memo == @target_memo" if target_memo else ""
+    condition += " and amount == @target_amount" if target_amount else ""
+    idx = df.query(condition).index.to_list()
+    if len(idx):
+        target_idx = idx[-1]
+        log.debug(f"Target index: {target_idx}")
+        target_row = ", ".join(df.loc[target_idx, columns].map(str))
+        df = df.drop(target_idx)
+        df.loc[:, columns].to_csv(EXPENSE_HISTORY, index=False, header=False)
+        log.debug(f"Deleted expense: {target_row}")
+    else:
+        log.debug(
+            f"Deleting expense Failed: records not found. ({target_date}, {target_type}, {target_memo}, {target_amount})"
+        )
+        status = False
+    log.info("end 'delete_expense' method")
+    return status
+
+
 def get_fiscal_year() -> int:
     """
     get fiscal year
