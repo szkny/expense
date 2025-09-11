@@ -17,6 +17,25 @@
   <div class="container">
     <h1>📝 Expense </h1>
 
+    {% if selected_type and input_date and input_amount %}
+    <div class="success">
+      ✅ 家計簿への登録が完了しました。
+      <p><strong> {{ input_date }}, {{ selected_type }}, {{ input_memo + ", " if input_memo else "" }}¥{{ "{:,}".format(input_amount)}} </strong></p>
+    </div>
+    {% endif %}
+
+    {% if delete_type and delete_date and delete_amount %}
+    {% if delete_status %}
+    <div class="success">
+      ✅ 家計簿の削除処理が完了しました。
+    {% else %}
+    <div class="failed">
+      🚫 家計簿の削除処理に失敗しました。
+    {% endif %}
+      <p><strong> {{ delete_date }}, {{ delete_type }}, {{ delete_memo + ", " if delete_memo else "" }}¥{{ "{:,}".format(delete_amount)}} </strong></p>
+    </div>
+    {% endif %}
+
     <div class="card">
       <form method="post" action="/register">
         <h3>🚀 家計簿に登録する情報を入力</h3>
@@ -33,17 +52,17 @@
 
         <select id="expense-type" name="expense_type">
           {% for item in items %}
-          <option value="{{ item }}" {% if selected_type and selected_type==item %} selected {% endif %}>
+          <option value="{{ item }}">
             {{ item }}
           </option>
           {% endfor %}
         </select>
 
-        <input type="number" id="expense-amount" name="expense_amount" value="{{ expense_amount or '' }}"
+        <input type="number" id="expense-amount" name="expense_amount" value=""
           placeholder="💴 金額を入力" {% if items | length and "/" in items[0] %} style="display: none;" {% else %} required
           {% endif %} />
 
-        <input type="text" id="expense-memo" name="expense_memo" value="{{ expense_memo or '' }}" placeholder="✏️ メモを入力"
+        <input type="text" id="expense-memo" name="expense_memo" value="" placeholder="✏️ メモを入力"
           {% if items | length and "/" in items[0] %} style="display: none;" {% endif %} />
 
         <button type="submit" class="btn">＋ 登録</button>
@@ -54,9 +73,9 @@
     <div class="card">
       <form method="post" action="/ocr">
         <h3> 📷️ 決済アプリのスクショから支払情報を取得 </h3>
-        <p style="font-size: 0.8rem;margin-left: 10px">
+        <div id="screenshot-name">
           ▶️ 対象画像 : {{ screenshot_name.split("/") | last }}
-        </p>
+        </div>
         <img class="screenshot" alt="{{ screenshot_name.split(" /") | last }}"
           src="data:image/png;base64,{{ screenshot_base64 }}"
           onclick="this.classList.toggle('is-zoomed')"
@@ -64,13 +83,6 @@
         <button type="submit" class="btn secondary" {% if disable_ocr %} disabled {% endif %}> {% if disable_ocr %} 登録済
           {% else %} 読取実行 {% endif %}</button>
       </form>
-    </div>
-    {% endif %}
-
-    {% if selected_type and input_amount %}
-    <div class="success">
-      ✅ 家計簿への登録が完了しました。
-      <p><strong> {{ input_date }}, {{ selected_type }}, {{ input_memo + ", " if input_memo else "" }}¥{{ "{:,}".format(input_amount)}}</strong></p>
     </div>
     {% endif %}
 
@@ -99,33 +111,63 @@
         <span> 🧾 直近の支出履歴 ({{n_records}}件) </span>
         <span id="table-toggle"> ▼ </span>
       </h3>
+      <form method="post" action="/delete">
+        <diV id="confirmation-overlay" class="overlay" style="display: none;">
+          <div id="confirmation-dialog" class="confirm">
+            🗑️ レコードを削除しますか？
+            <p id="record-info"><strong></strong></p>
+            <input type="hidden" name="expense_date" id="delete-record-date">
+            <input type="hidden" name="expense_type" id="delete-record-type">
+            <input type="hidden" name="expense_amount" id="delete-record-amount">
+            <input type="hidden" name="expense_memo" id="delete-record-memo">
+            <div class="confirmation-btn-container">
+              <button type="button" class="btn-no"> キャンセル </button>
+              <button type="submit" class="btn-yes"> 削除 </button>
+            </div>
+          </div>
+        </div>
+      </form>
       <a href="{{ gspread_url }}" class="link-spread"> 🔗 スプレッドシートを開く </a>
-      <div id="records-container" class="table-container">
+      <div id="records-container" class="records-container">
         <div class="search-wrapper">
           <input type="text" id="search-input" placeholder="🔍️ 支出タイプ or メモで検索" onkeyup="filterTable()" />
           <button id="clear-search" type="button">✕</button>
         </div>
-        <table>
-          <thead>
-            <tr>
-              <th>日付</th>
-              <th>支出タイプ</th>
-              <th>金額</th>
-              <th class="memo">メモ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for record in records %}
-            <tr>
-              <td>{{ record.date }}</td>
-              <td>{{ record.expense_type }}</td>
-              <td>¥{{ "{:,}".format(record.expense_amount) }}</td>
-              <td class="memo">{{ record.expense_memo }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-        <div id="total-amount" style="margin-top: 8px; font-weight: bold; text-align: right;" hidden></div>
+        <div class="table-container">
+          <table>
+            <colgroup>
+              <col>
+              <col>
+              <col>
+              <col>
+              <col style="width: 45px;">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>日付</th>
+                <th>カテゴリ</th>
+                <th>金額</th>
+                <th>メモ</th>
+                <th>編集</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for record in records %}
+              <tr>
+                <td>{{ record.date }}</td>
+                <td>{{ record.expense_type }}</td>
+                <td>¥{{ "{:,}".format(record.expense_amount) }}</td>
+                <td class="memo">{{ record.expense_memo }}</td>
+                <td>
+                  <span class="table-edt-btn"> 📝 </span>
+                  <span class="table-del-btn"> 🗑️ </span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div id="total-amount" style="display: none"></div>
       </div>
     </div>
   </div>

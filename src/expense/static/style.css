@@ -145,7 +145,7 @@ img.screenshot.is-zoomed {
 }
 
 /* ローディング */
-.loader-overlay {
+.overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -176,7 +176,7 @@ img.screenshot.is-zoomed {
   }
 }
 
-/* 登録完了メッセージ */
+/* 登録完了 失敗メッセージ */
 .success {
   margin-top: 20px;
   padding: 12px;
@@ -185,6 +185,22 @@ img.screenshot.is-zoomed {
   border: 1px solid #a7f3d0;
   border-radius: 8px;
   font-size: 0.95rem;
+}
+
+.failed {
+  margin-top: 20px;
+  padding: 12px;
+  background: #fdecec;
+  color: #5f0606;
+  border: 1px solid #f387a0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+/* スクリーンショット */
+#screenshot-name {
+  font-size: 0.8rem;
+  margin-left: 20px;
 }
 
 /* 支出レポート */
@@ -204,7 +220,7 @@ img.screenshot.is-zoomed {
 
 .summary-list {
   font-size: 0.95rem;
-  margin-left: 20px;
+  margin-left: 30px;
 }
 
 /* テーブル */
@@ -226,6 +242,7 @@ img.screenshot.is-zoomed {
   overflow-x: auto;
   overflow-y: auto;
   border-radius: 12px;
+  max-height: 500px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -234,70 +251,91 @@ table {
   border-collapse: collapse;
   background: #fff;
   border-radius: 12px;
-  overflow: hidden;
+  /* table-layout: fixed; */
 }
 
-thead {
-  display: block;
-  max-height: 50px;
-}
-
-thead tr {
-  display: table;
-  width: 100%;
-  table-layout: fixed;
-}
-
-tbody {
-  display: block;
-  max-height: 500px;
-  overflow-y: auto;
-}
-
-tbody tr {
-  display: table;
-  width: 100%;
-  table-layout: fixed;
+thead th {
+  position: sticky;
+  top: 0;
+  background: #f3f4f6;
+  z-index: 1;
 }
 
 th,
 td {
   padding: 12px;
-  text-align: center;
   border-bottom: 1px solid #e5e7eb;
-  font-size: 14px;
-  white-space: nowrap;
+  font-size: 0.7rem;
   text-align: center;
+  white-space: nowrap;
 }
 
 td.memo {
   white-space: normal;
   text-align: left;
   word-break: break-word;
-  min-width: 200px;
+  min-width: 90px;
 }
 
 th {
   background: #f3f4f6;
   color: #374151;
   font-weight: 1000;
+  white-space: nowrap;
 }
 
 tr:nth-child(even) {
   background: #fafafa;
 }
 
-/* --- レスポンシブ --- */
-@media (min-width: 768px) {
-  h1 {
-    font-size: 2rem;
-  }
+.table-edt-btn {
+  margin-right: 5px;
+}
 
-  input,
-  select,
-  .btn {
-    font-size: 18px;
-  }
+.table-edt-btn,
+.table-del-btn {
+  cursor: pointer;
+}
+
+#total-amount {
+  margin-top: 8px;
+  font-weight: bold;
+  text-align: right;
+}
+
+/* 確認ダイアログ */
+.confirm {
+  background: #f9fafb;
+  color: #333;
+  text-align: left;
+  width: 70%;
+  max-width: 400px;
+  font-size: 0.9rem;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.confirmation-btn-container {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.btn-yes,
+.btn-no {
+  width: 100px;
+  padding: 5px;
+  margin-top: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  background: #2563eb;
+  color: #fff;
+  text-align: center;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
 }
 
 /* トグルボタン */
@@ -414,6 +452,12 @@ tr:nth-child(even) {
   border-color: #10b981;
 }
 
+.dark .failed {
+  background: #5e062b;
+  color: #fad1e5;
+  border-color: #b91051;
+}
+
 .dark .theme-toggle {
   background: #374151;
   color: #f3f4f6;
@@ -429,4 +473,32 @@ tr:nth-child(even) {
 
 .dark .link-spread {
   color: #88aacc;
+}
+
+.dark .confirm {
+  background: #1f2937;
+  color: #f3f4f6;
+}
+
+.dark .btn-yes,
+.dark .btn-no {
+  background: #3b72b6;
+}
+
+/* レスポンシブ */
+@media (min-width: 768px) {
+  h1 {
+    font-size: 2rem;
+  }
+
+  input,
+  select,
+  .btn {
+    font-size: 18px;
+  }
+
+  th,
+  td {
+    font-size: 0.9rem;
+  }
 }

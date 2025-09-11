@@ -772,18 +772,51 @@ def delete(
     登録レコードを削除するエンドポイント
     """
     log.info("start 'delete' method")
+    try:
+        toast("削除中..")
+    except Exception:
+        log.info("Toast notification failed.")
+        pass
     status = True
-    if not GSPREAD_HANDLER.delete_expense(
-        expense_date,
-        expense_type,
-        expense_amount,
-        expense_memo,
-    ):
+    try:
+        if not expense_date or not expense_type or not expense_amount:
+            status = False
+        # parse date
+        expense_date = re.sub(r"\(.+\)", "", expense_date)
+        # parse amount
+        expense_amount = int(re.sub(r"[^\d]", "", str(expense_amount)))
+
+        if status and not GSPREAD_HANDLER.delete_expense(
+            expense_date,
+            expense_type,
+            expense_amount,
+            expense_memo,
+        ):
+            status = False
+        if status and not delete_expense(
+            expense_date, expense_type, expense_amount, expense_memo
+        ):
+            status = False
+    except Exception as e:
+        log.error(f"Error occurred: {e}")
         status = False
-    if status and not delete_expense(
-        expense_type, expense_memo, expense_amount, expense_date
-    ):
-        status = False
+    try:
+        notify(
+            (
+                "家計簿の削除処理が完了しました。"
+                if status
+                else "🚫 家計簿の削除処理に失敗しました。"
+            ),
+            (
+                f"[{expense_date}] "
+                f"{expense_type}"
+                f"{': '+expense_memo if expense_memo else ''}"
+                f", ¥{expense_amount:,}"
+            ),
+        )
+    except Exception:
+        log.info("Notification failed.")
+        pass
     commons = generate_commons(request)
     log.info("end 'delete' method")
     return templates.TemplateResponse(

@@ -167,6 +167,48 @@ function filterTable() {
   });
 })();
 
+// レコード削除処理
+(function() {
+  document.addEventListener("DOMContentLoaded", () => {
+    const overlay = document.getElementById("confirmation-overlay");
+    const recordInfo = document.getElementById("record-info");
+    const deleteDate = document.getElementById("delete-record-date");
+    const deleteType = document.getElementById("delete-record-type");
+    const deleteAmount = document.getElementById("delete-record-amount");
+    const deleteMemo = document.getElementById("delete-record-memo");
+
+    // 各削除ボタンにイベント登録
+    document.querySelectorAll(".table-del-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const row = btn.closest("tr");
+        const date = row.children[0].textContent;
+        const type = row.children[1].textContent;
+        const amount = row.children[2].textContent;
+        const memo = row.children[3].textContent;
+
+        // ダイアログに反映
+        recordInfo.innerHTML = `<strong>${date}, ${type}, ${memo ? memo + ", " : ""}${amount}</strong>`;
+        deleteDate.value = date;
+        deleteType.value = type;
+        deleteAmount.value = amount;
+        deleteMemo.value = memo;
+
+        overlay.style.display = "flex";
+      });
+    });
+
+    // キャンセルボタン
+    document.querySelector(".btn-no").addEventListener("click", () => {
+      overlay.style.display = "none";
+    });
+
+    // オーバーレイ部分をクリックしても確認ダイアログを閉じる
+    overlay.addEventListener("click", () => {
+      overlay.style.display = "none";
+    });
+  });
+})();
+
 // PWA インストール処理
 (function() {
   // Service Worker 登録
