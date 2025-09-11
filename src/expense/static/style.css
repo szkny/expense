@@ -297,7 +297,7 @@ thead th {
 
 th,
 td {
-  padding: 5px;
+  padding: 14px 5px 14px 5px;
   border-bottom: 1px solid #e5e7eb;
   font-size: 0.8rem;
   text-align: center;
@@ -323,15 +323,6 @@ tr:nth-child(even) {
   background: #fafafa;
 }
 
-.table-edt-btn {
-  margin-right: 5px;
-}
-
-.table-edt-btn,
-.table-del-btn {
-  cursor: pointer;
-}
-
 #total-amount {
   margin-top: 8px;
   font-weight: bold;
@@ -350,27 +341,58 @@ tr:nth-child(even) {
   border: none;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+.btn-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  text-align: right;
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  color: #666666;
 }
 
 .confirmation-btn-container {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
+  /* display: flex; */
+  /* justify-content: flex-end; */
 }
 
-.btn-yes,
-.btn-no {
+.space {
+  margin: 30px;
+}
+
+.btn-delete,
+.btn-edit {
+  /* display: inline-block; */
+  /* display: flex; */
   width: 100px;
   padding: 5px;
-  margin-top: 10px;
+  margin: 10px 10px 0 0;
   font-size: 16px;
   font-weight: 600;
-  background: #2563eb;
+  background: #112255;
   color: #fff;
   text-align: center;
   border: none;
   border-radius: 8px;
   cursor: pointer;
+}
+
+.btn-delete {
+  position: absolute;
+  bottom: 10px;
+  right: 115px;
+}
+
+.btn-edit {
+  position: absolute;
+  bottom: 10px;
+  right: 5px;
 }
 
 /* リンク */
@@ -491,9 +513,9 @@ tr:nth-child(even) {
   color: #f3f4f6;
 }
 
-.dark .btn-yes,
-.dark .btn-no {
-  background: #3b72b6;
+.dark .btn-delete,
+.dark .btn-edit {
+  background: #2563ab;
 }
 
 /* レスポンシブ */

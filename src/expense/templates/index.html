@@ -112,22 +112,41 @@
         <span> 🧾 直近の支出履歴 ({{n_records}}件) </span>
         <span id="table-toggle"> ▼ </span>
       </h3>
-      <form method="post" action="/delete">
-        <diV id="confirmation-overlay" class="overlay" style="display: none;">
-          <div id="confirmation-dialog" class="confirm">
-            🗑️ レコードを削除しますか？
-            <p id="record-info"><strong></strong></p>
-            <input type="hidden" name="expense_date" id="delete-record-date">
-            <input type="hidden" name="expense_type" id="delete-record-type">
-            <input type="hidden" name="expense_amount" id="delete-record-amount">
-            <input type="hidden" name="expense_memo" id="delete-record-memo">
-            <div class="confirmation-btn-container">
-              <button type="button" class="btn-no"> キャンセル </button>
-              <button type="submit" class="btn-yes"> 削除 </button>
-            </div>
+      <div id="confirmation-overlay" class="overlay" style="display: none;">
+        <div id="confirmation-dialog" class="confirm">
+          <h3> 📝 レコードを編集 </h3>
+          <button id="confirmation-close-btn" type="button" class="btn-close"> ✕ </button>
+          <div class="confirmation-btn-container">
+            <form method="post" action="/replace">
+              <input type="hidden" id="target-record-date" name="target_date">
+              <input type="hidden" id="target-record-type" name="target_type">
+              <input type="hidden" id="target-record-amount" name="target_amount">
+              <input type="hidden" id="target-record-memo" name="target_memo">
+              <input type="text" id="show-record-date" disabled>
+              <select id="new-expense-type" name="new_expense_type">
+                {% for item in items %}
+                {% if "/" not in item %}
+                <option value="{{ item }}">
+                  {{ item }}
+                </option>
+                {% endif %}
+                {% endfor %}
+              </select>
+              <input type="text" id="new-expense-amount" name="new_expense_amount" placeholder="💴 金額を入力">
+              <input type="text" id="new-expense-memo" name="new_expense_memo" placeholder="✏️ メモを入力">
+              <div class="space"></div>
+              <button type="submit" class="btn-edit"> ✏️ 修正 </button>
+            </form>
+            <form method="post" action="/delete">
+              <input type="hidden" name="expense_date" id="delete-record-date">
+              <input type="hidden" name="expense_type" id="delete-record-type">
+              <input type="hidden" name="expense_amount" id="delete-record-amount">
+              <input type="hidden" name="expense_memo" id="delete-record-memo">
+              <button type="submit" class="btn-delete"> 🗑️ 削除 </button>
+            </form>
           </div>
         </div>
-      </form>
+      </div>
       <a href="{{ gspread_url }}" class="link-spread"> 🔗 スプレッドシートを開く </a>
       <div id="records-container" class="records-container">
         <div class="search-wrapper">
@@ -141,7 +160,6 @@
               <col>
               <col>
               <col>
-              <col style="width: 45px;">
             </colgroup>
             <thead>
               <tr>
@@ -149,7 +167,6 @@
                 <th>カテゴリ</th>
                 <th>金額</th>
                 <th>メモ</th>
-                <th>編集</th>
               </tr>
             </thead>
             <tbody>
@@ -159,10 +176,6 @@
                 <td>{{ record.expense_type }}</td>
                 <td>¥{{ "{:,}".format(record.expense_amount) }}</td>
                 <td class="memo">{{ record.expense_memo }}</td>
-                <td>
-                  <span class="table-edt-btn"> 📝 </span>
-                  <span class="table-del-btn"> 🗑️ </span>
-                </td>
               </tr>
               {% endfor %}
             </tbody>

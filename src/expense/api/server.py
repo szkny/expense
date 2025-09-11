@@ -831,3 +831,48 @@ def delete(
             **commons,
         },
     )
+
+
+@app.post("/replace", response_class=HTMLResponse)
+def replace(
+    request: Request,
+    target_date: str = Form(...),
+    target_type: str = Form(...),
+    target_amount: str = Form(...),
+    target_memo: str = Form(...),
+    new_expense_type: str = Form(...),
+    new_expense_amount: str = Form(...),
+    new_expense_memo: str = Form(...),
+) -> HTMLResponse:
+    """
+    登録レコードを修正するエンドポイント
+    """
+    log.info("start 'replace' method")
+    status = True
+    try:
+        # parse date
+        target_date = re.sub(r"\(.+\)", "", target_date)
+        # parse amount
+        target_amount = int(re.sub(r"[^\d]", "", str(target_amount)))
+        new_expense_amount = int(re.sub(r"[^\d]", "", str(new_expense_amount)))
+
+        log.debug(f"target_date: {target_date}")
+        log.debug(f"target_type: {target_type}")
+        log.debug(f"target_amount: {target_amount}")
+        log.debug(f"target_memo: {target_memo}")
+        log.debug(f"new_expense_type: {new_expense_type}")
+        log.debug(f"new_expense_amount: {new_expense_amount}")
+        log.debug(f"new_expense_memo: {new_expense_memo}")
+    except Exception as e:
+        log.error(f"Error occurred: {e}")
+        status = False
+    commons = generate_commons(request)
+    log.info("end 'replace' method")
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "replace_status": status,
+            **commons,
+        },
+    )

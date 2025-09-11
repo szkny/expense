@@ -174,45 +174,68 @@ function filterTable() {
   });
 })();
 
-// レコード削除処理
+// レコード長押し処理
 (function() {
   document.addEventListener("DOMContentLoaded", () => {
     const overlay = document.getElementById("confirmation-overlay");
-    const recordInfo = document.getElementById("record-info");
     const deleteDate = document.getElementById("delete-record-date");
     const deleteType = document.getElementById("delete-record-type");
     const deleteAmount = document.getElementById("delete-record-amount");
     const deleteMemo = document.getElementById("delete-record-memo");
+    const targetDate = document.getElementById("target-record-date");
+    const targetType = document.getElementById("target-record-type");
+    const targetAmount = document.getElementById("target-record-amount");
+    const targetMemo = document.getElementById("target-record-memo");
+    const showDate = document.getElementById("show-record-date");
+    const newType = document.getElementById("new-expense-type");
+    const newAmount = document.getElementById("new-expense-amount");
+    const newMemo = document.getElementById("new-expense-memo");
 
-    // 各削除ボタンにイベント登録
-    document.querySelectorAll(".table-del-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const row = btn.closest("tr");
-        const date = row.children[0].textContent;
-        const type = row.children[1].textContent;
-        const amount = row.children[2].textContent;
-        const memo = row.children[3].textContent;
+    // Overlay表示処理
+    function showOverlay(row) {
+      const date = row.children[0].textContent;
+      const type = row.children[1].textContent;
+      const amount = row.children[2].textContent;
+      const memo = row.children[3].textContent;
+      deleteDate.value = date;
+      deleteType.value = type;
+      deleteAmount.value = amount;
+      deleteMemo.value = memo;
+      targetDate.value = date;
+      targetType.value = type;
+      targetAmount.value = amount;
+      targetMemo.value = memo;
+      showDate.value = date;
+      newType.value = type;
+      newAmount.value = amount;
+      newMemo.value = memo;
+      overlay.style.display = "flex";
+    }
 
-        // ダイアログに反映
-        recordInfo.innerHTML = `<strong>${date}, ${type}, ${memo ? memo + ", " : ""}${amount}</strong>`;
-        deleteDate.value = date;
-        deleteType.value = type;
-        deleteAmount.value = amount;
-        deleteMemo.value = memo;
-
-        overlay.style.display = "flex";
+    // 各行に長押しイベントを登録
+    let pressTimer;
+    const longPressTime = 500;
+    document.querySelectorAll("tbody tr").forEach((row) => {
+      // PC用（マウス押しっぱなし）
+      row.addEventListener("mousedown", (_) => {
+        pressTimer = setTimeout(() => showOverlay(row), longPressTime);
       });
+      row.addEventListener("mouseup", () => clearTimeout(pressTimer));
+      row.addEventListener("mouseleave", () => clearTimeout(pressTimer));
+      // スマホ用（タッチ押しっぱなし）
+      row.addEventListener("touchstart", () => {
+        pressTimer = setTimeout(() => showOverlay(row), longPressTime);
+      });
+      row.addEventListener("touchend", () => clearTimeout(pressTimer));
+      row.addEventListener("touchmove", () => clearTimeout(pressTimer));
     });
 
-    // キャンセルボタン
-    document.querySelector(".btn-no").addEventListener("click", () => {
-      overlay.style.display = "none";
-    });
-
-    // オーバーレイ部分をクリックしても確認ダイアログを閉じる
-    overlay.addEventListener("click", () => {
-      overlay.style.display = "none";
-    });
+    // 閉じるボタンをクリックして確認ダイアログを閉じる
+    document
+      .getElementById("confirmation-close-btn")
+      .addEventListener("click", () => {
+        overlay.style.display = "none";
+      });
   });
 })();
 
