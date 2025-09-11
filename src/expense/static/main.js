@@ -130,9 +130,10 @@ function filterTable() {
   for (let i = 0; i < rows.length; i++) {
     const cells = rows[i].getElementsByTagName("td");
     if (cells.length < 4) continue;
+    const date = cells[0].textContent || "";
     const expenseType = cells[1].textContent || "";
     const memo = cells[3].textContent || "";
-    const text = expenseType + " " + memo;
+    const text = date + " " + expenseType + " " + memo;
     const score = fuzzyMatch(input, text);
     if (!input || score > 0) {
       rows[i].style.display = "";
@@ -148,10 +149,10 @@ function filterTable() {
   totalAmount = document.getElementById("total-amount");
   if (input && total) {
     totalAmount.textContent = `合計: ¥${total.toLocaleString()}  (${n_match}件)`;
-    totalAmount.hidden = false;
+    totalAmount.style.display = "block";
   } else {
     totalAmount.textContent = "";
-    totalAmount.hidden = true;
+    totalAmount.style.display = "none";
   }
   document.getElementById("clear-search").style.display = "block";
 }
