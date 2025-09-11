@@ -26,7 +26,7 @@ from ..core.expense import (
     ocr_main,
     get_ocr_expense,
     store_expense,
-    delete_expense
+    delete_expense,
 )
 from ..core.termux_api import toast, notify
 from ..core.ocr import get_latest_screenshot
@@ -51,7 +51,7 @@ EXPENSE_TYPES = [
     "給与",
     "雑所得",
 ]
-INCOME_TYPES = ["給与", "雑所得"]
+EXCLUDE_TYPES = ["特別経費", "給与", "雑所得"]
 GSPREAD_HANDLER = GspreadHandler(f"CF ({get_fiscal_year()}年度)")
 GSPREAD_URL = GSPREAD_HANDLER.get_spreadsheet_url()
 
@@ -171,9 +171,7 @@ def generate_daily_chart(
         return ""
     t = dt.datetime.today()
     month_start, month_end = _get_month_boundaries(t)
-    df_graph = _prepare_graph_dataframe(
-        df, month_start, month_end, INCOME_TYPES
-    )
+    df_graph = _prepare_graph_dataframe(df, month_start, month_end)
     df_bar = _prepare_bar_dataframe(df_graph)
     df_graph = _add_month_start_point(df_graph, month_start)
     df_graph, df_predict = _handle_predictions(
@@ -208,10 +206,10 @@ def _get_month_boundaries(t: dt.datetime) -> tuple[str, str]:
 
 
 def _prepare_graph_dataframe(
-    df: pd.DataFrame, month_start: str, month_end: str, income_types: list
+    df: pd.DataFrame, month_start: str, month_end: str
 ) -> pd.DataFrame:
     df_graph = df.copy()
-    df_graph = df_graph.query("expense_type not in @income_types")
+    df_graph = df_graph.query("expense_type not in @EXCLUDE_TYPES")
     df_graph["date"] = pd.to_datetime(df_graph["date"])
     df_graph = df_graph.query(
         f"date >= @pd.Timestamp('{month_start}') and date <= @pd.Timestamp('{month_end}')"
@@ -557,7 +555,7 @@ def generate_commons(request: Request) -> dict[str, Any]:
     # 支出レポートを計算
     df_records = pd.DataFrame(recent_expenses)
     if not df_records.empty:
-        df_records = df_records.query("expense_type not in @INCOME_TYPES")
+        df_records = df_records.query("expense_type not in @EXCLUDE_TYPES")
         df_records.loc[:, "date"] = pd.to_datetime(
             df_records.loc[:, "date"].map(lambda s: re.sub(r"[^\d\-]+", "", s))
         )
