@@ -292,24 +292,25 @@ thead th {
 
 th,
 td {
-  padding: 12px;
+  padding: 5px;
   border-bottom: 1px solid #e5e7eb;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   text-align: center;
   white-space: nowrap;
+  font-weight: regular;
 }
 
 td.memo {
   white-space: normal;
   text-align: left;
   word-break: break-word;
-  min-width: 90px;
+  min-width: 80px;
 }
 
 th {
   background: #f3f4f6;
   color: #374151;
-  font-weight: 1000;
+  font-weight: bold;
   white-space: nowrap;
 }
 
@@ -504,6 +505,7 @@ tr:nth-child(even) {
 
   th,
   td {
+    padding: 14px;
     font-size: 0.9rem;
   }
 }
