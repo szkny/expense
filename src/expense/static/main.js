@@ -1,3 +1,10 @@
+// 右クリック / 長押しメニューを無効化
+document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+  });
+});
+
 // 経費タイプ選択に応じた入力欄の表示・非表示
 (function() {
   const typeSelect = document.getElementById("expense-type");

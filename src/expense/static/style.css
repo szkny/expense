@@ -6,6 +6,11 @@ body {
   margin: 0;
   padding: 16px;
   color: #333;
+  /* 長押しを無効化 */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .container {
