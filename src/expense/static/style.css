@@ -38,6 +38,35 @@ hr {
   margin: 16px 0;
 }
 
+/* ホームボタン */
+#home-btn {
+  left: 12px;
+}
+
+/* テーマトグルボタン */
+.theme-toggle {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  background: #e5e7eb;
+  color: #111;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition:
+    background 0.2s,
+    transform 0.2s;
+  z-index: 1000;
+}
+.theme-toggle:hover {
+  background: #d1d5db;
+  transform: scale(1.1);
+}
+
 /* カード */
 .card {
   background: #fff;
@@ -336,30 +365,6 @@ tr:nth-child(even) {
   border: none;
   border-radius: 8px;
   cursor: pointer;
-}
-
-/* トグルボタン */
-.theme-toggle {
-  position: fixed;
-  top: 12px;
-  right: 12px;
-  background: #e5e7eb;
-  color: #111;
-  border: none;
-  border-radius: 50%;
-  width: 30px;
-  height: 30px;
-  font-size: 12px;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  transition:
-    background 0.2s,
-    transform 0.2s;
-  z-index: 1000;
-}
-.theme-toggle:hover {
-  background: #d1d5db;
-  transform: scale(1.1);
 }
 
 /* リンク */
