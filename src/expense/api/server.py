@@ -368,10 +368,17 @@ def _create_prediction_figure(df_predict: pd.DataFrame, theme: str) -> px.line:
 
 
 def _add_bar_chart_labels(
-    fig: px.bar, df_bar: pd.DataFrame, key: str, theme: str, fontsize: int = 14
+    fig: px.bar,
+    df_bar: pd.DataFrame,
+    key: str,
+    theme: str,
+    fontsize: int = 14,
+    min_amount: int = 2000,
 ) -> None:
     totals = df_bar.groupby(key, as_index=False)["expense_amount"].sum()
-    totals["label"] = totals["expense_amount"].map(lambda x: f"¥{x:,}")
+    totals["label"] = totals["expense_amount"].map(
+        lambda x: f"¥{x:,}" if x >= min_amount else ""
+    )
     fig.add_trace(
         go.Scatter(
             x=totals[key],
@@ -442,6 +449,7 @@ def generate_pie_chart(df: pd.DataFrame, theme: str = "light") -> str:
         df_pie.loc[:, "month"] == dt.datetime.today().strftime("%Y-%m")
     ]
     month_str = pd.Timestamp(df_pie.iloc[-1]["month"]).strftime("%Y年%-m月")
+    total_amount = df_pie['expense_amount'].sum()
     fig = px.pie(
         df_pie,
         names="expense_type",
@@ -456,7 +464,7 @@ def generate_pie_chart(df: pd.DataFrame, theme: str = "light") -> str:
         textfont=dict(size=14),
     )
     fig.add_annotation(
-        text=f"合計<br>¥{df_pie['expense_amount'].sum(): ,.0f}",
+        text=f"合計<br>¥{total_amount: ,.0f}",
         x=0.5,
         y=0.5,
         font_size=20,
