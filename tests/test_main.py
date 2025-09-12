@@ -163,8 +163,8 @@ class TestMain(unittest.TestCase):
                         "expense_memo": expense_memo,
                     }
                 )
-            except Exception as e:
-                log.error(f"Error processing screenshot (No.{i}):\n{e}\n")
+            except Exception:
+                log.exception(f"Error processing screenshot (No.{i})")
         df_result = pd.DataFrame(result)
         log.info(f"OCR results:\n{df_result}")
 

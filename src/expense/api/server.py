@@ -577,8 +577,8 @@ def generate_commons(request: Request) -> dict[str, Any]:
         else:
             img_base64 = ""
             disable_ocr = True
-    except Exception as e:
-        log.error(f"Error occured in screenshot process: {e}")
+    except Exception:
+        log.exception("Error occured in screenshot process.")
         screenshot_name = ""
         img_base64 = ""
         disable_ocr = True
@@ -834,8 +834,8 @@ def delete(
             expense_date, expense_type, expense_amount, expense_memo
         ):
             status = False
-    except Exception as e:
-        log.error(f"Error occurred: {e}")
+    except Exception:
+        log.exception("Error occurred")
         status = False
     try:
         notify(
@@ -928,8 +928,8 @@ def edit(
         else:
             log.debug("Nothing to do.")
             status = False
-    except Exception as e:
-        log.error(f"Error occurred: {e}")
+    except Exception:
+        log.exception("Error occurred")
         status = False
     commons = generate_commons(request)
     log.info("end 'edit' method")

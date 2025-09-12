@@ -260,10 +260,10 @@ def get_ocr_expense() -> dict:
         with open(CACHE_PATH / "ocr_data.json", "r") as f:
             data: dict = json.load(f)
     except FileNotFoundError:
-        log.debug("OCR data not found.")
+        log.exception("OCR data not found.")
         return {}
     except ValueError:
-        log.error("OCR data is invalid.")
+        log.exception("OCR data is invalid.")
         return {}
     ocr_expense = {
         "expense_type": data.get("expense_type", ""),

@@ -46,8 +46,8 @@ def ocr_main(offset: int = 0, enable_toast: bool = True) -> dict:
             ],
             env=dict(LOG_LEVEL="ERROR"),
         )
-    except json.decoder.JSONDecodeError as e:
-        log.error(f"JSON decode error: {e}")
+    except json.decoder.JSONDecodeError:
+        log.exception("JSON decode error")
         res = {}
     expense_type = res.get("predicted_type", "")
     log.info("end 'ocr_main' method")

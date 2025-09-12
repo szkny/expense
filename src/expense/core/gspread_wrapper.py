@@ -161,8 +161,8 @@ class GspreadHandler:
                 f"writing: '{new_value}' to {address} in {self.sheetname}"
             )
             self.sheet.update_acell(address, new_value)
-        except Exception as e:
-            log.error("Error occured.", e)
+        except Exception:
+            log.exception("Error occured.")
             return False
         finally:
             log.info("end 'add_memo' method")
