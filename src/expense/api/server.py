@@ -150,13 +150,54 @@ def generate_monthly_df(df: pd.DataFrame) -> pd.DataFrame:
     df_new.loc[:, "month"] = pd.to_datetime(df_new.loc[:, "date"]).dt.strftime(
         "%Y-%m"
     )
+    df_ref = df_new.copy()
     df_new = (
         df_new.groupby(["month", "expense_type"])["expense_amount"]
         .sum()
         .reset_index()
     )
+    # extract memos for hover text of monthly chart
+    df_new = _add_expense_memo_summary(df_new, df_ref, "month")
     log.info("end 'generate_monthly_df' method")
     return df_new
+
+
+def _add_expense_memo_summary(
+    df: pd.DataFrame,
+    df_ref: pd.DataFrame,
+    date_or_month: str,
+    len_memo_text: int = 50,
+) -> pd.DataFrame:
+    for i, r in df.iterrows():
+        key = r[date_or_month]
+        expense_type = r["expense_type"]
+        condition = f"expense_type=='{expense_type}' and "
+        condition += (
+            f"date==@pd.Timestamp('{key}')"
+            if date_or_month == "date"
+            else f"month=='{key}'"
+        )
+        _data = df_ref.query(condition)
+        n_memo = _data["expense_memo"].value_counts()
+        _data = (
+            _data.groupby(["expense_memo"])["expense_amount"]
+            .sum()
+            .reset_index()
+        ).sort_values("expense_amount")
+        _add_memo = ""
+        for memo in _data["expense_memo"].iloc[::-1]:
+            if memo in _add_memo:
+                continue
+            n = n_memo[memo]
+            if n > 1:
+                memo += f" ×{n}"
+            if len(_add_memo + memo) > len_memo_text:
+                _add_memo += ", ⋯"
+                break
+            if len(memo) > 0:
+                _add_memo += ",<br>" + memo if len(_add_memo) else memo
+        df.loc[i, "expense_memo"] = _add_memo
+    return df
 
 
 def generate_daily_chart(
@@ -219,9 +260,7 @@ def _prepare_graph_dataframe(
     return df_graph
 
 
-def _prepare_bar_dataframe(
-    df_graph: pd.DataFrame, len_memo_text: int = 20
-) -> pd.DataFrame:
+def _prepare_bar_dataframe(df_graph: pd.DataFrame) -> pd.DataFrame:
     df_graph = df_graph.sort_values(["date", "expense_type", "expense_amount"])
     df_bar = (
         df_graph.groupby(["date", "expense_type"])["expense_amount"]
@@ -229,23 +268,8 @@ def _prepare_bar_dataframe(
         .reset_index()
     )
     df_bar.index = pd.Index(range(len(df_bar)))
-
     # extract memos for hover text of bar chart
-    for i, r in df_bar.iterrows():
-        date = r["date"]
-        expense_type = r["expense_type"]
-        _data = df_graph.query(
-            f"date==@pd.Timestamp('{date}') and expense_type=='{expense_type}'"
-        )
-        _add_memo = ""
-        for memo in _data["expense_memo"].iloc[::-1]:
-            if len(_add_memo + memo) > len_memo_text:
-                _add_memo += ", ⋯"
-                break
-            if len(memo) > 0:
-                _add_memo += ",<br>" + memo if len(_add_memo) else memo
-        df_bar.loc[i, "expense_memo"] = _add_memo
-
+    df_bar = _add_expense_memo_summary(df_bar, df_graph, "date")
     # add offset to `date` column
     df_bar["date"] = pd.to_datetime(df_bar["date"]) + pd.Timedelta(hours=12)
     return df_bar
@@ -392,8 +416,7 @@ def _add_bar_chart_labels(
                 color="#ffffff" if theme == "dark" else "#000000",
             ),
             showlegend=False,
-            hoverlabel=dict(namelength=0),
-            hovertemplate="%{text}",
+            hoverinfo="skip",
         )
     )
 
@@ -449,18 +472,19 @@ def generate_pie_chart(df: pd.DataFrame, theme: str = "light") -> str:
         df_pie.loc[:, "month"] == dt.datetime.today().strftime("%Y-%m")
     ]
     month_str = pd.Timestamp(df_pie.iloc[-1]["month"]).strftime("%Y年%-m月")
-    total_amount = df_pie['expense_amount'].sum()
+    total_amount = df_pie["expense_amount"].sum()
     fig = px.pie(
         df_pie,
         names="expense_type",
         values="expense_amount",
         title=f"支出内訳（{month_str}）",
+        hover_data=["expense_memo"],
         category_orders={"expense_type": EXPENSE_TYPES},
         hole=0.4,
     )
     fig.update_traces(
         texttemplate="¥%{value:,} (%{percent})",
-        hovertemplate="%{label}<br>¥%{value:,.0f}",
+        hovertemplate="%{label}<br>¥%{value:,.0f}<br>%{customdata[0]}",
         textfont=dict(size=14),
     )
     fig.add_annotation(
@@ -505,12 +529,12 @@ def generate_bar_chart(
         color="expense_type",
         text="label",
         title="支出内訳（月別）",
-        hover_data=dict(expense_amount=":,"),
+        hover_data=["expense_memo"],
         range_y=[0, None],
         category_orders={"expense_type": EXPENSE_TYPES},
     )
     fig.update_traces(
-        hovertemplate="%{label}<br>¥%{value:,.0f}",
+        hovertemplate="¥%{value:,.0f}<br>%{customdata[0]}",
         textfont=dict(size=14),
     )
     _update_layout(fig, theme)
