@@ -27,6 +27,7 @@ from ..core.expense import (
     get_ocr_expense,
     store_expense,
     delete_expense,
+    edit_expense,
 )
 from ..core.termux_api import toast, notify
 from ..core.ocr import get_latest_screenshot
@@ -690,7 +691,6 @@ def register(
             toast("登録中..")
         except Exception:
             log.info("Toast notification failed.")
-            pass
         GSPREAD_HANDLER.register_expense(
             expense_type, expense_amount_num, expense_memo, expense_date
         )
@@ -709,7 +709,6 @@ def register(
             )
         except Exception:
             log.info("Notification failed.")
-            pass
     commons = generate_commons(request)
     log.info("end 'register' method")
     return templates.TemplateResponse(
@@ -762,7 +761,6 @@ def ocr(
             toast("登録中..")
         except Exception:
             log.info("Toast notification failed.")
-            pass
         GSPREAD_HANDLER.register_expense(
             expense_type, expense_amount, expense_memo, expense_date
         )
@@ -785,7 +783,6 @@ def ocr(
             )
         except Exception:
             log.info("Notification failed.")
-            pass
     commons = generate_commons(request)
     log.info("end 'ocr' method")
     return templates.TemplateResponse(
@@ -817,7 +814,6 @@ def delete(
         toast("削除中..")
     except Exception:
         log.info("Toast notification failed.")
-        pass
     status = True
     try:
         if not expense_date or not expense_type or not expense_amount:
@@ -857,7 +853,6 @@ def delete(
         )
     except Exception:
         log.info("Notification failed.")
-        pass
     commons = generate_commons(request)
     log.info("end 'delete' method")
     return templates.TemplateResponse(
@@ -874,8 +869,8 @@ def delete(
     )
 
 
-@app.post("/replace", response_class=HTMLResponse)
-def replace(
+@app.post("/edit", response_class=HTMLResponse)
+def edit(
     request: Request,
     target_date: str = Form(...),
     target_type: str = Form(...),
@@ -888,7 +883,7 @@ def replace(
     """
     登録レコードを修正するエンドポイント
     """
-    log.info("start 'replace' method")
+    log.info("start 'edit' method")
     status = True
     try:
         # parse date
@@ -904,16 +899,45 @@ def replace(
         log.debug(f"new_expense_type: {new_expense_type}")
         log.debug(f"new_expense_amount: {new_expense_amount}")
         log.debug(f"new_expense_memo: {new_expense_memo}")
+        if (
+            target_type != new_expense_type
+            or target_amount != new_expense_amount
+            or target_memo != new_expense_memo
+        ):
+            target_expense = dict(
+                expense_date=target_date,
+                expense_type=target_type,
+                expense_amount=target_amount,
+                expense_memo=target_memo,
+            )
+            new_expense = dict(
+                expense_type=new_expense_type,
+                expense_amount=new_expense_amount,
+                expense_memo=new_expense_memo,
+            )
+            if status and not GSPREAD_HANDLER.edit_expense(
+                target_expense=target_expense,
+                new_expense=new_expense,
+            ):
+                status = False
+            if status and not edit_expense(
+                target_expense=target_expense,
+                new_expense=new_expense,
+            ):
+                status = False
+        else:
+            log.debug("Nothing to do.")
+            status = False
     except Exception as e:
         log.error(f"Error occurred: {e}")
         status = False
     commons = generate_commons(request)
-    log.info("end 'replace' method")
+    log.info("end 'edit' method")
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
-            "replace_status": status,
+            "edit_status": status,
             **commons,
         },
     )

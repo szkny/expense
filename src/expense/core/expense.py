@@ -7,6 +7,7 @@ import argparse
 import datetime
 import pandas as pd
 import logging as log
+from typing import Any
 from collections import Counter
 from platformdirs import user_cache_dir, user_config_dir
 
@@ -375,6 +376,79 @@ def delete_expense(
         )
         status = False
     log.info("end 'delete_expense' method")
+    return status
+
+
+def edit_expense(
+    target_expense: dict[str, Any],
+    new_expense: dict[str, Any],
+) -> bool:
+    """
+    edit expense
+    """
+    log.info("start 'edit_expense' method")
+    status = True
+
+    # validation check
+    target_date = target_expense.get("expense_date")
+    target_type = target_expense.get("expense_type")
+    target_amount = target_expense.get("expense_amount")
+    target_memo = target_expense.get("expense_memo")
+    if not target_date:
+        log.debug("Failed to edit record. target_date must be specified.")
+        return False
+    if not target_type:
+        log.debug("Failed to edit record. target_type must be specified.")
+        return False
+    if not target_amount:
+        log.debug("Failed to edit record. target_amount must be specified.")
+        return False
+
+    new_expense_type = new_expense.get("expense_type", target_type)
+    new_expense_amount = new_expense.get("expense_amount", target_amount)
+    new_expense_memo = new_expense.get("expense_memo", "")
+
+    target_amount = int(re.sub(r"[^\d]", "", str(target_amount)))
+    new_expense_amount = int(re.sub(r"[^\d]", "", str(new_expense_amount)))
+
+    log.debug(f"target_date: {target_date}")
+    log.debug(f"target_type: {target_type}")
+    log.debug(f"target_amount: {target_amount}")
+    log.debug(f"target_memo: {target_memo}")
+    log.debug(f"new_expense_type: {new_expense_type}")
+    log.debug(f"new_expense_amount: {new_expense_amount}")
+    log.debug(f"new_expense_memo: {new_expense_memo}")
+
+    try:
+        df = pd.read_csv(EXPENSE_HISTORY, header=None)
+        columns = ["datetime", "type", "memo", "amount"]
+        df.columns = pd.Index(columns)
+        df.loc[:, "date"] = pd.to_datetime(df.loc[:, "datetime"]).dt.date
+    except FileNotFoundError:
+        log.debug(f"File not found. {EXPENSE_HISTORY}")
+        return False
+    condition = f"date == @pd.Timestamp('{target_date}').date()"
+    condition += " and type == @target_type" if target_type else ""
+    condition += " and memo == @target_memo" if target_memo else ""
+    condition += " and amount == @target_amount" if target_amount else ""
+    idx = df.query(condition).index.to_list()
+    if len(idx):
+        target_idx = idx[-1]
+        log.debug(f"Target index: {target_idx}")
+        target_row = ", ".join(df.loc[target_idx, columns].map(str))
+        log.debug(f"Target expense: {target_row}")
+        df.loc[target_idx, "type"] = new_expense_type
+        df.loc[target_idx, "memo"] = new_expense_memo
+        df.loc[target_idx, "amount"] = new_expense_amount
+        df.loc[:, columns].to_csv(EXPENSE_HISTORY, index=False, header=False)
+        edited_row = ", ".join(df.loc[target_idx, columns].map(str))
+        log.debug(f"Edited expense: {edited_row}")
+    else:
+        log.debug(
+            f"Editing expense Failed: records not found. ({target_date}, {target_type}, {target_memo}, {target_amount})"
+        )
+        status = False
+    log.info("end 'edit_expense' method")
     return status
 
 

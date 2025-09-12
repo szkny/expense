@@ -118,7 +118,7 @@
           <h3> 📝 レコードを編集 </h3>
           <button id="confirmation-close-btn" type="button" class="btn-close"> ✕ </button>
           <div class="confirmation-btn-container">
-            <form method="post" action="/replace">
+            <form method="post" action="/edit">
               <input type="hidden" id="target-record-date" name="target_date">
               <input type="hidden" id="target-record-type" name="target_type">
               <input type="hidden" id="target-record-amount" name="target_amount">
@@ -133,7 +133,7 @@
                 {% endif %}
                 {% endfor %}
               </select>
-              <input type="text" id="new-expense-amount" name="new_expense_amount" placeholder="💴 金額を入力">
+              <input type="text" id="new-expense-amount" name="new_expense_amount" placeholder="💴 金額を入力" required>
               <input type="text" id="new-expense-memo" name="new_expense_memo" placeholder="✏️ メモを入力">
               <div class="space"></div>
               <button type="submit" class="btn-edit"> ✏️ 修正 </button>
