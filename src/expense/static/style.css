@@ -376,7 +376,7 @@ tr:nth-child(even) {
   margin: 10px 10px 0 0;
   font-size: 16px;
   font-weight: 600;
-  background: #112255;
+  background: #2563eb;
   color: #fff;
   text-align: center;
   border: none;
@@ -458,11 +458,11 @@ tr:nth-child(even) {
 }
 
 .dark .btn {
-  background: #3b82f6;
+  background: #2e63af;
 }
 
 .dark .btn:hover {
-  background: #2563eb;
+  background: #1e40af;
 }
 
 .dark .btn.secondary {
@@ -516,7 +516,7 @@ tr:nth-child(even) {
 
 .dark .btn-delete,
 .dark .btn-edit {
-  background: #2563ab;
+  background: #2e63af;
 }
 
 /* レスポンシブ */
