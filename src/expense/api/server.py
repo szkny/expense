@@ -448,11 +448,20 @@ def generate_pie_chart(df: pd.DataFrame, theme: str = "light") -> str:
         values="expense_amount",
         title=f"支出内訳（{month_str}）",
         category_orders={"expense_type": EXPENSE_TYPES},
+        hole=0.4,
     )
     fig.update_traces(
         texttemplate="¥%{value:,} (%{percent})",
         hovertemplate="%{label}<br>¥%{value:,.0f}",
         textfont=dict(size=14),
+    )
+    fig.add_annotation(
+        text=f"合計<br>¥{df_pie['expense_amount'].sum(): ,.0f}",
+        x=0.5,
+        y=0.5,
+        font_size=20,
+        showarrow=False,
+        font=dict(color="#ffffff" if theme == "dark" else "#000000", size=20),
     )
     _update_layout(fig, theme)
     graph_html = fig.to_html(full_html=False)
