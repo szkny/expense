@@ -44,6 +44,29 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 })();
 
+// スクショの拡大・縮小動作
+(function() {
+  const screenshot = document.getElementById("screenshot");
+  const overlay = document.getElementById("img-overlay");
+  let isZoomed = false;
+  screenshot.addEventListener("click", () => {
+    if (isZoomed) {
+      screenshot.style.transform = "scale(1)";
+      overlay.style.display = "none";
+      isZoomed = false;
+    } else {
+      screenshot.style.transform = "scale(5.5)";
+      overlay.style.display = "flex";
+      isZoomed = true;
+    }
+  });
+  overlay.addEventListener("click", () => {
+    screenshot.style.transform = "scale(1)";
+    overlay.style.display = "none";
+    isZoomed = false;
+  });
+})();
+
 // レポートの折りたたみ処理
 (function() {
   const sectionReport = document.getElementById("report-section");
@@ -178,6 +201,7 @@ function filterTable() {
 (function() {
   document.addEventListener("DOMContentLoaded", () => {
     const overlay = document.getElementById("confirmation-overlay");
+    const dialog = document.getElementById("confirmation-dialog");
     const deleteDate = document.getElementById("delete-record-date");
     const deleteType = document.getElementById("delete-record-type");
     const deleteAmount = document.getElementById("delete-record-amount");
@@ -236,6 +260,14 @@ function filterTable() {
       .addEventListener("click", () => {
         overlay.style.display = "none";
       });
+
+    // オーバーレイをクリックしたら閉じる
+    overlay.addEventListener("click", function(e) {
+      // クリック対象がダイアログ自身ではない場合のみ閉じる
+      if (!dialog.contains(e.target)) {
+        overlay.style.display = "none";
+      }
+    });
   });
 })();
 

@@ -77,7 +77,8 @@
         <div id="screenshot-name">
           ▶️ 対象画像 : {{ screenshot_name.split("/") | last }}
         </div>
-        <img class="screenshot" alt="{{ screenshot_name.split(" /") | last }}"
+        <div id="img-overlay" class="overlay"></div>
+        <img id="screenshot" class="screenshot" alt="{{ screenshot_name.split(" /") | last }}"
           src="data:image/png;base64,{{ screenshot_base64 }}"
           onclick="this.classList.toggle('is-zoomed')"
         >
