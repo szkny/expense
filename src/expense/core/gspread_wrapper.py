@@ -501,8 +501,8 @@ class GspreadHandler:
         self,
         column: str,
         target_type: str,
-        target_memo: int,
-        new_expense_memo: int,
+        target_memo: str,
+        new_expense_memo: str,
         offset: int = 51,
     ) -> bool:
         log.info("start 'edit_memo' method")
@@ -582,66 +582,83 @@ class GspreadHandler:
         new_expense: dict[str, Any],
     ) -> bool:
         log.info("start 'edit_record' method")
-        target_date = target_expense.get("expense_date")
-        target_type = target_expense.get("expense_type")
-        target_amount = target_expense.get("expense_amount")
-        target_memo = target_expense.get("expense_memo")
-        if not target_date:
-            log.debug("Failed to edit record. target_date must be specified.")
-            return False
-        if not target_type:
-            log.debug("Failed to edit record. target_type must be specified.")
-            return False
-        if not target_amount:
-            log.debug("Failed to edit record. target_amount must be specified.")
-            return False
-
-        new_expense_type = new_expense.get("expense_type", target_type)
-        new_expense_amount = new_expense.get("expense_amount", target_amount)
-        new_expense_memo = new_expense.get("expense_memo", "")
-
-        target_amount = int(re.sub(r"[^\d]", "", str(target_amount)))
-        new_expense_amount = int(re.sub(r"[^\d]", "", str(new_expense_amount)))
-
-        if (
-            target_type == new_expense_type
-            and target_amount == new_expense_amount
-            and target_memo == new_expense_memo
-        ):
-            log.debug("Nothing to do.")
-            return False
-
-        column = self.get_column(target_date)
-        if target_type != new_expense_type:
-            log.debug(
-                f"Change expense_type: '{target_type}' to '{new_expense_type}'"
-            )
-            self.delete_amount(column, target_type, target_amount)
-            if target_memo:
-                self.delete_memo(column, target_type, target_memo)
-            self.register_expense(
-                new_expense_type,
-                new_expense_amount,
-                new_expense_memo,
-                target_date,
-            )
-        else:
-            if target_amount != new_expense_amount and not self.edit_amount(
-                column,
-                target_type,
-                target_amount,
-                new_expense_amount,
-            ):
+        try:
+            target_date = target_expense.get("expense_date")
+            target_type = target_expense.get("expense_type")
+            target_amount = target_expense.get("expense_amount")
+            target_memo = str(target_expense.get("expense_memo"))
+            if not target_date:
+                log.debug(
+                    "Failed to edit record. target_date must be specified."
+                )
                 return False
-            if target_memo != new_expense_memo and not self.edit_memo(
-                column,
-                target_type,
-                target_memo,
-                new_expense_memo,
-            ):
+            if not target_type:
+                log.debug(
+                    "Failed to edit record. target_type must be specified."
+                )
                 return False
-        log.info("end 'end_record' method")
-        return True
+            if not target_amount:
+                log.debug(
+                    "Failed to edit record. target_amount must be specified."
+                )
+                return False
+
+            new_expense_type = new_expense.get("expense_type", target_type)
+            new_expense_amount = new_expense.get(
+                "expense_amount", target_amount
+            )
+            new_expense_memo = str(new_expense.get("expense_memo", ""))
+
+            target_amount = int(re.sub(r"[^\d]", "", str(target_amount)))
+            new_expense_amount = int(
+                re.sub(r"[^\d]", "", str(new_expense_amount))
+            )
+
+            if (
+                target_type == new_expense_type
+                and target_amount == new_expense_amount
+                and target_memo == new_expense_memo
+            ):
+                log.debug("Nothing to do.")
+                return False
+
+            self.load_sheet(target_date)
+            column = self.get_column(target_date)
+            if target_type != new_expense_type:
+                log.debug(
+                    f"Change expense_type: '{target_type}' to '{new_expense_type}'"
+                )
+                self.delete_amount(column, target_type, target_amount)
+                if target_memo:
+                    self.delete_memo(column, target_type, target_memo)
+                self.register_expense(
+                    new_expense_type,
+                    new_expense_amount,
+                    new_expense_memo,
+                    target_date,
+                )
+            else:
+                if (
+                    target_amount != new_expense_amount
+                    and not self.edit_amount(
+                        column,
+                        target_type,
+                        target_amount,
+                        new_expense_amount,
+                    )
+                ):
+                    return False
+                if target_memo != new_expense_memo and not self.edit_memo(
+                    column,
+                    target_type,
+                    target_memo,
+                    new_expense_memo,
+                ):
+                    return False
+            return True
+        finally:
+            self.load_sheet()
+            log.info("end 'end_record' method")
 
 
 if __name__ == "__main__":
