@@ -348,7 +348,7 @@ def similarity(a: str, b: str) -> float:
 
 
 def get_most_similar_memo(
-    target: str, memos: list[str], threshold: float = 0.9
+    target: str, memos: list[str], threshold: float = 0.85
 ) -> str:
     """
     get the most similar memo from a list of memos
