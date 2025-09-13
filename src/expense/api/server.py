@@ -889,7 +889,7 @@ def delete(
     )
 
 
-@app.post("/edit", response_class=HTMLResponse)
+@app.post("/edit")
 def edit(
     request: Request,
     target_date: str = Form(...),
@@ -899,7 +899,7 @@ def edit(
     new_expense_type: str = Form(...),
     new_expense_amount: str = Form(...),
     new_expense_memo: str = Form(...),
-) -> HTMLResponse:
+) -> RedirectResponse:
     """
     登録レコードを修正するエンドポイント
     """
