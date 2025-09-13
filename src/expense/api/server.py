@@ -398,8 +398,8 @@ def _add_bar_chart_labels(
     key: str,
     theme: str,
     fontsize: int = 14,
-    threshold: int = 0,
-    label_offset: int = 2000,
+    threshold: int = 2000,
+    label_offset: int = 3000,
 ) -> None:
     totals = df_bar.groupby(key, as_index=False)["expense_amount"].sum()
     totals["label"] = totals["expense_amount"].map(
