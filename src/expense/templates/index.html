@@ -18,22 +18,19 @@
   <div class="container">
     <h1>📝 Expense </h1>
 
-    {% if selected_type and input_date and input_amount %}
+    {% if status and msg %}
     <div class="success">
-      ✅ 家計簿への登録が完了しました。
-      <p><strong> {{ input_date }}, {{ selected_type }}, {{ input_memo + ", " if input_memo else "" }}¥{{ "{:,}".format(input_amount)}} </strong></p>
+      {{ msg }}
+    {% if info %}
+      <p><strong> {{ info }} </strong></p>
+    {% endif %}
     </div>
-    {% endif %}
-
-    {% if delete_type and delete_date and delete_amount %}
-    {% if delete_status %}
-    <div class="success">
-      ✅ 家計簿の削除処理が完了しました。
-    {% else %}
+    {% elif not status and msg %}
     <div class="failed">
-      🚫 家計簿の削除処理に失敗しました。
+      {{ msg }}
+    {% if info %}
+      <p><strong> {{ info }} </strong></p>
     {% endif %}
-      <p><strong> {{ delete_date }}, {{ delete_type }}, {{ delete_memo + ", " if delete_memo else "" }}¥{{ "{:,}".format(delete_amount)}} </strong></p>
     </div>
     {% endif %}
 

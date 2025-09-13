@@ -13,9 +13,9 @@ from plotly import graph_objects as go
 from platformdirs import user_cache_dir
 
 from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 
 from ..core.expense import (
     get_fiscal_year,
@@ -406,7 +406,7 @@ def _add_bar_chart_labels(
         lambda x: f"¥{x:,}" if x >= threshold else ""
     )
     y = [
-        j if (i+1) % 2 else j + label_offset
+        j if (i + 1) % 2 else j + label_offset
         for i, j in enumerate(totals["expense_amount"])
     ]
     fig.add_trace(
@@ -583,7 +583,7 @@ def generate_commons(request: Request) -> dict[str, Any]:
             img_base64 = ""
             disable_ocr = True
     except Exception:
-        log.exception("Error occured in screenshot process.")
+        log.exception("Error occurred in screenshot process.")
         screenshot_name = ""
         img_base64 = ""
         disable_ocr = True
@@ -648,7 +648,12 @@ async def manifest() -> FileResponse:
 
 
 @app.get("/", response_class=HTMLResponse)
-def read_root(request: Request) -> HTMLResponse:
+def read_root(
+    request: Request,
+    status: bool | None = None,
+    msg: str | None = None,
+    info: str | None = None,
+) -> HTMLResponse:
     """
     トップページ
     """
@@ -659,168 +664,188 @@ def read_root(request: Request) -> HTMLResponse:
         "index.html",
         {
             "request": request,
+            "status": status,
+            "msg": msg,
+            "info": info,
             **commons,
         },
     )
 
 
-@app.post("/register", response_class=HTMLResponse)
+@app.post("/register")
 def register(
     request: Request,
     expense_type: str = Form(...),
     expense_amount: str = Form(...),
     expense_memo: str = Form(...),
     expense_date: str = Form(...),
-) -> HTMLResponse:
+) -> RedirectResponse:
     """
     レコード登録を実行するエンドポイント
     """
     log.info("start 'register' method")
-    if any([emoji in expense_type for emoji in "⭐🔥🕒️"]):
-        data = re.sub("(⭐|🔥|🕒️) ", "", expense_type).split("/")
-        if len(data) == 3:
-            expense_type = data[0]
-            expense_memo = data[1]
-            expense_amount = data[2]
-        elif len(data) == 2:
-            expense_type = data[0]
-            expense_memo = ""
-            expense_amount = data[1]
-    expense_amount_num = int(re.sub(r"[^\d]", "", expense_amount))
-    log.debug(f"Expense Type: {expense_type}")
-    log.debug(f"Expense Amount: {expense_amount_num}")
-    log.debug(f"Expense Memo: {expense_memo}")
-    log.debug(f"Expense Date: {expense_date}")
-    if expense_type and expense_amount and expense_date:
-        try:
-            toast("登録中..")
-        except Exception:
-            log.info("Toast notification failed.")
-        GSPREAD_HANDLER.register_expense(
-            expense_type, expense_amount_num, expense_memo, expense_date
-        )
-        store_expense(
-            expense_type, expense_memo, expense_amount_num, expense_date
-        )
-        try:
-            notify(
-                "家計簿への登録が完了しました。",
-                (
-                    f"[{expense_date}] "
-                    f"{expense_type}"
-                    f"{': '+expense_memo if expense_memo else ''}"
-                    f", ¥{expense_amount_num:,}"
-                ),
+    status = True
+    msg = ""
+    info = ""
+    try:
+        if any([emoji in expense_type for emoji in "⭐🔥🕒️"]):
+            data = re.sub("(⭐|🔥|🕒️) ", "", expense_type).split("/")
+            if len(data) == 3:
+                expense_type = data[0]
+                expense_memo = data[1]
+                expense_amount = data[2]
+            elif len(data) == 2:
+                expense_type = data[0]
+                expense_memo = ""
+                expense_amount = data[1]
+        expense_amount_num = int(re.sub(r"[^\d]", "", expense_amount))
+        log.debug(f"Expense Type: {expense_type}")
+        log.debug(f"Expense Amount: {expense_amount_num}")
+        log.debug(f"Expense Memo: {expense_memo}")
+        log.debug(f"Expense Date: {expense_date}")
+        if expense_type and expense_amount and expense_date:
+            try:
+                toast("登録中..")
+            except Exception:
+                log.info("Toast notification failed.")
+            GSPREAD_HANDLER.register_expense(
+                expense_type, expense_amount_num, expense_memo, expense_date
             )
-        except Exception:
-            log.info("Notification failed.")
-    commons = generate_commons(request)
-    log.info("end 'register' method")
-    return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
-            "input_date": expense_date,
-            "selected_type": expense_type,
-            "input_amount": expense_amount_num,
-            "input_memo": expense_memo,
-            **commons,
-        },
+            store_expense(
+                expense_type, expense_memo, expense_amount_num, expense_date
+            )
+            msg = "✅ 家計簿への登録が完了しました。"
+            info = (
+                f"[{expense_date}] "
+                f"{expense_type}: "
+                f"¥{expense_amount_num:,}"
+                f"{', '+expense_memo if expense_memo else ''}"
+            )
+            try:
+                notify(
+                    msg,
+                    info,
+                )
+            except Exception:
+                log.info("Notification failed.")
+        else:
+            status = False
+            msg = "🚫 家計簿の登録処理に失敗ました。"
+    except Exception:
+        log.exception("Error occurred")
+        status = False
+        msg = "🚫 家計簿の登録処理に失敗ました。"
+    finally:
+        log.info("end 'register' method")
+    return RedirectResponse(
+        url=f"/?status={status}&msg={msg}&info={info}", status_code=303
     )
 
 
-@app.post("/ocr", response_class=HTMLResponse)
+@app.post("/ocr")
 def ocr(
     request: Request,
-) -> HTMLResponse:
+) -> RedirectResponse:
     """
     OCRを実行するエンドポイント
     """
     log.info("start 'ocr' method")
-    recent_screenshot = os.path.basename(get_latest_screenshot())
-    latest_ocr_data = get_ocr_expense()
-    if len(latest_ocr_data) and (
-        latest_ocr_data.get("screenshot_name") == recent_screenshot
-    ):
-        log.info("OCR data already exists, skipping registration.")
-        expense_type = latest_ocr_data["expense_type"]
-        expense_amount: int | str = int(latest_ocr_data["expense_amount"])
-        expense_memo = latest_ocr_data.get("expense_memo", "")
-        try:
-            notify(
-                "OCRデータは登録済のためスキップされました。",
-                f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
+    status = True
+    msg = ""
+    info = ""
+    try:
+        recent_screenshot = os.path.basename(get_latest_screenshot())
+        latest_ocr_data = get_ocr_expense()
+        status = True
+        if len(latest_ocr_data) and (
+            latest_ocr_data.get("screenshot_name") == recent_screenshot
+        ):
+            log.info("OCR data already exists, skipping registration.")
+            expense_date = latest_ocr_data.get("expense_date")
+            expense_type = latest_ocr_data.get("expense_type")
+            expense_amount: int | str = int(
+                latest_ocr_data.get("expense_amount")
             )
-        except Exception:
-            log.info("Notification failed.")
-        expense_type = ""
-        expense_amount = ""
-        expense_memo = ""
-    else:
-        ocr_data = ocr_main()
-        expense_type = ocr_data["expense_type"]
-        expense_amount = int(ocr_data["expense_amount"])
-        expense_memo = ocr_data.get("expense_memo", "")
-        expense_date = ocr_data.get("expense_date", "")
-        try:
-            toast("登録中..")
-        except Exception:
-            log.info("Toast notification failed.")
-        GSPREAD_HANDLER.register_expense(
-            expense_type, expense_amount, expense_memo, expense_date
-        )
-        json.dump(
-            ocr_data,
-            open(CACHE_PATH / "ocr_data.json", "w"),
-            ensure_ascii=False,
-            indent=2,
-        )
-        store_expense(expense_type, expense_memo, expense_amount, expense_date)
-        try:
-            notify(
-                "家計簿への登録が完了しました。",
-                (
-                    f"[{expense_date}] "
-                    f"{expense_type}"
-                    f"{': '+expense_memo if expense_memo else ''}"
-                    f", ¥{expense_amount:,}"
-                ),
+            expense_memo = latest_ocr_data.get("expense_memo", "")
+            status = False
+            msg = "🚫 OCRデータは登録済のためスキップされました。"
+            info = (
+                f"[{expense_date}] "
+                f"{expense_type}: "
+                f"¥{expense_amount:,}"
+                f"{', '+expense_memo if expense_memo else ''}"
             )
-        except Exception:
-            log.info("Notification failed.")
-    commons = generate_commons(request)
-    log.info("end 'ocr' method")
-    return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
-            "selected_type": expense_type,
-            "input_date": expense_date,
-            "input_amount": expense_amount,
-            "input_memo": expense_memo,
-            **commons,
-        },
+            try:
+                notify(msg, info)
+            except Exception:
+                log.info("Notification failed.")
+        else:
+            ocr_data = ocr_main()
+            expense_type = ocr_data.get("expense_type")
+            expense_amount = int(ocr_data.get("expense_amount"))
+            expense_memo = ocr_data.get("expense_memo", "")
+            expense_date = ocr_data.get("expense_date", "")
+            try:
+                toast("登録中..")
+            except Exception:
+                log.info("Toast notification failed.")
+            GSPREAD_HANDLER.register_expense(
+                expense_type, expense_amount, expense_memo, expense_date
+            )
+            json.dump(
+                ocr_data,
+                open(CACHE_PATH / "ocr_data.json", "w"),
+                ensure_ascii=False,
+                indent=2,
+            )
+            store_expense(
+                expense_type, expense_memo, expense_amount, expense_date
+            )
+            msg = "✅ 家計簿への登録が完了しました。"
+            info = (
+                f"[{expense_date}] "
+                f"{expense_type}: "
+                f"¥{expense_amount:,}"
+                f"{', '+expense_memo if expense_memo else ''}"
+            )
+            try:
+                notify(
+                    msg,
+                    info,
+                )
+            except Exception:
+                log.info("Notification failed.")
+    except Exception:
+        log.exception("Error occurred")
+        status = False
+        msg = "🚫 家計簿の登録処理に失敗ました。"
+    finally:
+        log.info("end 'ocr' method")
+    return RedirectResponse(
+        url=f"/?status={status}&msg={msg}&info={info}", status_code=303
     )
 
 
-@app.post("/delete", response_class=HTMLResponse)
+@app.post("/delete")
 def delete(
     request: Request,
     expense_date: str = Form(...),
     expense_type: str = Form(...),
     expense_amount: str = Form(...),
     expense_memo: str = Form(...),
-) -> HTMLResponse:
+) -> RedirectResponse:
     """
     登録レコードを削除するエンドポイント
     """
     log.info("start 'delete' method")
-    try:
-        toast("削除中..")
-    except Exception:
-        log.info("Toast notification failed.")
     status = True
+    msg = ""
+    info = ""
     try:
+        try:
+            toast("削除中..")
+        except Exception:
+            log.info("Toast notification failed.")
         if not expense_date or not expense_type or not expense_amount:
             status = False
         # parse date
@@ -839,38 +864,28 @@ def delete(
             expense_date, expense_type, expense_amount, expense_memo
         ):
             status = False
+        if status:
+            msg = "✅ 家計簿の削除処理が完了しました。"
+        else:
+            msg = "🚫 家計簿の削除処理に失敗しました。"
+        info = (
+            f"[{expense_date}] "
+            f"{expense_type}: "
+            f"¥{expense_amount:,}"
+            f"{', '+expense_memo if expense_memo else ''}"
+        )
+        try:
+            notify(msg, info)
+        except Exception:
+            log.info("Notification failed.")
     except Exception:
         log.exception("Error occurred")
         status = False
-    try:
-        notify(
-            (
-                "家計簿の削除処理が完了しました。"
-                if status
-                else "🚫 家計簿の削除処理に失敗しました。"
-            ),
-            (
-                f"[{expense_date}] "
-                f"{expense_type}"
-                f"{': '+expense_memo if expense_memo else ''}"
-                f", ¥{expense_amount:,}"
-            ),
-        )
-    except Exception:
-        log.info("Notification failed.")
-    commons = generate_commons(request)
-    log.info("end 'delete' method")
-    return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
-            "delete_status": status,
-            "delete_type": expense_type,
-            "delete_date": expense_date,
-            "delete_amount": expense_amount,
-            "delete_memo": expense_memo,
-            **commons,
-        },
+        msg = "🚫 家計簿の削除処理に失敗しました。"
+    finally:
+        log.info("end 'delete' method")
+    return RedirectResponse(
+        url=f"/?status={status}&msg={msg}&info={info}", status_code=303
     )
 
 
@@ -890,7 +905,13 @@ def edit(
     """
     log.info("start 'edit' method")
     status = True
+    msg = ""
+    info = ""
     try:
+        try:
+            toast("修正中..")
+        except Exception:
+            log.info("Toast notification failed.")
         # parse date
         target_date = re.sub(r"\(.+\)", "", target_date)
         # parse amount
@@ -930,19 +951,32 @@ def edit(
                 new_expense=new_expense,
             ):
                 status = False
+            if status:
+                msg = "✅ 家計簿の修正処理が完了しました。"
+            else:
+                msg = "🚫 家計簿の修正処理に失敗しました。"
+            info = (
+                f"[{target_date}] "
+                f"{target_type}: "
+                f"¥{target_amount:,}"
+                f"{', '+target_memo if target_memo else ''}"
+                " ▶ "
+                f"{new_expense_type}: "
+                f"¥{new_expense_amount:,}"
+                f"{', '+new_expense_memo if new_expense_memo else ''}"
+            )
+            try:
+                notify(msg, info)
+            except Exception:
+                log.info("Notification failed.")
         else:
             log.debug("Nothing to do.")
             status = False
     except Exception:
         log.exception("Error occurred")
         status = False
-    commons = generate_commons(request)
-    log.info("end 'edit' method")
-    return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
-            "edit_status": status,
-            **commons,
-        },
+    finally:
+        log.info("end 'edit' method")
+    return RedirectResponse(
+        url=f"/?status={status}&msg={msg}&info={info}", status_code=303
     )
