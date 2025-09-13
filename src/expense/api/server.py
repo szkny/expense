@@ -10,7 +10,7 @@ import logging as log
 from typing import Any
 from plotly import express as px
 from plotly import graph_objects as go
-from platformdirs import user_cache_dir
+from platformdirs import user_cache_dir, user_config_dir
 
 from fastapi import FastAPI, Request, Form
 from fastapi.staticfiles import StaticFiles
@@ -33,28 +33,31 @@ from ..core.termux_api import toast, notify
 from ..core.ocr import get_latest_screenshot
 from ..core.gspread_wrapper import GspreadHandler
 
-APP_NAME = "expense"
-CACHE_PATH = pathlib.Path(user_cache_dir(APP_NAME))
+APP_NAME: str = "expense"
+CACHE_PATH: pathlib.Path = pathlib.Path(user_cache_dir(APP_NAME))
+CONFIG_PATH: pathlib.Path = pathlib.Path(user_config_dir(APP_NAME))
 CACHE_PATH.mkdir(parents=True, exist_ok=True)
-N_RECORDS = 200
-EXPENSE_TYPES = [
-    "食費",
-    "交通費",
-    "遊興費",
-    "雑費",
-    "書籍費",
-    "医療費",
-    "家賃",
-    "光熱費",
-    "通信費",
-    "養育費",
-    "特別経費",
-    "給与",
-    "雑所得",
-]
-EXCLUDE_TYPES = ["特別経費", "給与", "雑所得"]
-GSPREAD_HANDLER = GspreadHandler(f"CF ({get_fiscal_year()}年度)")
-GSPREAD_URL = GSPREAD_HANDLER.get_spreadsheet_url()
+CONFIG_PATH.mkdir(parents=True, exist_ok=True)
+
+try:
+    with open(CONFIG_PATH / "config.json", "r") as f:
+        CONFIG: dict[str, Any] = json.load(f)
+except Exception:
+    log.debug(
+        f"Error occurred when loading config file. ({CONFIG_PATH / 'config.json'})"
+    )
+    CONFIG = {}
+EXPENSE_TYPES_ALL: dict[str, list] = CONFIG.get("expense_types", {})
+INCOME_TYPES: list[str] = EXPENSE_TYPES_ALL.get("income", [])
+FIXED_TYPES: list[str] = EXPENSE_TYPES_ALL.get("fixed", [])
+VARIABLE_TYPES: list[str] = EXPENSE_TYPES_ALL.get("variable", [])
+EXPENSE_TYPES: list[str] = VARIABLE_TYPES + FIXED_TYPES + INCOME_TYPES
+EXCLUDE_TYPES: list[str] = CONFIG.get("exclude_types", [])
+
+GSPREAD_HANDLER: GspreadHandler = GspreadHandler(
+    f"CF ({get_fiscal_year()}年度)"
+)
+GSPREAD_URL: str = GSPREAD_HANDLER.get_spreadsheet_url()
 
 app = FastAPI()
 
@@ -592,9 +595,10 @@ def generate_commons(request: Request) -> dict[str, Any]:
     items = generate_items()
 
     # 最近の支出履歴を取得
+    n_records = CONFIG.get("n_records", 200)
     try:
         recent_expenses = get_recent_expenses(
-            N_RECORDS, drop_duplicates=False, with_date=True
+            n_records, drop_duplicates=False, with_date=True
         )
     except Exception:
         recent_expenses = []
@@ -625,7 +629,7 @@ def generate_commons(request: Request) -> dict[str, Any]:
     return {
         "expense_date_range": expense_date_range,
         "theme": theme,
-        "n_records": N_RECORDS,
+        "n_records": n_records,
         "gspread_url": GSPREAD_URL,
         "items": items,
         "records": recent_expenses,

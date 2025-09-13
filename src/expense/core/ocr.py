@@ -8,20 +8,21 @@ import unicodedata
 import pandas as pd
 import logging as log
 from PIL import Image
+from typing import Any
 from janome.tokenizer import Tokenizer
 from platformdirs import user_cache_dir, user_config_dir
 
 from .termux_api import exec_command, toast
 
-APP_NAME = "expense"
-CACHE_PATH = pathlib.Path(user_cache_dir(APP_NAME))
-CONFIG_PATH = pathlib.Path(user_config_dir(APP_NAME))
+APP_NAME: str = "expense"
+CACHE_PATH: pathlib.Path = pathlib.Path(user_cache_dir(APP_NAME))
+CONFIG_PATH: pathlib.Path = pathlib.Path(user_config_dir(APP_NAME))
 CACHE_PATH.mkdir(parents=True, exist_ok=True)
 CONFIG_PATH.mkdir(parents=True, exist_ok=True)
 
-EXPENSE_HISTORY = CACHE_PATH / f"{APP_NAME}_history.log"
+EXPENSE_HISTORY: pathlib.Path = CACHE_PATH / f"{APP_NAME}_history.log"
 
-HOME = pathlib.Path(os.getenv("HOME") or "~")
+HOME: pathlib.Path = pathlib.Path(os.getenv("HOME") or "~")
 
 
 def ocr_main(offset: int = 0, enable_toast: bool = True) -> dict:
@@ -114,8 +115,9 @@ def ocr_image(screenshot_name: str) -> str:
 
     # Define OCR regions for different payment apps
     try:
-        with open(CONFIG_PATH / "ocr_regions.json", "r") as f:
-            ocr_regions: dict[str, list] = json.load(f)
+        with open(CONFIG_PATH / "config.json", "r") as f:
+            config: dict[str, Any] = json.load(f)
+            ocr_regions: dict[str, list] = config.get("ocr_regions", {})
     except FileNotFoundError:
         ocr_regions = {}
 

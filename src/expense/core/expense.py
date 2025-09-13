@@ -21,16 +21,26 @@ from .termux_api import (
 )
 from .gspread_wrapper import GspreadHandler
 
-APP_NAME = "expense"
-CACHE_PATH = pathlib.Path(user_cache_dir(APP_NAME))
-CONFIG_PATH = pathlib.Path(user_config_dir(APP_NAME))
+APP_NAME: str = "expense"
+CACHE_PATH: pathlib.Path = pathlib.Path(user_cache_dir(APP_NAME))
+CONFIG_PATH: pathlib.Path = pathlib.Path(user_config_dir(APP_NAME))
 CACHE_PATH.mkdir(parents=True, exist_ok=True)
 CONFIG_PATH.mkdir(parents=True, exist_ok=True)
 
-EXPENSE_HISTORY = CACHE_PATH / f"{APP_NAME}_history.log"
+try:
+    with open(CONFIG_PATH / "config.json", "r") as f:
+        CONFIG: dict[str, Any] = json.load(f)
+except Exception:
+    log.debug(
+        f"Error occurred when loading config file. ({CONFIG_PATH / 'config.json'})"
+    )
+    CONFIG = {}
 
+EXPENSE_HISTORY: pathlib.Path = CACHE_PATH / f"{APP_NAME}_history.log"
+
+LOG_LEVEL: str = CONFIG.get("log_level", "INFO")
 log.basicConfig(
-    level=os.environ.get("LOG_LEVEL", "DEBUG").upper(),
+    level=os.environ.get("LOG_LEVEL", LOG_LEVEL).upper(),
     handlers=[
         log.StreamHandler(),
         log.FileHandler(CACHE_PATH / f"{APP_NAME}.log"),
@@ -150,8 +160,9 @@ def get_favorite_expenses() -> list[dict]:
     """
     log.info("start 'get_favorite_expenses' method")
     try:
-        with open(CONFIG_PATH / "favorites.json", "r") as f:
-            favorite_expenses: list[dict] = json.load(f)
+        with open(CONFIG_PATH / "config.json", "r") as f:
+            config: dict[Any] = json.load(f)
+            favorite_expenses: list[dict] = config.get("favorites", [])
     except FileNotFoundError:
         return []
     # log.debug(

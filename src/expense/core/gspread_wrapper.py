@@ -1,4 +1,5 @@
 import re
+import json
 import pathlib
 import gspread
 import datetime as dt
@@ -8,25 +9,24 @@ from platformdirs import user_config_dir
 from tenacity import retry, stop_after_attempt
 from google.oauth2 import service_account
 
-APP_NAME = "expense"
-CONFIG_PATH = pathlib.Path(user_config_dir(APP_NAME))
+APP_NAME: str = "expense"
+CONFIG_PATH: pathlib.Path = pathlib.Path(user_config_dir(APP_NAME))
 CONFIG_PATH.mkdir(parents=True, exist_ok=True)
 
-expense_type_list: list[str] = [
-    "給与",
-    "雑所得",
-    "家賃",
-    "光熱費",
-    "通信費",
-    "養育費",
-    "特別経費",
-    "食費",
-    "交通費",
-    "医療費",
-    "書籍費",
-    "遊興費",
-    "雑費",
-]
+try:
+    with open(CONFIG_PATH / "config.json", "r") as f:
+        CONFIG: dict[str, Any] = json.load(f)
+except Exception:
+    log.debug(
+        f"Error occurred when loading config file. ({CONFIG_PATH / 'config.json'})"
+    )
+    CONFIG = {}
+EXPENSE_TYPES_ALL: dict[str, list] = CONFIG.get("expense_types", {})
+INCOME_TYPES: list[str] = EXPENSE_TYPES_ALL.get("income", [])
+FIXED_TYPES: list[str] = EXPENSE_TYPES_ALL.get("fixed", [])
+VARIABLE_TYPES: list[str] = EXPENSE_TYPES_ALL.get("variable", [])
+EXPENSE_TYPES: list[str] = INCOME_TYPES + FIXED_TYPES + VARIABLE_TYPES
+EXCLUDE_TYPES: list[str] = CONFIG.get("exclude_types", [])
 
 
 class GspreadHandler:
@@ -102,7 +102,7 @@ class GspreadHandler:
 
     def get_row(self, expense_type: str, offset: int = 31) -> int:
         log.info("start 'get_row' method")
-        row = offset + expense_type_list.index(expense_type)
+        row = offset + EXPENSE_TYPES.index(expense_type)
         log.info("end 'get_row' method")
         return row
 
@@ -188,9 +188,7 @@ class GspreadHandler:
     def get_todays_expenses(self, offset: int = 31) -> str:
         log.info("start 'get_today_expenses' method")
         column = self.get_column()
-        cell_range = (
-            f"{column}{offset}:{column}{offset+len(expense_type_list)-1}"
-        )
+        cell_range = f"{column}{offset}:{column}{offset+len(EXPENSE_TYPES)-1}"
         cells = self.sheet.range(cell_range)
 
         def str2int(s: str) -> int:
@@ -202,19 +200,17 @@ class GspreadHandler:
         log.debug(f"expense_list: {expense_list}")
         todays_expenses: list[dict] = [
             {
-                "expense_type": expense_type_list[str2int(c.address) - offset],
+                "expense_type": EXPENSE_TYPES[str2int(c.address) - offset],
                 "amount": str(c.value),
             }
             for c in expense_list
         ]
         log.info(f"todays_expenses: {todays_expenses}")
-        exclude_expense_types = ["給与", "雑所得"]
         sum_amount = 0
         if len(todays_expenses):
             excluded_expenses = list(
                 filter(
-                    lambda item: item.get("expense_type")
-                    not in exclude_expense_types,
+                    lambda item: item.get("expense_type") not in EXCLUDE_TYPES,
                     todays_expenses,
                 )
             )
@@ -244,14 +240,14 @@ class GspreadHandler:
             return int(re.sub(r"[^\d]", "", s))
 
         column = self.get_column()
-        cell_range = f"{column}{offset+len(expense_type_list)+3}"
+        cell_range = f"{column}{offset+len(EXPENSE_TYPES)+3}"
         cell1 = self.sheet.acell(cell_range)
         budget_left1 = max(
             str2int(str(self.sheet.acell("D16").value))
             - str2int(str(cell1.value)),
             0,
         )
-        cell_range = f"{column}{offset+len(expense_type_list)+4}"
+        cell_range = f"{column}{offset+len(EXPENSE_TYPES)+4}"
         cell2 = self.sheet.acell(cell_range)
         budget_left2 = str2int(str(cell2.value))
         log.debug(f"cell1: {cell1}, cell2: {cell2}")

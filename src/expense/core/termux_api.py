@@ -1,9 +1,28 @@
 import json
+import pathlib
 import subprocess
 import logging as log
 from typing import Any
+from platformdirs import user_config_dir
 
-TITLE = "家計簿"
+APP_NAME: str = "expense"
+
+CONFIG_PATH: pathlib.Path = pathlib.Path(user_config_dir(APP_NAME))
+CONFIG_PATH.mkdir(parents=True, exist_ok=True)
+
+try:
+    with open(CONFIG_PATH / "config.json", "r") as f:
+        CONFIG: dict[str, Any] = json.load(f)
+except Exception:
+    log.debug(
+        f"Error occurred when loading config file. ({CONFIG_PATH / 'config.json'})"
+    )
+    CONFIG = {}
+EXPENSE_TYPES_ALL: dict[str, list] = CONFIG.get("expense_types", {})
+INCOME_TYPES: list[str] = EXPENSE_TYPES_ALL.get("income", [])
+FIXED_TYPES: list[str] = EXPENSE_TYPES_ALL.get("fixed", [])
+VARIABLE_TYPES: list[str] = EXPENSE_TYPES_ALL.get("variable", [])
+EXPENSE_TYPES: list[str] = VARIABLE_TYPES + FIXED_TYPES + INCOME_TYPES
 
 
 def exec_command(command: list, timeout: int = 60, env: dict = {}) -> Any:
@@ -47,7 +66,7 @@ def select_expense_type(
     select expense type
     """
     log.info("start 'select_expense_type' method")
-    items_list_str = "食費,交通費,遊興費,雑費,書籍費,医療費,家賃,光熱費,通信費,養育費,特別経費,給与,雑所得"
+    items_list_str = ",".join(EXPENSE_TYPES)
     additional_items = ""
     for item_data in item_list:
         items: list[dict] = item_data.get("items", [])
@@ -70,7 +89,7 @@ def select_expense_type(
             "termux-dialog",
             "sheet",
             "-t",
-            TITLE,
+            APP_NAME,
             "-v",
             items_list_str,
         ]
@@ -91,7 +110,7 @@ def enter_expense_amount(expense_type: str) -> int:
             "termux-dialog",
             "text",
             "-t",
-            TITLE,
+            APP_NAME,
             "-i",
             f"{expense_type}の金額を入力",
             "-n",
@@ -113,7 +132,7 @@ def enter_expense_memo(expense_type: str) -> str:
             "termux-dialog",
             "text",
             "-t",
-            TITLE,
+            APP_NAME,
             "-i",
             f"{expense_type}のメモを入力",
         ]
@@ -134,7 +153,7 @@ def confirmation(content: str) -> bool:
             "termux-dialog",
             "confirm",
             "-t",
-            TITLE,
+            APP_NAME,
             "-i",
             content,
         ]
