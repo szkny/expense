@@ -1,6 +1,6 @@
 [project]
 name = "expense"
-version = "0.1.0"
+version = "0.2.0"
 description = "household expenses on termux"
 authors = [{ name="Sohei.Suzuki", email="s.s1008@gmail.com" }]
 readme = "README.md"
