@@ -398,16 +398,21 @@ def _add_bar_chart_labels(
     key: str,
     theme: str,
     fontsize: int = 14,
-    min_amount: int = 2000,
+    threshold: int = 0,
+    label_offset: int = 2000,
 ) -> None:
     totals = df_bar.groupby(key, as_index=False)["expense_amount"].sum()
     totals["label"] = totals["expense_amount"].map(
-        lambda x: f"¥{x:,}" if x >= min_amount else ""
+        lambda x: f"¥{x:,}" if x >= threshold else ""
     )
+    y = [
+        j if (i+1) % 2 else j + label_offset
+        for i, j in enumerate(totals["expense_amount"])
+    ]
     fig.add_trace(
         go.Scatter(
             x=totals[key],
-            y=totals["expense_amount"],
+            y=y,
             text=totals["label"],
             mode="text",
             textposition="top center",
