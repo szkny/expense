@@ -1,25 +1,23 @@
 import re
-import pathlib
 import gspread
+import logging
 import datetime as dt
-import logging as log
 from typing import Any
-from platformdirs import user_config_dir
 from tenacity import retry, stop_after_attempt
 from google.oauth2 import service_account
 
-APP_NAME: str = "expense"
-CONFIG_PATH: pathlib.Path = pathlib.Path(user_config_dir(APP_NAME))
-CONFIG_PATH.mkdir(parents=True, exist_ok=True)
+from .base import Base
+
+log: logging.Logger = logging.getLogger("expense")
 
 
-class GspreadHandler:
-    def __init__(
-        self, book_name: str, expense_config: dict[str, Any] = {}
-    ) -> None:
+class GspreadHandler(Base):
+
+    def __init__(self, book_name: str):
+        super().__init__()
         log.info("start 'GspreadHandler' constructor")
         credentials = service_account.Credentials.from_service_account_file(
-            CONFIG_PATH / "credentials.json",
+            self.config_path / "credentials.json",
             scopes=[
                 "https://spreadsheets.google.com/feeds",
                 "https://www.googleapis.com/auth/drive",
@@ -28,10 +26,10 @@ class GspreadHandler:
         self.client = gspread.authorize(credentials)
         self.workbook = self.client.open(book_name)
         self.load_sheet()
+        expense_config: dict[str, Any] = self.config.get("expense", {})
         expense_types_all: dict[str, list] = expense_config.get(
             "expense_types", {}
         )
-        # load config
         income_types: list[str] = expense_types_all.get("income", [])
         fixed_types: list[str] = expense_types_all.get("fixed", [])
         variable_types: list[str] = expense_types_all.get("variable", [])

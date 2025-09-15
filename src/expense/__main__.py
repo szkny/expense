@@ -1,7 +1,7 @@
 import asyncio
 import argparse
 
-from .core.expense import expense_main
+from .core.expense import Expense
 
 
 def main() -> None:
@@ -35,7 +35,8 @@ def main() -> None:
         help="ocr image of the latest screenshot",
     )
     args = parser.parse_args()
-    asyncio.run(expense_main(args))
+    expense = Expense()
+    asyncio.run(expense.expense_main(args))
 
 
 if __name__ == "__main__":

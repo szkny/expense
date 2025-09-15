@@ -19,7 +19,7 @@
 - [x] register past record with datetime
 - [x] recognize date text in ocr mode
 - [x] add feature to edit records
-- [ ] upgrade config file
+- [x] upgrade config file
 - [ ] manage monthly subscription
 - [ ] data migration from spreadsheet records
 - [ ] add a feature to change monthes on daily chart
