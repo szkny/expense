@@ -47,15 +47,19 @@ except Exception:
         f"Error occurred when loading config file. ({CONFIG_PATH / 'config.json'})"
     )
     CONFIG = {}
-EXPENSE_TYPES_ALL: dict[str, list] = CONFIG.get("expense_types", {})
+EXPENSE_CONFIG: dict[str, Any] = CONFIG.get("expense", {})
+EXPENSE_TYPES_ALL: dict[str, list] = EXPENSE_CONFIG.get("expense_types", {})
 INCOME_TYPES: list[str] = EXPENSE_TYPES_ALL.get("income", [])
 FIXED_TYPES: list[str] = EXPENSE_TYPES_ALL.get("fixed", [])
 VARIABLE_TYPES: list[str] = EXPENSE_TYPES_ALL.get("variable", [])
 EXPENSE_TYPES: list[str] = VARIABLE_TYPES + FIXED_TYPES + INCOME_TYPES
-EXCLUDE_TYPES: list[str] = CONFIG.get("exclude_types", [])
+EXCLUDE_TYPES: list[str] = EXPENSE_CONFIG.get("exclude_types", [])
+ICONS: dict[str, str] = CONFIG.get("web_ui", {}).get(
+    "icons", {}
+) | EXPENSE_CONFIG.get("icons", {})
 
 GSPREAD_HANDLER: GspreadHandler = GspreadHandler(
-    f"CF ({get_fiscal_year()}年度)"
+    f"CF ({get_fiscal_year()}年度)", expense_config=EXPENSE_CONFIG
 )
 GSPREAD_URL: str = GSPREAD_HANDLER.get_spreadsheet_url()
 
@@ -98,9 +102,9 @@ def generate_items() -> list[str]:
         ]
     )
     item_list = [
-        {"icon": "⭐", "items": favorite_expenses},
-        {"icon": "🔥", "items": frequent_expenses},
-        {"icon": "🕒️", "items": recent_expenses},
+        {"icon": ICONS.get("favorite"), "items": favorite_expenses},
+        {"icon": ICONS.get("frequent"), "items": frequent_expenses},
+        {"icon": ICONS.get("recent"), "items": recent_expenses},
     ]
     for item_data in item_list:
         icon: str = item_data.get("icon", "")
@@ -595,7 +599,9 @@ def generate_commons(request: Request) -> dict[str, Any]:
     items = generate_items()
 
     # 最近の支出履歴を取得
-    n_records = CONFIG.get("n_records", 200)
+    n_records = (
+        CONFIG.get("web_ui", {}).get("record_table", {}).get("n_records", 200)
+    )
     try:
         recent_expenses = get_recent_expenses(
             n_records, drop_duplicates=False, with_date=True
@@ -627,8 +633,9 @@ def generate_commons(request: Request) -> dict[str, Any]:
         graph_html = ""
     log.info("end 'generate_commons' method")
     return {
-        "expense_date_range": expense_date_range,
+        "icons": ICONS,
         "theme": theme,
+        "expense_date_range": expense_date_range,
         "n_records": n_records,
         "gspread_url": GSPREAD_URL,
         "items": items,
@@ -665,7 +672,7 @@ def read_root(
     commons = generate_commons(request)
     log.info("end 'read_root' method")
     return templates.TemplateResponse(
-        "index.html",
+        "index.j2",
         {
             "request": request,
             "status": status,
@@ -692,8 +699,13 @@ def register(
     msg = ""
     info = ""
     try:
-        if any([emoji in expense_type for emoji in "⭐🔥🕒️"]):
-            data = re.sub("(⭐|🔥|🕒️) ", "", expense_type).split("/")
+        icons: list[str] = [
+            ICONS.get("favorite", ""),
+            ICONS.get("frequent", ""),
+            ICONS.get("recent", ""),
+        ]
+        if any([emoji in expense_type for emoji in icons]):
+            data = re.sub(f"({'|'.join(icons)}) ", "", expense_type).split("/")
             if len(data) == 3:
                 expense_type = data[0]
                 expense_memo = data[1]
@@ -912,10 +924,6 @@ def edit(
     msg = ""
     info = ""
     try:
-        try:
-            toast("修正中..")
-        except Exception:
-            log.info("Toast notification failed.")
         # parse date
         target_date = re.sub(r"\(.+\)", "", target_date)
         # parse amount
@@ -934,6 +942,10 @@ def edit(
             or target_amount != new_expense_amount
             or target_memo != new_expense_memo
         ):
+            try:
+                toast("修正中..")
+            except Exception:
+                log.info("Toast notification failed.")
             target_expense = dict(
                 expense_date=target_date,
                 expense_type=target_type,
@@ -975,6 +987,10 @@ def edit(
                 log.info("Notification failed.")
         else:
             log.debug("Nothing to do.")
+            try:
+                toast("修正点なし")
+            except Exception:
+                log.info("Toast notification failed.")
             status = False
     except Exception:
         log.exception("Error occurred")

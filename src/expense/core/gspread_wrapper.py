@@ -1,5 +1,4 @@
 import re
-import json
 import pathlib
 import gspread
 import datetime as dt
@@ -13,24 +12,11 @@ APP_NAME: str = "expense"
 CONFIG_PATH: pathlib.Path = pathlib.Path(user_config_dir(APP_NAME))
 CONFIG_PATH.mkdir(parents=True, exist_ok=True)
 
-try:
-    with open(CONFIG_PATH / "config.json", "r") as f:
-        CONFIG: dict[str, Any] = json.load(f)
-except Exception:
-    log.debug(
-        f"Error occurred when loading config file. ({CONFIG_PATH / 'config.json'})"
-    )
-    CONFIG = {}
-EXPENSE_TYPES_ALL: dict[str, list] = CONFIG.get("expense_types", {})
-INCOME_TYPES: list[str] = EXPENSE_TYPES_ALL.get("income", [])
-FIXED_TYPES: list[str] = EXPENSE_TYPES_ALL.get("fixed", [])
-VARIABLE_TYPES: list[str] = EXPENSE_TYPES_ALL.get("variable", [])
-EXPENSE_TYPES: list[str] = INCOME_TYPES + FIXED_TYPES + VARIABLE_TYPES
-EXCLUDE_TYPES: list[str] = CONFIG.get("exclude_types", [])
-
 
 class GspreadHandler:
-    def __init__(self, book_name: str) -> None:
+    def __init__(
+        self, book_name: str, expense_config: dict[str, Any] = {}
+    ) -> None:
         log.info("start 'GspreadHandler' constructor")
         credentials = service_account.Credentials.from_service_account_file(
             CONFIG_PATH / "credentials.json",
@@ -42,6 +28,17 @@ class GspreadHandler:
         self.client = gspread.authorize(credentials)
         self.workbook = self.client.open(book_name)
         self.load_sheet()
+        expense_types_all: dict[str, list] = expense_config.get(
+            "expense_types", {}
+        )
+        # load config
+        income_types: list[str] = expense_types_all.get("income", [])
+        fixed_types: list[str] = expense_types_all.get("fixed", [])
+        variable_types: list[str] = expense_types_all.get("variable", [])
+        self.expense_types: list[str] = (
+            income_types + fixed_types + variable_types
+        )
+        self.exclude_types: list[str] = expense_config.get("exclude_types", [])
         log.info("end 'GspreadHandler' constructor")
 
     def get_spreadsheet_url(self) -> str:
@@ -102,7 +99,7 @@ class GspreadHandler:
 
     def get_row(self, expense_type: str, offset: int = 31) -> int:
         log.info("start 'get_row' method")
-        row = offset + EXPENSE_TYPES.index(expense_type)
+        row = offset + self.expense_types.index(expense_type)
         log.info("end 'get_row' method")
         return row
 
@@ -188,7 +185,9 @@ class GspreadHandler:
     def get_todays_expenses(self, offset: int = 31) -> str:
         log.info("start 'get_today_expenses' method")
         column = self.get_column()
-        cell_range = f"{column}{offset}:{column}{offset+len(EXPENSE_TYPES)-1}"
+        cell_range = (
+            f"{column}{offset}:{column}{offset+len(self.expense_types)-1}"
+        )
         cells = self.sheet.range(cell_range)
 
         def str2int(s: str) -> int:
@@ -200,7 +199,7 @@ class GspreadHandler:
         log.debug(f"expense_list: {expense_list}")
         todays_expenses: list[dict] = [
             {
-                "expense_type": EXPENSE_TYPES[str2int(c.address) - offset],
+                "expense_type": self.expense_types[str2int(c.address) - offset],
                 "amount": str(c.value),
             }
             for c in expense_list
@@ -210,7 +209,8 @@ class GspreadHandler:
         if len(todays_expenses):
             excluded_expenses = list(
                 filter(
-                    lambda item: item.get("expense_type") not in EXCLUDE_TYPES,
+                    lambda item: item.get("expense_type")
+                    not in self.exclude_types,
                     todays_expenses,
                 )
             )
@@ -240,14 +240,14 @@ class GspreadHandler:
             return int(re.sub(r"[^\d]", "", s))
 
         column = self.get_column()
-        cell_range = f"{column}{offset+len(EXPENSE_TYPES)+3}"
+        cell_range = f"{column}{offset+len(self.expense_types)+3}"
         cell1 = self.sheet.acell(cell_range)
         budget_left1 = max(
             str2int(str(self.sheet.acell("D16").value))
             - str2int(str(cell1.value)),
             0,
         )
-        cell_range = f"{column}{offset+len(EXPENSE_TYPES)+4}"
+        cell_range = f"{column}{offset+len(self.expense_types)+4}"
         cell2 = self.sheet.acell(cell_range)
         budget_left2 = str2int(str(cell2.value))
         log.debug(f"cell1: {cell1}, cell2: {cell2}")
@@ -655,11 +655,3 @@ class GspreadHandler:
         finally:
             self.load_sheet()
             log.info("end 'end_record' method")
-
-
-if __name__ == "__main__":
-    BOOKNAME = "CF (2024年度)"
-    handler = GspreadHandler(BOOKNAME)
-    # handler.register_expense("食費", 123, "コンビニ")
-    todays_expenses = handler.get_todays_expenses()
-    print(todays_expenses)

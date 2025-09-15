@@ -60,7 +60,9 @@ async def expense_main(args: argparse.Namespace) -> None:
         bookname = f"CF ({current_fiscal_year}年度)"
         if args.check_todays_expenses:
             loop.run_in_executor(None, lambda: toast("データ取得中.."))
-            handler = GspreadHandler(bookname)
+            handler = GspreadHandler(
+                bookname, expense_config=CONFIG.get("expense", {})
+            )
             todays_expenses = handler.get_todays_expenses()
             t = datetime.datetime.today()
             today_str = t.date().isoformat()
@@ -140,7 +142,9 @@ async def expense_main(args: argparse.Namespace) -> None:
                     f"{expense_type}(¥{expense_amount:,})"
                 )
         loop.run_in_executor(None, lambda: toast("登録中.."))
-        handler = GspreadHandler(bookname)
+        handler = GspreadHandler(
+            bookname, expense_config=CONFIG.get("expense", {})
+        )
         handler.register_expense(expense_type, expense_amount, expense_memo)
         store_expense(expense_type, expense_memo, expense_amount)
         notify(
@@ -162,7 +166,8 @@ def get_favorite_expenses() -> list[dict]:
     try:
         with open(CONFIG_PATH / "config.json", "r") as f:
             config: dict[Any] = json.load(f)
-            favorite_expenses: list[dict] = config.get("favorites", [])
+            expense_config: dict[str, Any] = config.get("expense", {})
+            favorite_expenses: list[dict] = expense_config.get("favorites", [])
     except FileNotFoundError:
         return []
     # log.debug(

@@ -117,7 +117,8 @@ def ocr_image(screenshot_name: str) -> str:
     try:
         with open(CONFIG_PATH / "config.json", "r") as f:
             config: dict[str, Any] = json.load(f)
-            ocr_regions: dict[str, list] = config.get("ocr_regions", {})
+            ocr_config: dict[str, Any] = config.get("ocr", {})
+            ocr_regions: dict[str, list] = ocr_config.get("regions", {})
     except FileNotFoundError:
         ocr_regions = {}
 

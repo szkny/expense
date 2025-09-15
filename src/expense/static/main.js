@@ -37,7 +37,6 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("theme-toggle").addEventListener("click", () => {
     const isDark = document.documentElement.classList.toggle("dark");
     const newTheme = isDark ? "dark" : "light";
-    document.getElementById("theme-toggle").textContent = isDark ? "☀️" : "🌙";
     localStorage.setItem("theme", newTheme);
     document.cookie = `theme=${newTheme};path=/;max-age=31536000`;
     location.reload();
@@ -76,17 +75,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const collapsed = localStorage.getItem("reportCollapsed") === "true";
   if (collapsed) {
     reportContainer.style.display = "none";
-    toggleBtnReport.textContent = "▲";
+    toggleBtnReport.textContent = "▼";
   }
   sectionReport.addEventListener("click", () => {
     const isCollapsed = reportContainer.style.display === "none";
     if (isCollapsed) {
       reportContainer.style.display = "block";
-      toggleBtnReport.textContent = "▼";
+      toggleBtnReport.textContent = "▲";
       localStorage.setItem("reportCollapsed", "false");
     } else {
       reportContainer.style.display = "none";
-      toggleBtnReport.textContent = "▲";
+      toggleBtnReport.textContent = "▼";
       localStorage.setItem("reportCollapsed", "true");
     }
   });
@@ -101,17 +100,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const collapsed = localStorage.getItem("recordsCollapsed") === "true";
   if (collapsed) {
     recordsContainer.style.display = "none";
-    toggleBtnTable.textContent = "▲";
+    toggleBtnTable.textContent = "▼";
   }
   sectionTable.addEventListener("click", () => {
     const isCollapsed = recordsContainer.style.display === "none";
     if (isCollapsed) {
       recordsContainer.style.display = "block";
-      toggleBtnTable.textContent = "▼";
+      toggleBtnTable.textContent = "▲";
       localStorage.setItem("recordsCollapsed", "false");
     } else {
       recordsContainer.style.display = "none";
-      toggleBtnTable.textContent = "▲";
+      toggleBtnTable.textContent = "▼";
       localStorage.setItem("recordsCollapsed", "true");
     }
   });

@@ -18,7 +18,8 @@ except Exception:
         f"Error occurred when loading config file. ({CONFIG_PATH / 'config.json'})"
     )
     CONFIG = {}
-EXPENSE_TYPES_ALL: dict[str, list] = CONFIG.get("expense_types", {})
+EXPENSE_CONFIG: dict[str, Any] = CONFIG.get("expense", {})
+EXPENSE_TYPES_ALL: dict[str, list] = EXPENSE_CONFIG.get("expense_types", {})
 INCOME_TYPES: list[str] = EXPENSE_TYPES_ALL.get("income", [])
 FIXED_TYPES: list[str] = EXPENSE_TYPES_ALL.get("fixed", [])
 VARIABLE_TYPES: list[str] = EXPENSE_TYPES_ALL.get("variable", [])

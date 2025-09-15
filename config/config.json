@@ -1,23 +1,69 @@
 {
   "log_level": "DEBUG",
-  "n_records": 200,
-  "expense_types": {
-    "income": ["給与", "雑所得"],
-    "fixed": ["家賃", "光熱費", "通信費", "養育費", "特別経費"],
-    "variable": ["食費", "交通費", "医療費", "書籍費", "遊興費", "雑費"]
+  "termux_api": {
+    "//": "TODO",
+    "toast": true,
+    "notify": true
   },
-  "exclude_types": ["特別経費", "給与", "雑所得"],
-  "favorites": [
-    {
-      "expense_type": "食費",
-      "expense_memo": "コンビニ",
-      "expense_amount": 100
+  "web_ui": {
+    "icons": {
+      "title": "📝",
+      "home": "🏠",
+      "light_theme": "☀️",
+      "dark_theme": "🌙",
+      "pwa_install": "📲",
+      "register": "🚀",
+      "ocr": "📷️",
+      "input_amount": "💴",
+      "input_memo": "✏️",
+      "screenshot_name": "▶️",
+      "report": "📊",
+      "record_table": "🧾",
+      "confirm_dialog": "🛠️",
+      "edit_record": "🔧",
+      "delete_record": "🗑️",
+      "link": "🔗",
+      "search": "🔍️"
+    },
+    "record_table": {
+      "n_records": 500
     }
-  ],
-  "ocr_regions": {
-    "PayPay": [
-      [160, 100, 1000, 270],
-      [0, 260, 1000, 450]
+  },
+  "expense": {
+    "icons": {
+      "favorite": "⭐",
+      "frequent": "🔥",
+      "recent": "🕒️"
+    },
+    "expense_types": {
+      "income": ["給与", "雑所得"],
+      "fixed": ["家賃", "光熱費", "通信費", "養育費", "特別経費"],
+      "variable": ["食費", "交通費", "医療費", "書籍費", "遊興費", "雑費"]
+    },
+    "exclude_types": ["特別経費", "給与", "雑所得"],
+    "favorites": [
+      {
+        "expense_type": "食費",
+        "expense_memo": "コンビニ",
+        "expense_amount": 100
+      }
     ]
+  },
+  "ocr": {
+    "regions": {
+      "PayPay": [
+        [160, 100, 1000, 270],
+        [0, 260, 1000, 450]
+      ]
+    },
+    "normalize": {
+      "//": "TODO",
+      "use_similar_word_correct": false,
+      "threshold": {
+        "memo_similarity": 0.85,
+        "word_levendist": 1,
+        "word_min_len": 3
+      }
+    }
   }
 }
