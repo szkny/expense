@@ -9,7 +9,7 @@ HOME: pathlib.Path = pathlib.Path(os.getenv("HOME") or "~")
 
 
 class Base:
-    def __init__(self):
+    def __init__(self) -> None:
         self.app_name: str = "expense"
         self.log: logging.Logger = logging.getLogger(self.app_name)
         self.cache_path: pathlib.Path = pathlib.Path(
@@ -26,7 +26,7 @@ class Base:
         self.load_config()
         self.setup_logging()
 
-    def load_config(self):
+    def load_config(self) -> None:
         """load configuration file"""
         try:
             with open(self.config_path / "config.json", "r") as f:
@@ -38,14 +38,19 @@ class Base:
                 f"Failed to load config: {self.config_path / "config.json"}"
             )
 
-    def setup_logging(self):
+    def setup_logging(self) -> None:
         """setup log config"""
-        log_level: str = self.config.get("log_level", "INFO")
-        logging.basicConfig(
-            level=os.environ.get("LOG_LEVEL", log_level).upper(),
-            handlers=[
-                logging.StreamHandler(),
-                logging.FileHandler(self.cache_path / f"{self.app_name}.log"),
-            ],
-            format="%(asctime)s - [%(levelname)s] %(message)s",
-        )
+        if not self.log.handlers:
+            log_level: str = self.config.get("log_level", "INFO")
+            self.log.setLevel(log_level)
+            stream_handler = logging.StreamHandler()
+            file_handler = logging.FileHandler(
+                self.cache_path / f"{self.app_name}.log"
+            )
+            formatter = logging.Formatter(
+                "%(asctime)s - [%(levelname)s] %(message)s"
+            )
+            stream_handler.setFormatter(formatter)
+            file_handler.setFormatter(formatter)
+            self.log.addHandler(stream_handler)
+            self.log.addHandler(file_handler)
