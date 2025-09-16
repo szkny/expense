@@ -1,33 +1,27 @@
 import os
+import logging
 import unittest
 import datetime
 import pandas as pd
-import logging as log
 from unittest.mock import patch
-from src.expense.core.expense import (
-    get_fiscal_year,
-    filter_duplicates,
-    get_favorite_expenses,
-    get_frequent_expenses,
-    get_recent_expenses,
-    store_expense,
-)
-from src.expense.core.ocr import (
-    ocr_main,
-    get_latest_screenshot,
-    normalize_capture_text,
-)
+from src.expense.core.expense import get_fiscal_year, Expense
+from src.expense.core.ocr import get_latest_screenshot, Ocr
+
+log: logging.Logger = logging.getLogger("expense")
 
 
 class TestMain(unittest.TestCase):
 
     def test_normalize_capture_text(self) -> None:
-        self.assertEqual(normalize_capture_text("①②③"), "123")
+        ocr = Ocr()
+        self.assertEqual(ocr.normalize_capture_text("①②③"), "123")
         self.assertEqual(
-            normalize_capture_text("０１２３４５６７８９"), "0123456789"
+            ocr.normalize_capture_text("０１２３４５６７８９"), "0123456789"
         )
-        self.assertEqual(normalize_capture_text("あ い う え お"), "あいうえお")
-        self.assertEqual(normalize_capture_text("①０ あ い"), "10あい")
+        self.assertEqual(
+            ocr.normalize_capture_text("あ い う え お"), "あいうえお"
+        )
+        self.assertEqual(ocr.normalize_capture_text("①０ あ い"), "10あい")
 
     def test_get_fiscal_year(self) -> None:
         with patch("src.expense.core.expense.datetime") as mock_datetime:
@@ -48,36 +42,39 @@ class TestMain(unittest.TestCase):
             self.assertEqual(get_fiscal_year(), 2023)
 
     def test_filter_duplicates(self) -> None:
+        expense = Expense()
         list1 = [{"a": 1}, {"b": 2}]
         list2 = [{"b": 2}, {"c": 3}]
         list3 = [{"a": 1}, {"d": 4}]
-        result = filter_duplicates([list1, list2, list3])
+        result = expense.filter_duplicates([list1, list2, list3])
         self.assertEqual(result, [[{"a": 1}, {"b": 2}], [{"c": 3}], [{"d": 4}]])
 
     def test_get_favorite_expenses(self) -> None:
-        with (
-            patch(
-                "builtins.open",
-                unittest.mock.mock_open(
-                    read_data='[{"expense_type": "食費", "expense_memo": "", "expense_amount": 1000}]'
-                ),
-            ) as mock_open,
-        ):
-            self.assertEqual(
-                get_favorite_expenses(),
-                [
+        expense = Expense()
+        expense.config = {
+            "expense": {
+                "favorites": [
                     {
                         "expense_type": "食費",
                         "expense_memo": "",
                         "expense_amount": 1000,
                     }
-                ],
-            )
-
-            mock_open.side_effect = FileNotFoundError
-            self.assertEqual(get_favorite_expenses(), [])
+                ]
+            }
+        }
+        self.assertEqual(
+            expense.get_favorite_expenses(),
+            [
+                {
+                    "expense_type": "食費",
+                    "expense_memo": "",
+                    "expense_amount": 1000,
+                }
+            ],
+        )
 
     def test_get_frequent_expenses(self) -> None:
+        expense = Expense()
         with (
             patch("src.expense.core.expense.os.path.exists") as mock_exists,
             patch(
@@ -89,7 +86,7 @@ class TestMain(unittest.TestCase):
         ):
             mock_exists.return_value = True
             self.assertEqual(
-                get_frequent_expenses(1),
+                expense.get_frequent_expenses(1),
                 [
                     {
                         "expense_type": "食費",
@@ -100,9 +97,10 @@ class TestMain(unittest.TestCase):
             )
 
             mock_exists.return_value = False
-            self.assertEqual(get_frequent_expenses(1), [])
+            self.assertEqual(expense.get_frequent_expenses(1), [])
 
     def test_get_recent_expenses(self) -> None:
+        expense = Expense()
         with (
             patch(
                 "src.expense.core.expense.pd.read_csv",
@@ -119,7 +117,7 @@ class TestMain(unittest.TestCase):
             ) as mock_read_csv,
         ):
             self.assertEqual(
-                get_recent_expenses(2),
+                expense.get_recent_expenses(2),
                 [
                     {
                         "expense_type": "遊興費",
@@ -135,20 +133,22 @@ class TestMain(unittest.TestCase):
             )
 
             mock_read_csv.side_effect = FileNotFoundError
-            self.assertEqual(get_recent_expenses(2), [])
+            self.assertEqual(expense.get_recent_expenses(2), [])
 
     def test_store_expense(self) -> None:
+        expense = Expense()
         with patch("builtins.open", unittest.mock.mock_open()) as mock_open:
-            store_expense("食費", "メモ", 1000)
+            expense.store_expense("食費", "メモ", 1000)
             mock_open.assert_called_once_with(unittest.mock.ANY, "a")
             mock_open().write.assert_called_once()
 
     def test_ocr_main(self, n: int = 3, offset: int = 0) -> None:
+        ocr = Ocr()
         result = []
         for i in range(n):
             try:
                 screenshot_name = get_latest_screenshot(offset + i)
-                expense_data = ocr_main(offset + i, enable_toast=False)
+                expense_data = ocr.main(offset + i, enable_toast=False)
                 log.info(f"OCR result (No.{i}): {expense_data}")
                 expense_amount = expense_data.get("expense_amount", "")
                 expense_memo = expense_data.get("expense_memo", "")
