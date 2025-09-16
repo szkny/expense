@@ -388,6 +388,72 @@ class Ocr(TermuxAPI):
         log.info("end 'get_memo_words' method")
         return words
 
+    def get_most_similar_memo(
+        self, target: str, memos: list[str], threshold: float = 0.85
+    ) -> str:
+        """
+        get the most similar memo from a list of memos
+        """
+        log.info("start 'get_most_similar_memo' method")
+        log.debug(f"Target memo:\t\t{target}")
+        if target in memos:
+            log.debug("Exact match found.")
+            log.info("end 'get_most_similar_memo' method")
+            return target
+        most_similar_memo = ""
+        highest_similarity = 0.0
+        for memo in memos:
+            sim = similarity(target, memo)
+            if sim > highest_similarity:
+                highest_similarity = sim
+                most_similar_memo = memo
+        log.debug(
+            f"Most similar memo:\t{most_similar_memo} (similarity: {highest_similarity: .2f})"
+        )
+        if highest_similarity < threshold:
+            most_similar_memo = ""
+            log.debug(
+                f"Similar memo not found above the threshold={threshold: .2f}"
+            )
+        else:
+            log.debug(
+                f"Similar memo found above the threshold={threshold: .2f}"
+            )
+        log.info("end 'get_most_similar_memo' method")
+        return most_similar_memo
+
+    def get_most_similar_word(
+        self, target: str, words: list[str], threshold: int = 1
+    ) -> str:
+        """
+        get the most similar word from a list of words
+        """
+        log.info("start 'get_most_similar_word' method")
+        log.debug(f"Target word:\t\t{target}")
+        if target in words:
+            log.debug("Exact match found.")
+            log.info("end 'get_most_similar_word' method")
+            return target
+        most_similar_word = ""
+        lowest_dist = 0
+        for word in words:
+            leven_dist = levenshtein(target, word)
+            if lowest_dist == 0 or leven_dist < lowest_dist:
+                lowest_dist = leven_dist
+                most_similar_word = word
+        log.debug(
+            f"Most similar word:\t{most_similar_word} (distance: {lowest_dist})"
+        )
+        if lowest_dist > threshold:
+            most_similar_word = ""
+            log.debug(
+                f"Similar word not found within the threshold={threshold}"
+            )
+        else:
+            log.debug(f"Similar word found within the threshold={threshold}")
+        log.info("end 'get_most_similar_word' method")
+        return most_similar_word
+
     def correct_expense_memo(
         self, expense_memo: str, use_similar_word_correct: bool = False
     ) -> str:
