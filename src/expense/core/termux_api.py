@@ -12,6 +12,9 @@ class TermuxAPI(Base):
 
     def __init__(self):
         super().__init__()
+        termux_api_config = self.config.get("termux_api", {})
+        self.toast_enabled = termux_api_config.get("toast", {})
+        self.notify_enabled = termux_api_config.get("notify", {})
         expense_config: dict[str, Any] = self.config.get("expense", {})
         expense_types_all: dict[str, list] = expense_config.get(
             "expense_types", {}
@@ -165,21 +168,24 @@ class TermuxAPI(Base):
         toast popup message
         """
         log.info("start 'toast' method")
-        notify_command = [
-            "termux-toast",
-            "-b",
-            "black",
-            "-g",
-            "top",
-            content,
-        ]
-        log.debug(f"execute command: {notify_command}")
-        subprocess.run(
-            notify_command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            timeout=timeout,
-        )
+        if self.toast_enabled:
+            notify_command = [
+                "termux-toast",
+                "-b",
+                "black",
+                "-g",
+                "top",
+                content,
+            ]
+            log.debug(f"execute command: {notify_command}")
+            subprocess.run(
+                notify_command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                timeout=timeout,
+            )
+        else:
+            log.info(f"toast_enabled: {self.toast_enabled}")
         log.info("end 'toast' method")
 
     def notify(self, title: str, content: str, timeout: int = 30) -> None:
@@ -187,18 +193,21 @@ class TermuxAPI(Base):
         notification
         """
         log.info("start 'notify' method")
-        notify_command = [
-            "termux-notification",
-            "--title",
-            title,
-            "--content",
-            content,
-        ]
-        log.debug(f"execute command: {notify_command}")
-        subprocess.run(
-            notify_command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            timeout=timeout,
-        )
+        if self.notify_enabled:
+            notify_command = [
+                "termux-notification",
+                "--title",
+                title,
+                "--content",
+                content,
+            ]
+            log.debug(f"execute command: {notify_command}")
+            subprocess.run(
+                notify_command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                timeout=timeout,
+            )
+        else:
+            log.info(f"notify_enabled: {self.notify_enabled}")
         log.info("end 'notify' method")

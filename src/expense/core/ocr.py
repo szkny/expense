@@ -76,19 +76,17 @@ class Ocr(TermuxAPI):
         super().__init__()
         self.ocr_config: dict[str, Any] = self.config.get("ocr", {})
 
-    def main(self, offset: int = 0, enable_toast: bool = True) -> dict:
+    def main(self, offset: int = 0) -> dict:
         """main method for OCR processing"""
         log.info("start 'main' method")
-        if enable_toast:
-            self.toast("画像解析中..")
+        self.toast("画像解析中..")
         screenshot_name = get_latest_screenshot(offset)
         ocr_text = self.ocr_image(screenshot_name)
         expense_data = self.parse_ocr_text(ocr_text, screenshot_name)
         expense_amount = expense_data.get("amount", "")
         expense_memo = expense_data.get("memo", "")
         expense_date = expense_data.get("date", "")
-        if enable_toast:
-            self.toast("支出項目解析中..")
+        self.toast("支出項目解析中..")
         try:
             res = self.exec_command(
                 [

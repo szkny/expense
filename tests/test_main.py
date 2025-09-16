@@ -144,11 +144,13 @@ class TestMain(unittest.TestCase):
 
     def test_ocr_main(self, n: int = 3, offset: int = 0) -> None:
         ocr = Ocr()
+        ocr.toast_enabled = False
+        ocr.notify_enabled = False
         result = []
         for i in range(n):
             try:
                 screenshot_name = get_latest_screenshot(offset + i)
-                expense_data = ocr.main(offset + i, enable_toast=False)
+                expense_data = ocr.main(offset + i)
                 log.info(f"OCR result (No.{i}): {expense_data}")
                 expense_amount = expense_data.get("expense_amount", "")
                 expense_memo = expense_data.get("expense_memo", "")

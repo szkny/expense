@@ -1,7 +1,6 @@
 {
   "log_level": "DEBUG",
   "termux_api": {
-    "//": "TODO",
     "toast": true,
     "notify": true
   },
