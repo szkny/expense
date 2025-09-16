@@ -190,7 +190,11 @@ class ServerTools(Base):
         return df
 
     def generate_daily_chart(
-        self, df: pd.DataFrame, theme: str = "light", min_yrange: int = 50000
+        self,
+        df: pd.DataFrame,
+        theme: str = "light",
+        min_yrange: int = 50000,
+        include_plotlyjs: bool = True,
     ) -> str:
         """
         累積折れ線グラフを生成
@@ -217,7 +221,7 @@ class ServerTools(Base):
         fig_bar.add_traces(fig_line.data)
         fig_bar.add_traces(fig_predict.data)
         self._add_bar_chart_labels(fig_bar, df_bar, "date", theme, fontsize=10)
-        graph_html = fig_bar.to_html(full_html=False)
+        graph_html = fig_bar.to_html(full_html=False, include_plotlyjs=include_plotlyjs)
         log.info("end 'generate_daily_chart' method")
         return graph_html
 
@@ -457,7 +461,12 @@ class ServerTools(Base):
             template="plotly_dark" if theme == "dark" else "plotly_white",
         )
 
-    def generate_pie_chart(self, df: pd.DataFrame, theme: str = "light") -> str:
+    def generate_pie_chart(
+        self,
+        df: pd.DataFrame,
+        theme: str = "light",
+        include_plotlyjs: bool = True,
+    ) -> str:
         """
         円グラフを生成
         """
@@ -496,12 +505,16 @@ class ServerTools(Base):
             ),
         )
         self._update_layout(fig, theme)
-        graph_html = fig.to_html(full_html=False)
+        graph_html = fig.to_html(full_html=False, include_plotlyjs=include_plotlyjs)
         log.info("end 'generate_pie_chart' method")
         return graph_html
 
     def generate_bar_chart(
-        self, df: pd.DataFrame, theme: str = "light", max_monthes: int = 12
+        self,
+        df: pd.DataFrame,
+        theme: str = "light",
+        max_monthes: int = 12,
+        include_plotlyjs: bool = True,
     ) -> str:
         """
         月別の棒グラフを生成
@@ -538,7 +551,7 @@ class ServerTools(Base):
         )
         self._update_layout(fig, theme)
         self._add_bar_chart_labels(fig, df_graph, "month", theme, fontsize=14)
-        graph_html = fig.to_html(full_html=False)
+        graph_html = fig.to_html(full_html=False, include_plotlyjs=include_plotlyjs)
         log.info("end 'generate_bar_chart' method")
         return graph_html
 
@@ -610,11 +623,11 @@ class ServerTools(Base):
             report_summary = self.generate_report_summary(df_records)
             # グラフを生成
             df_graph = self.generate_monthly_df(df_records)
-            graph_html = self.generate_daily_chart(df_records, theme)
+            graph_html = self.generate_daily_chart(df_records, theme, include_plotlyjs=True)
             graph_html += "<hr>" if graph_html else ""
-            graph_html += self.generate_pie_chart(df_graph, theme)
+            graph_html += self.generate_pie_chart(df_graph, theme, include_plotlyjs=False if graph_html else True)
             graph_html += "<hr>" if graph_html else ""
-            graph_html += self.generate_bar_chart(df_graph, theme)
+            graph_html += self.generate_bar_chart(df_graph, theme, include_plotlyjs=False if graph_html else True)
         else:
             report_summary = {
                 "today_total": 0,
