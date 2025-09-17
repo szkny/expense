@@ -189,44 +189,6 @@ class ServerTools(Base):
             df.loc[i, "expense_memo"] = _add_memo
         return df
 
-    def generate_daily_chart(
-        self,
-        df: pd.DataFrame,
-        theme: str = "light",
-        min_yrange: int = 50000,
-        include_plotlyjs: bool = True,
-    ) -> str:
-        """
-        累積折れ線グラフを生成
-        """
-        log.info("start 'generate_daily_chart' method")
-        if df.empty:
-            log.info("DataFrame is empty, skipping graph generation.")
-            return ""
-        t = dt.datetime.today()
-        month_start, month_end = self._get_month_boundaries(t)
-        df_graph = self._prepare_graph_dataframe(df, month_start, month_end)
-        df_bar = self._prepare_bar_dataframe(df_graph)
-        df_graph = self._add_month_start_point(df_graph, month_start)
-        df_graph, df_predict = self._handle_predictions(
-            df_graph, t, month_start, month_end
-        )
-        fig_bar = self._create_bar_figure(
-            df_bar, month_start, month_end, min_yrange, df_graph, df_predict
-        )
-        fig_line = self._create_line_figure(df_graph, theme)
-        fig_predict = self._create_prediction_figure(df_predict, theme)
-        self._update_traces(fig_bar, fig_line, fig_predict)
-        self._update_layout(fig_bar, theme)
-        fig_bar.add_traces(fig_line.data)
-        fig_bar.add_traces(fig_predict.data)
-        self._add_bar_chart_labels(fig_bar, df_bar, "date", theme, fontsize=10)
-        graph_html = fig_bar.to_html(
-            full_html=False, include_plotlyjs=include_plotlyjs
-        )
-        log.info("end 'generate_daily_chart' method")
-        return graph_html
-
     def _get_month_boundaries(self, t: dt.datetime) -> tuple[str, str]:
         month_start = dt.date(t.year, t.month, 1).isoformat()
         month_end = (
@@ -463,6 +425,46 @@ class ServerTools(Base):
             template="plotly_dark" if theme == "dark" else "plotly_white",
         )
 
+    def generate_daily_chart(
+        self,
+        df: pd.DataFrame,
+        theme: str = "light",
+        min_yrange: int = 50000,
+        include_plotlyjs: bool = True,
+    ) -> str:
+        """
+        累積折れ線グラフを生成
+        """
+        log.info("start 'generate_daily_chart' method")
+        if df.empty:
+            log.info("DataFrame is empty, skipping graph generation.")
+            return ""
+        t = dt.datetime.today()
+        month_start, month_end = self._get_month_boundaries(t)
+        df_graph = self._prepare_graph_dataframe(df, month_start, month_end)
+        df_bar = self._prepare_bar_dataframe(df_graph)
+        df_graph = self._add_month_start_point(df_graph, month_start)
+        df_graph, df_predict = self._handle_predictions(
+            df_graph, t, month_start, month_end
+        )
+        fig_bar = self._create_bar_figure(
+            df_bar, month_start, month_end, min_yrange, df_graph, df_predict
+        )
+        fig_line = self._create_line_figure(df_graph, theme)
+        fig_predict = self._create_prediction_figure(df_predict, theme)
+        self._update_traces(fig_bar, fig_line, fig_predict)
+        self._update_layout(fig_bar, theme)
+        fig_bar.add_traces(fig_line.data)
+        fig_bar.add_traces(fig_predict.data)
+        self._add_bar_chart_labels(fig_bar, df_bar, "date", theme, fontsize=10)
+        graph_html = fig_bar.to_html(
+            full_html=False,
+            include_plotlyjs=include_plotlyjs,
+            config=dict(responsive=True),
+        )
+        log.info("end 'generate_daily_chart' method")
+        return graph_html
+
     def generate_pie_chart(
         self,
         df: pd.DataFrame,
@@ -508,7 +510,9 @@ class ServerTools(Base):
         )
         self._update_layout(fig, theme)
         graph_html = fig.to_html(
-            full_html=False, include_plotlyjs=include_plotlyjs
+            full_html=False,
+            include_plotlyjs=include_plotlyjs,
+            config=dict(responsive=True),
         )
         log.info("end 'generate_pie_chart' method")
         return graph_html
@@ -556,7 +560,9 @@ class ServerTools(Base):
         self._update_layout(fig, theme)
         self._add_bar_chart_labels(fig, df_graph, "month", theme, fontsize=14)
         graph_html = fig.to_html(
-            full_html=False, include_plotlyjs=include_plotlyjs
+            full_html=False,
+            include_plotlyjs=include_plotlyjs,
+            config=dict(responsive=True),
         )
         log.info("end 'generate_bar_chart' method")
         return graph_html

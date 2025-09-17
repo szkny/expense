@@ -5,10 +5,18 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Expense</title>
-  <script> if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark'); </script>
   <link rel="stylesheet" href="/static/style.css?v={{ range(100000, 999999) | random }}" />
   <link rel="manifest" href="/static/manifest.json" />
   <meta name="theme-color" content="#111827">
+  <script>
+    if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
+    document.documentElement.classList.add(
+      localStorage.getItem("tableCollapsed") === "true" ? "table-collapsed" : "table-open"
+    );
+    document.documentElement.classList.add(
+      localStorage.getItem("reportCollapsed") === "true" ? "report-collapsed" : "report-open"
+    );
+  </script>
 </head>
 
 <body>
@@ -86,29 +94,9 @@
     {% endif %}
 
     <div class="card">
-      <h3 id="report-section">
-        <span> {{ icons.get("report", "📊") }} 支出レポート ({{today}}) </span>
-        <span id="report-toggle"> ▲ </span>
-      </h3>
-      <div id="report-container">
-        <div class="summary-list">
-          <li> 本日の支出金額 : ¥{{ "{:,}".format(today_total) }} </li>
-          <li> 今月の支出金額 : ¥{{ "{:,}".format(monthly_total) }} </li>
-          <li> 前月の支出金額 : ¥{{ "{:,}".format(prev_monthly_total) }} </li>
-        </div>
-        {% if graph_html %}
-          <div class="graph-container">
-            <hr>
-            {{ graph_html | safe }}
-          </div>
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="card">
       <h3 id="table-section">
         <span> {{ icons.get("record_table", "🧾") }} 直近の支出履歴 ({{n_records}}件) </span>
-        <span id="table-toggle"> ▲ </span>
+        <span id="table-toggle"></span>
       </h3>
       <div id="confirmation-overlay" class="overlay" style="display: none;">
         <div id="confirmation-dialog" class="confirm">
@@ -182,6 +170,27 @@
         <div id="total-amount" style="display: none"></div>
       </div>
     </div>
+
+    <div class="card">
+      <h3 id="report-section">
+        <span> {{ icons.get("report", "📊") }} 支出レポート ({{today}}) </span>
+        <span id="report-toggle"></span>
+      </h3>
+      <div id="report-container">
+        <div class="summary-list">
+          <li> 本日の支出金額 : ¥{{ "{:,}".format(today_total) }} </li>
+          <li> 今月の支出金額 : ¥{{ "{:,}".format(monthly_total) }} </li>
+          <li> 前月の支出金額 : ¥{{ "{:,}".format(prev_monthly_total) }} </li>
+        </div>
+        {% if graph_html %}
+          <div class="graph-container">
+            <hr>
+            {{ graph_html | safe }}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
   </div>
   <div id="loader" class="overlay" style="display: none;">
     <div class="spinner"></div>

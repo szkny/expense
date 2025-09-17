@@ -245,6 +245,23 @@ img.screenshot {
   gap: 10px;
 }
 
+.summary-list {
+  font-size: 0.95rem;
+  margin-left: 30px;
+}
+
+#report-container {
+  display: none;
+}
+
+.report-open #report-container {
+  display: block;
+}
+
+.report-collapsed #report-container {
+  display: none;
+}
+
 #report-toggle {
   background: transparent;
   color: #333333;
@@ -253,9 +270,14 @@ img.screenshot {
   transition: background 0.2s;
 }
 
-.summary-list {
-  font-size: 0.95rem;
-  margin-left: 30px;
+#report-toggle::after {
+  content: "▲";
+  display: inline-block;
+  margin-left: 8px;
+}
+
+.report-collapsed #report-toggle::after {
+  content: "▼";
 }
 
 /* テーブル */
@@ -265,12 +287,34 @@ img.screenshot {
   gap: 10px;
 }
 
+#records-container {
+  display: none;
+}
+
+.table-open #records-container {
+  display: block;
+}
+
+.table-collapsed #records-container {
+  display: none;
+}
+
 #table-toggle {
   background: transparent;
   color: #333333;
   cursor: pointer;
   font-size: 8px;
   transition: background 0.2s;
+}
+
+#table-toggle::after {
+  content: "▲";
+  display: inline-block;
+  margin-left: 8px;
+}
+
+.table-collapsed #table-toggle::after {
+  content: "▼";
 }
 
 .table-container {

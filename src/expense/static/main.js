@@ -69,23 +69,28 @@ document.addEventListener("DOMContentLoaded", () => {
 // レポートの折りたたみ処理
 (function() {
   const sectionReport = document.getElementById("report-section");
-  const toggleBtnReport = document.getElementById("report-toggle");
-  const reportContainer = document.getElementById("report-container");
-  // ページ読み込み時に前回の折りたたみ状態を復元
+  // 初期状態の復元
   const collapsed = localStorage.getItem("reportCollapsed") === "true";
-  if (collapsed) {
-    reportContainer.style.display = "none";
-    toggleBtnReport.textContent = "▼";
-  }
+  document.documentElement.classList.toggle("report-collapsed", collapsed);
+  document.documentElement.classList.toggle("report-open", !collapsed);
+  // クリック時の処理
   sectionReport.addEventListener("click", () => {
-    const isCollapsed = reportContainer.style.display === "none";
+    const isCollapsed =
+      document.documentElement.classList.contains("report-collapsed");
     if (isCollapsed) {
-      reportContainer.style.display = "block";
-      toggleBtnReport.textContent = "▲";
+      // 開く
+      document.documentElement.classList.remove("report-collapsed");
+      document.documentElement.classList.add("report-open");
       localStorage.setItem("reportCollapsed", "false");
+      // グラフをリサイズ
+      requestAnimationFrame(() => {
+        const graphs = document.querySelectorAll(".plotly-graph-div");
+        graphs.forEach((g) => Plotly.Plots.resize(g));
+      });
     } else {
-      reportContainer.style.display = "none";
-      toggleBtnReport.textContent = "▼";
+      // 閉じる
+      document.documentElement.classList.remove("report-open");
+      document.documentElement.classList.add("report-collapsed");
       localStorage.setItem("reportCollapsed", "true");
     }
   });
@@ -94,24 +99,24 @@ document.addEventListener("DOMContentLoaded", () => {
 // テーブルの折りたたみ処理
 (function() {
   const sectionTable = document.getElementById("table-section");
-  const toggleBtnTable = document.getElementById("table-toggle");
-  const recordsContainer = document.getElementById("records-container");
-  // ページ読み込み時に前回の折りたたみ状態を復元
-  const collapsed = localStorage.getItem("recordsCollapsed") === "true";
-  if (collapsed) {
-    recordsContainer.style.display = "none";
-    toggleBtnTable.textContent = "▼";
-  }
+  // 初期状態の復元
+  const collapsed = localStorage.getItem("tableCollapsed") === "true";
+  document.documentElement.classList.toggle("table-collapsed", collapsed);
+  document.documentElement.classList.toggle("table-open", !collapsed);
+  // クリック時の処理
   sectionTable.addEventListener("click", () => {
-    const isCollapsed = recordsContainer.style.display === "none";
+    const isCollapsed =
+      document.documentElement.classList.contains("table-collapsed");
     if (isCollapsed) {
-      recordsContainer.style.display = "block";
-      toggleBtnTable.textContent = "▲";
-      localStorage.setItem("recordsCollapsed", "false");
+      // 開く
+      document.documentElement.classList.remove("table-collapsed");
+      document.documentElement.classList.add("table-open");
+      localStorage.setItem("tableCollapsed", "false");
     } else {
-      recordsContainer.style.display = "none";
-      toggleBtnTable.textContent = "▼";
-      localStorage.setItem("recordsCollapsed", "true");
+      // 閉じる
+      document.documentElement.classList.remove("table-open");
+      document.documentElement.classList.add("table-collapsed");
+      localStorage.setItem("tableCollapsed", "true");
     }
   });
 })();
