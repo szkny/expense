@@ -460,7 +460,10 @@ class ServerTools(Base):
         graph_html = fig_bar.to_html(
             full_html=False,
             include_plotlyjs=include_plotlyjs,
-            config=dict(responsive=True),
+            config=dict(
+                responsive=True,
+                displayModeBar=False,
+            ),
         )
         log.info("end 'generate_daily_chart' method")
         return graph_html
@@ -512,7 +515,10 @@ class ServerTools(Base):
         graph_html = fig.to_html(
             full_html=False,
             include_plotlyjs=include_plotlyjs,
-            config=dict(responsive=True),
+            config=dict(
+                responsive=True,
+                displayModeBar=False,
+            ),
         )
         log.info("end 'generate_pie_chart' method")
         return graph_html
@@ -562,7 +568,10 @@ class ServerTools(Base):
         graph_html = fig.to_html(
             full_html=False,
             include_plotlyjs=include_plotlyjs,
-            config=dict(responsive=True),
+            config=dict(
+                responsive=True,
+                displayModeBar=False,
+            ),
         )
         log.info("end 'generate_bar_chart' method")
         return graph_html
