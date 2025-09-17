@@ -238,85 +238,64 @@ img.screenshot {
   z-index: 1999;
 }
 
-/* 支出レポート */
+/* 折りたたみ関連 */
+#ocr-section,
+#record-section,
 #report-section {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.summary-list {
-  font-size: 0.95rem;
-  margin-left: 30px;
-}
-
+#ocr-container,
+#record-container,
 #report-container {
   display: none;
 }
 
+.ocr-open #ocr-container,
+.record-open #record-container,
 .report-open #report-container {
   display: block;
 }
 
+.ocr-collapsed #ocr-container,
+.record-collapsed #record-container,
 .report-collapsed #report-container {
   display: none;
 }
 
+#ocr-toggle,
+#record-toggle,
 #report-toggle {
   background: transparent;
-  color: #333333;
+  color: #576171;
   cursor: pointer;
   font-size: 8px;
   transition: background 0.2s;
 }
 
+#ocr-toggle::after,
+#record-toggle::after,
 #report-toggle::after {
   content: "▲";
   display: inline-block;
   margin-left: 8px;
 }
 
+.ocr-collapsed #ocr-toggle::after,
+.record-collapsed #record-toggle::after,
 .report-collapsed #report-toggle::after {
   content: "▼";
 }
 
+/* 支出レポート */
+.summary-list {
+  font-size: 0.95rem;
+  margin-left: 30px;
+}
+
 /* テーブル */
-#table-section {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-#records-container {
-  display: none;
-}
-
-.table-open #records-container {
-  display: block;
-}
-
-.table-collapsed #records-container {
-  display: none;
-}
-
-#table-toggle {
-  background: transparent;
-  color: #333333;
-  cursor: pointer;
-  font-size: 8px;
-  transition: background 0.2s;
-}
-
-#table-toggle::after {
-  content: "▲";
-  display: inline-block;
-  margin-left: 8px;
-}
-
-.table-collapsed #table-toggle::after {
-  content: "▼";
-}
-
 .table-container {
   overflow-x: auto;
   overflow-y: auto;
@@ -541,12 +520,10 @@ tr:nth-child(even) {
   color: #f3f4f6;
 }
 
+.dark #ocr-toggle,
+.dark #record-toggle,
 .dark #report-toggle {
-  color: #cccccc;
-}
-
-.dark #table-toggle {
-  color: #cccccc;
+  color: #91959b;
 }
 
 .dark .link-spread {

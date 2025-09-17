@@ -6,11 +6,11 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // 経費タイプ選択に応じた入力欄の表示・非表示
-(function() {
+(function () {
   const typeSelect = document.getElementById("expense-type");
   const amountInput = document.getElementById("expense-amount");
   const memoInput = document.getElementById("expense-memo");
-  typeSelect.addEventListener("change", function() {
+  typeSelect.addEventListener("change", function () {
     if (this.value.includes("/")) {
       amountInput.style.display = "none";
       memoInput.style.display = "none";
@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
 })();
 
 // フォーム送信時にローディング表示
-(function() {
+(function () {
   document.querySelectorAll("form").forEach((form) => {
     form.addEventListener("submit", () => {
       document.getElementById("loader").style.display = "flex";
@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
 })();
 
 // テーマ切り替え処理
-(function() {
+(function () {
   document.getElementById("theme-toggle").addEventListener("click", () => {
     const isDark = document.documentElement.classList.toggle("dark");
     const newTheme = isDark ? "dark" : "light";
@@ -44,7 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
 })();
 
 // スクショの拡大・縮小動作
-(function() {
+(function () {
   const screenshot = document.getElementById("screenshot");
   const overlay = document.getElementById("img-overlay");
   let isZoomed = false;
@@ -66,58 +66,42 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 })();
 
-// レポートの折りたたみ処理
-(function() {
-  const sectionReport = document.getElementById("report-section");
-  // 初期状態の復元
-  const collapsed = localStorage.getItem("reportCollapsed") === "true";
-  document.documentElement.classList.toggle("report-collapsed", collapsed);
-  document.documentElement.classList.toggle("report-open", !collapsed);
-  // クリック時の処理
-  sectionReport.addEventListener("click", () => {
-    const isCollapsed =
-      document.documentElement.classList.contains("report-collapsed");
-    if (isCollapsed) {
-      // 開く
-      document.documentElement.classList.remove("report-collapsed");
-      document.documentElement.classList.add("report-open");
-      localStorage.setItem("reportCollapsed", "false");
-      // グラフをリサイズ
-      requestAnimationFrame(() => {
-        const graphs = document.querySelectorAll(".plotly-graph-div");
-        graphs.forEach((g) => Plotly.Plots.resize(g));
-      });
-    } else {
-      // 閉じる
-      document.documentElement.classList.remove("report-open");
-      document.documentElement.classList.add("report-collapsed");
-      localStorage.setItem("reportCollapsed", "true");
-    }
-  });
-})();
-
-// テーブルの折りたたみ処理
-(function() {
-  const sectionTable = document.getElementById("table-section");
-  // 初期状態の復元
-  const collapsed = localStorage.getItem("tableCollapsed") === "true";
-  document.documentElement.classList.toggle("table-collapsed", collapsed);
-  document.documentElement.classList.toggle("table-open", !collapsed);
-  // クリック時の処理
-  sectionTable.addEventListener("click", () => {
-    const isCollapsed =
-      document.documentElement.classList.contains("table-collapsed");
-    if (isCollapsed) {
-      // 開く
-      document.documentElement.classList.remove("table-collapsed");
-      document.documentElement.classList.add("table-open");
-      localStorage.setItem("tableCollapsed", "false");
-    } else {
-      // 閉じる
-      document.documentElement.classList.remove("table-open");
-      document.documentElement.classList.add("table-collapsed");
-      localStorage.setItem("tableCollapsed", "true");
-    }
+// 折りたたみ処理
+(function () {
+  function setupCollapsible(key, onOpen) {
+    const sectionId = key + "-section";
+    const localVarId = key + "Collapsed";
+    const openClass = key + "-open";
+    const collapsedClass = key + "-collapsed";
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+    section.addEventListener("click", () => {
+      const isCollapsed =
+        document.documentElement.classList.contains(collapsedClass);
+      if (isCollapsed) {
+        // 開く
+        document.documentElement.classList.remove(collapsedClass);
+        document.documentElement.classList.add(openClass);
+        localStorage.setItem(localVarId, "false");
+        if (typeof onOpen === "function") {
+          onOpen();
+        }
+      } else {
+        // 閉じる
+        document.documentElement.classList.remove(openClass);
+        document.documentElement.classList.add(collapsedClass);
+        localStorage.setItem(localVarId, "true");
+      }
+    });
+  }
+  setupCollapsible("ocr");
+  setupCollapsible("record");
+  setupCollapsible("report", () => {
+    // グラフをリサイズ
+    requestAnimationFrame(() => {
+      const graphs = document.querySelectorAll(".plotly-graph-div");
+      graphs.forEach((g) => Plotly.Plots.resize(g));
+    });
   });
 })();
 
@@ -192,7 +176,7 @@ function filterTable() {
 }
 
 // 検索入力窓をクリア
-(function() {
+(function () {
   document.getElementById("clear-search").addEventListener("click", () => {
     const input = document.getElementById("search-input");
     input.value = "";
@@ -202,7 +186,7 @@ function filterTable() {
 })();
 
 // レコード長押し処理
-(function() {
+(function () {
   document.addEventListener("DOMContentLoaded", () => {
     const overlay = document.getElementById("confirmation-overlay");
     const dialog = document.getElementById("confirmation-dialog");
@@ -266,7 +250,7 @@ function filterTable() {
       });
 
     // オーバーレイをクリックしたら閉じる
-    overlay.addEventListener("click", function(e) {
+    overlay.addEventListener("click", function (e) {
       // クリック対象がダイアログ自身ではない場合のみ閉じる
       if (!dialog.contains(e.target)) {
         overlay.style.display = "none";
@@ -276,7 +260,7 @@ function filterTable() {
 })();
 
 // PWA インストール処理
-(function() {
+(function () {
   // Service Worker 登録
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/static/service-worker.js");

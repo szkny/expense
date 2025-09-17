@@ -8,15 +8,7 @@
   <link rel="stylesheet" href="/static/style.css?v={{ range(100000, 999999) | random }}" />
   <link rel="manifest" href="/static/manifest.json" />
   <meta name="theme-color" content="#111827">
-  <script>
-    if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
-    document.documentElement.classList.add(
-      localStorage.getItem("tableCollapsed") === "true" ? "table-collapsed" : "table-open"
-    );
-    document.documentElement.classList.add(
-      localStorage.getItem("reportCollapsed") === "true" ? "report-collapsed" : "report-open"
-    );
-  </script>
+  <script src="/static/preload.js?v={{ range(100000, 999999) | random }}"></script>
 </head>
 
 <body>
@@ -78,25 +70,30 @@
     {% if screenshot_name %}
     <div class="card">
       <form method="post" action="/ocr">
-        <h3> {{ icons.get("ocr", "📷") }} 決済アプリのスクショから支払情報を取得 </h3>
-        <div id="screenshot-name">
-          {{ icons.get("screenshot_name", "▶️") }} 対象画像 : {{ screenshot_name.split("/") | last }}
+        <h3 id="ocr-section">
+          <span> {{ icons.get("ocr", "📷") }} 決済アプリのスクショから支払情報を取得 </span>
+          <span id="ocr-toggle"></span>
+        </h3>
+        <div id="ocr-container">
+          <div id="screenshot-name">
+            {{ icons.get("screenshot_name", "▶️") }} 対象画像 : {{ screenshot_name.split("/") | last }}
+          </div>
+          <div id="img-overlay" class="overlay"></div>
+          <img id="screenshot" class="screenshot" alt="{{ screenshot_name.split(" /") | last }}"
+            src="data:image/png;base64,{{ screenshot_base64 }}"
+            onclick="this.classList.toggle('is-zoomed')"
+          >
+          <button type="submit" class="btn secondary" {% if disable_ocr %} disabled {% endif %}> {% if disable_ocr %} 登録済
+            {% else %} 読取実行 {% endif %}</button>
         </div>
-        <div id="img-overlay" class="overlay"></div>
-        <img id="screenshot" class="screenshot" alt="{{ screenshot_name.split(" /") | last }}"
-          src="data:image/png;base64,{{ screenshot_base64 }}"
-          onclick="this.classList.toggle('is-zoomed')"
-        >
-        <button type="submit" class="btn secondary" {% if disable_ocr %} disabled {% endif %}> {% if disable_ocr %} 登録済
-          {% else %} 読取実行 {% endif %}</button>
       </form>
     </div>
     {% endif %}
 
     <div class="card">
-      <h3 id="table-section">
+      <h3 id="record-section">
         <span> {{ icons.get("record_table", "🧾") }} 直近の支出履歴 ({{n_records}}件) </span>
-        <span id="table-toggle"></span>
+        <span id="record-toggle"></span>
       </h3>
       <div id="confirmation-overlay" class="overlay" style="display: none;">
         <div id="confirmation-dialog" class="confirm">
@@ -134,7 +131,7 @@
         </div>
       </div>
       <a href="{{ gspread_url }}" class="link-spread"> {{ icons.get("link", "🔗") }} スプレッドシートを開く </a>
-      <div id="records-container" class="records-container">
+      <div id="record-container">
         <div class="search-wrapper">
           <input type="text" id="search-input" placeholder="{{ icons.get('search', '🔍') }} 履歴を検索" onkeyup="filterTable()" />
           <button id="clear-search" type="button">✕</button>
