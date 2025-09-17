@@ -560,7 +560,7 @@ class ServerTools(Base):
             category_orders={"expense_type": self.expense_types},
         )
         fig.update_traces(
-            hovertemplate="¥%{value:,.0f}<br>%{customdata[0]}",
+            hovertemplate="%{x|%-Y年%-m月}<br>¥%{value:,.0f}<br>%{customdata[0]}",
             textfont=dict(size=14),
         )
         self._update_layout(fig, theme)
