@@ -393,7 +393,7 @@ class ServerTools(Base):
         self, fig_bar: px.bar, fig_line: px.line, fig_predict: px.line
     ) -> None:
         fig_bar.update_traces(
-            hovertemplate="¥%{y:,.0f}<br>%{customdata[0]}",
+            hovertemplate="%{x|%-m月%-d日} ¥%{y:,.0f}<br>%{customdata[0]}",
             textfont=dict(size=14),
         )
         fig_line.update_traces(
