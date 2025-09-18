@@ -250,19 +250,30 @@ img.screenshot {
 #ocr-container,
 #record-container,
 #report-container {
-  display: none;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition:
+    max-height 0.5s ease,
+    opacity 0.5s ease;
 }
 
 .ocr-open #ocr-container,
 .record-open #record-container,
 .report-open #report-container {
-  display: block;
+  max-height: 1000px;
+  opacity: 1;
 }
 
 .ocr-collapsed #ocr-container,
 .record-collapsed #record-container,
 .report-collapsed #report-container {
-  display: none;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition:
+    max-height 0.3s ease,
+    opacity 0.3s ease;
 }
 
 #ocr-toggle,
