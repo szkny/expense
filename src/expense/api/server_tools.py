@@ -37,9 +37,11 @@ class ServerTools(Base):
             variable_types + fixed_types + income_types
         )
         self.exclude_types: list[str] = expense_config.get("exclude_types", [])
-        self.icons: dict[str, str] = self.config.get("web_ui", {}).get(
-            "icons", {}
-        ) | expense_config.get("icons", {})
+        webui_config: dict[str, Any] = self.config.get("web_ui", {})
+        self.icons: dict[str, str] = webui_config.get("icons", {})
+        self.icons = self.icons | expense_config.get("icons", {})
+        graph_config: dict[str, str] = webui_config.get("graph", {})
+        self.graph_color: dict[str, str] = graph_config.get("color", {})
 
         self.expense_handler = Expense()
         self.gspread_handler: GspreadHandler = gspread_handler
@@ -314,6 +316,7 @@ class ServerTools(Base):
             title=f"支出内訳 日別（{month_str}）",
             hover_data=["expense_memo"],
             category_orders={"expense_type": self.expense_types},
+            color_discrete_map=self.graph_color,
             barmode="stack",
             range_x=[
                 pd.Timestamp(month_start),
@@ -491,9 +494,11 @@ class ServerTools(Base):
             df_pie,
             names="expense_type",
             values="expense_amount",
+            color="expense_type",
             title=f"支出内訳（{month_str}）",
             hover_data=["expense_memo"],
             category_orders={"expense_type": self.expense_types},
+            color_discrete_map=self.graph_color,
             hole=0.4,
         )
         fig.update_traces(
@@ -558,6 +563,7 @@ class ServerTools(Base):
             hover_data=["expense_memo"],
             range_y=[0, None],
             category_orders={"expense_type": self.expense_types},
+            color_discrete_map=self.graph_color,
         )
         fig.update_traces(
             hovertemplate="%{x|%-Y年%-m月}<br>¥%{value:,.0f}<br>%{customdata[0]}",
