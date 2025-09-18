@@ -261,7 +261,7 @@ img.screenshot {
 .ocr-open #ocr-container,
 .record-open #record-container,
 .report-open #report-container {
-  max-height: 1000px;
+  max-height: 10000px;
   opacity: 1;
 }
 
