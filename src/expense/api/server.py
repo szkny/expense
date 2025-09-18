@@ -169,41 +169,48 @@ def ocr_process(
             except Exception:
                 log.info("Notification failed.")
         else:
-            ocr_data = ocr.main()
-            expense_type = ocr_data.get("expense_type")
-            expense_amount = int(ocr_data.get("expense_amount"))
-            expense_memo = ocr_data.get("expense_memo", "")
-            expense_date = ocr_data.get("expense_date", "")
             try:
-                server_tools.termux_api.toast("登録中..")
+                ocr_data = ocr.main()
             except Exception:
-                log.info("Toast notification failed.")
-            server_tools.gspread_handler.register_expense(
-                expense_type, expense_amount, expense_memo, expense_date
-            )
-            json.dump(
-                ocr_data,
-                open(server_tools.cache_path / "ocr_data.json", "w"),
-                ensure_ascii=False,
-                indent=2,
-            )
-            server_tools.expense_handler.store_expense(
-                expense_type, expense_memo, expense_amount, expense_date
-            )
-            msg = "✅ 家計簿への登録が完了しました。"
-            info = (
-                f"[{expense_date}] "
-                f"{expense_type}: "
-                f"¥{expense_amount:,}"
-                f"{', '+expense_memo if expense_memo else ''}"
-            )
-            try:
-                server_tools.termux_api.notify(
-                    msg,
-                    info,
+                log.exception("Error occurred")
+                status = False
+                msg = "🚫 画像の読み取り処理に失敗ました。"
+                ocr_data = {}
+            if ocr_data:
+                expense_type = ocr_data.get("expense_type")
+                expense_amount = int(ocr_data.get("expense_amount"))
+                expense_memo = ocr_data.get("expense_memo", "")
+                expense_date = ocr_data.get("expense_date", "")
+                try:
+                    server_tools.termux_api.toast("登録中..")
+                except Exception:
+                    log.info("Toast notification failed.")
+                server_tools.gspread_handler.register_expense(
+                    expense_type, expense_amount, expense_memo, expense_date
                 )
-            except Exception:
-                log.info("Notification failed.")
+                json.dump(
+                    ocr_data,
+                    open(server_tools.cache_path / "ocr_data.json", "w"),
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                server_tools.expense_handler.store_expense(
+                    expense_type, expense_memo, expense_amount, expense_date
+                )
+                msg = "✅ 家計簿への登録が完了しました。"
+                info = (
+                    f"[{expense_date}] "
+                    f"{expense_type}: "
+                    f"¥{expense_amount:,}"
+                    f"{', '+expense_memo if expense_memo else ''}"
+                )
+                try:
+                    server_tools.termux_api.notify(
+                        msg,
+                        info,
+                    )
+                except Exception:
+                    log.info("Notification failed.")
     except Exception:
         log.exception("Error occurred")
         status = False
@@ -220,7 +227,7 @@ def delete_process(
     request: Request,
     expense_date: str = Form(...),
     expense_type: str = Form(...),
-    expense_amount: str = Form(...),
+    expense_amount: str | int = Form(...),
     expense_memo: str = Form(...),
 ) -> RedirectResponse:
     """
@@ -284,10 +291,10 @@ def edit_process(
     request: Request,
     target_date: str = Form(...),
     target_type: str = Form(...),
-    target_amount: str = Form(...),
+    target_amount: str | int = Form(...),
     target_memo: str = Form(...),
     new_expense_type: str = Form(...),
-    new_expense_amount: str = Form(...),
+    new_expense_amount: str | int = Form(...),
     new_expense_memo: str = Form(...),
 ) -> RedirectResponse:
     """
