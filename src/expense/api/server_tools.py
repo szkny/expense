@@ -412,7 +412,7 @@ class ServerTools(Base):
         fig.update_layout(
             height=500,
             xaxis_title="",
-            yaxis_title="金額(¥)",
+            yaxis_title="",
             title_y=0.98,
             legend_title="",
             yaxis=dict(
