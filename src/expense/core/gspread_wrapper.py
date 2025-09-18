@@ -40,7 +40,7 @@ class GspreadHandler(Base):
         log.info("end 'GspreadHandler' constructor")
 
     def get_spreadsheet_url(self) -> str:
-        return self.workbook.url
+        return self.workbook.url + "/edit"
 
     @retry(stop=stop_after_attempt(3))
     def load_sheet(self, date_str: str = "") -> None:
