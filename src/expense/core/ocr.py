@@ -167,7 +167,9 @@ class Ocr(TermuxAPI):
                         pytesseract.image_to_string(
                             cropped,
                             lang="jpn",
-                            config="--psm 6 --oem 3",
+                            config=self.ocr_config.get(
+                                "tesseract_config", "--psm 6 --oem 3"
+                            ),
                         )
                     )
                     log.debug(f"\t[{i}] region: {region}, ocr text: {text}")

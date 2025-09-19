@@ -66,6 +66,7 @@
     ]
   },
   "ocr": {
+    "tesseract_config": "--psm 6 --oem 3",
     "regions": {
       "PayPay": [
         [160, 100, 1000, 270],
