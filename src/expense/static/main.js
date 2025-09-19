@@ -6,11 +6,11 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // 経費タイプ選択に応じた入力欄の表示・非表示
-(function () {
+(function() {
   const typeSelect = document.getElementById("expense-type");
   const amountInput = document.getElementById("expense-amount");
   const memoInput = document.getElementById("expense-memo");
-  typeSelect.addEventListener("change", function () {
+  typeSelect.addEventListener("change", function() {
     if (this.value.includes("/")) {
       amountInput.style.display = "none";
       memoInput.style.display = "none";
@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
 })();
 
 // フォーム送信時にローディング表示
-(function () {
+(function() {
   document.querySelectorAll("form").forEach((form) => {
     form.addEventListener("submit", () => {
       document.getElementById("loader").style.display = "flex";
@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
 })();
 
 // テーマ切り替え処理
-(function () {
+(function() {
   document.getElementById("theme-toggle").addEventListener("click", () => {
     const isDark = document.documentElement.classList.toggle("dark");
     const newTheme = isDark ? "dark" : "light";
@@ -44,30 +44,33 @@ document.addEventListener("DOMContentLoaded", () => {
 })();
 
 // スクショの拡大・縮小動作
-(function () {
+(function() {
   const screenshot = document.getElementById("screenshot");
   const overlay = document.getElementById("img-overlay");
-  let isZoomed = false;
   screenshot.addEventListener("click", () => {
-    if (isZoomed) {
-      screenshot.style.transform = "scale(1)";
-      overlay.style.display = "none";
-      isZoomed = false;
-    } else {
-      screenshot.style.transform = "scale(5.5)";
-      overlay.style.display = "flex";
-      isZoomed = true;
-    }
+    overlay.innerHTML = "";
+    const zoomedImg = screenshot.cloneNode();
+    overlay.appendChild(zoomedImg);
+    requestAnimationFrame(() => {
+      overlay.classList.add("show");
+    });
   });
   overlay.addEventListener("click", () => {
-    screenshot.style.transform = "scale(1)";
-    overlay.style.display = "none";
-    isZoomed = false;
+    overlay.classList.remove("show");
+    overlay.addEventListener(
+      "transitionend",
+      () => {
+        if (!overlay.classList.contains("show")) {
+          overlay.innerHTML = "";
+        }
+      },
+      { once: true },
+    );
   });
 })();
 
 // 折りたたみ処理
-(function () {
+(function() {
   function setupCollapsible(key, onOpen) {
     const sectionId = key + "-section";
     const localVarId = key + "Collapsed";
@@ -176,7 +179,7 @@ function filterTable() {
 }
 
 // 検索入力窓をクリア
-(function () {
+(function() {
   document.getElementById("clear-search").addEventListener("click", () => {
     const input = document.getElementById("search-input");
     input.value = "";
@@ -186,7 +189,7 @@ function filterTable() {
 })();
 
 // レコード長押し処理
-(function () {
+(function() {
   document.addEventListener("DOMContentLoaded", () => {
     const overlay = document.getElementById("confirmation-overlay");
     const dialog = document.getElementById("confirmation-dialog");
@@ -250,7 +253,7 @@ function filterTable() {
       });
 
     // オーバーレイをクリックしたら閉じる
-    overlay.addEventListener("click", function (e) {
+    overlay.addEventListener("click", function(e) {
       // クリック対象がダイアログ自身ではない場合のみ閉じる
       if (!dialog.contains(e.target)) {
         overlay.style.display = "none";
@@ -260,7 +263,7 @@ function filterTable() {
 })();
 
 // PWA インストール処理
-(function () {
+(function() {
   // Service Worker 登録
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/static/service-worker.js");

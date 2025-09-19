@@ -236,7 +236,44 @@ img.screenshot {
 }
 
 #img-overlay {
-  z-index: 1999;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  overflow: auto;
+}
+
+#img-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#img-overlay img {
+  height: 10000px;
+  max-height: 90%;
+  max-width: 90%;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  cursor: zoom-out;
+  transform: scale(0.7);
+  opacity: 0;
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
+}
+
+#img-overlay.show img {
+  transform: scale(1);
+  opacity: 1;
 }
 
 /* 折りたたみ関連 */
