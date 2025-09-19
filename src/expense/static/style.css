@@ -74,6 +74,7 @@ hr {
 
 /* カード */
 .card {
+  position: relative;
   background: #fff;
   padding: 12px;
   margin: 16px 0;
@@ -289,9 +290,11 @@ img.screenshot {
 #ocr-toggle::after,
 #record-toggle::after,
 #report-toggle::after {
+  position: absolute;
   content: "▲";
   display: inline-block;
-  margin-left: 8px;
+  right: 12px;
+  margin-top: -6px;
 }
 
 .ocr-collapsed #ocr-toggle::after,
