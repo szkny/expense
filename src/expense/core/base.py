@@ -1,8 +1,10 @@
 import os
 import json
+import shutil
 import pathlib
 import logging
 from typing import Any
+from importlib import resources
 from platformdirs import user_cache_dir, user_config_dir
 
 HOME: pathlib.Path = pathlib.Path(os.getenv("HOME") or "~")
@@ -23,8 +25,25 @@ class Base:
         self.expense_history: pathlib.Path = (
             self.cache_path / f"{self.app_name}_history.log"
         )
+        self.generate_config()
         self.load_config()
         self.setup_logging()
+
+    def generate_config(self) -> None:
+        """generate configuration file if not exists"""
+        config_file = self.config_path / "config.json"
+        if not config_file.exists():
+            self.log.info(
+                f"'{config_file}' not found. Generating default config."
+            )
+            try:
+                with resources.path(
+                    "expense.config", "config.json"
+                ) as default_config:
+                    shutil.copy(default_config, config_file)
+                    self.log.info(f"Generated default config at: {config_file}")
+            except Exception:
+                self.log.exception("Failed to generate default config file.")
 
     def load_config(self) -> None:
         """load configuration file"""
