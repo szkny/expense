@@ -163,7 +163,13 @@ class Ocr(TermuxAPI):
                 log.debug(f"Processing OCR for {app_name}")
                 for i, region in enumerate(regions):
                     cropped = img.crop(region)
-                    text = str(pytesseract.image_to_string(cropped, lang="jpn"))
+                    text = str(
+                        pytesseract.image_to_string(
+                            cropped,
+                            lang="jpn",
+                            config="--psm 6 --oem 3",
+                        )
+                    )
                     log.debug(f"\t[{i}] region: {region}, ocr text: {text}")
                     results.append(text)
             text = "\n".join(results)
