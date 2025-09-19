@@ -281,7 +281,7 @@ img.screenshot {
 #record-toggle,
 #report-toggle {
   background: transparent;
-  color: #576171;
+  color: #97a1b1;
   cursor: pointer;
   font-size: 8px;
   transition: background 0.2s;
@@ -293,7 +293,7 @@ img.screenshot {
   position: absolute;
   content: "▲";
   display: inline-block;
-  right: 12px;
+  right: 16px;
   margin-top: -6px;
 }
 
@@ -537,7 +537,7 @@ tr:nth-child(even) {
 .dark #ocr-toggle,
 .dark #record-toggle,
 .dark #report-toggle {
-  color: #91959b;
+  color: #61656b;
 }
 
 .dark .link-spread {
