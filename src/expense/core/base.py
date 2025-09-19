@@ -35,7 +35,7 @@ class Base:
             self.config = {}
         except Exception:
             self.log.exception(
-                f"Failed to load config: {self.config_path / "config.json"}"
+                f"Failed to load config: {self.config_path / 'config.json'}"
             )
 
     def setup_logging(self) -> None:
