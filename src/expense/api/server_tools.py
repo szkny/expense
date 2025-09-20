@@ -415,6 +415,7 @@ class ServerTools(Base):
             yaxis_title="",
             title_y=0.98,
             legend_title="",
+            xaxis=dict(fixedrange=True),
             yaxis=dict(
                 tickprefix="¥",
                 tickformat=",",
@@ -456,10 +457,10 @@ class ServerTools(Base):
         fig_line = self._create_line_figure(df_graph, theme)
         fig_predict = self._create_prediction_figure(df_predict, theme)
         self._update_traces(fig_bar, fig_line, fig_predict)
-        self._update_layout(fig_bar, theme)
         fig_bar.add_traces(fig_line.data)
         fig_bar.add_traces(fig_predict.data)
         self._add_bar_chart_labels(fig_bar, df_bar, "date", theme, fontsize=10)
+        self._update_layout(fig_bar, theme)
         graph_html = fig_bar.to_html(
             full_html=False,
             include_plotlyjs=include_plotlyjs,
