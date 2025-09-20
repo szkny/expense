@@ -21,15 +21,15 @@
 - [x] add feature to edit records
 - [x] upgrade config file
 - [x] add a feature to change monthes on daily chart
-- [ ] manage monthly subscription
-- [ ] data migration from spreadsheet records
-- [ ] change web UI to SPA
+- [x] ~~desynchronization of loading graph~~
+- [x] ~~change web UI to SPA~~
+- [x] ~~add feature of undo~~
+- [x] ~~adapt to deficiencies of amount for instant registeration item~~
+- [x] ~~cardanalyse/improve processing time~~
+  - [x] ~~desynchronization of toast and notification~~
 - [ ] add a feature of asset management
+- [ ] data migration from spreadsheet records
+- [ ] manage monthly subscription
 - [ ] add a feature of sorting cards in the Web UI
-- [ ] desynchronization of loading graph
-- [ ] add test scripts
-- [ ] add feature of undo
-- [ ] adapt to deficiencies of amount for instant registeration item
 - [ ] add feature of validation for usage history of credit card
-- [ ] analyse/improve processing time
-  - [ ] desynchronization of toast and notification
+- [ ] add test scripts
