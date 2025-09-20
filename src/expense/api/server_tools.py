@@ -420,7 +420,7 @@ class ServerTools(Base):
                 tickprefix="¥",
                 tickformat=",",
                 autorange=True,
-                fixedrange=True,
+                fixedrange=False,
             ),
             dragmode=False,
             legend=dict(orientation="h"),
@@ -445,42 +445,41 @@ class ServerTools(Base):
             log.info("DataFrame is empty, skipping graph generation.")
             return ""
 
+        today = pd.Timestamp(dt.date.today())
         df["date"] = pd.to_datetime(df["date"])
-        unique_months = sorted(df["date"].dt.to_period("M").unique(), reverse=True)
+        unique_months = sorted(
+            df["date"].dt.to_period("M").unique(), reverse=True
+        )
 
         fig = go.Figure()
-
         trace_collections = []
         y_ranges = []
         processed_months = []
-
         for month in unique_months:
             t = month.to_timestamp()
             month_start, month_end = self._get_month_boundaries(t)
-
             df_graph = self._prepare_graph_dataframe(df, month_start, month_end)
             if df_graph.empty:
                 continue
-
             df_bar = self._prepare_bar_dataframe(df_graph)
             df_graph = self._add_month_start_point(df_graph, month_start)
             df_graph, df_predict = self._handle_predictions(
                 df_graph, t, month_start, month_end
             )
-
             fig_bar = self._create_bar_figure(
                 df_bar, month_start, month_end, min_yrange, df_graph, df_predict
             )
             fig_line = self._create_line_figure(df_graph, theme)
             fig_predict = self._create_prediction_figure(df_predict, theme)
-
             self._update_traces(fig_bar, fig_line, fig_predict)
-
             temp_fig = go.Figure()
             temp_fig.add_traces(fig_bar.data)
             temp_fig.add_traces(fig_line.data)
-            temp_fig.add_traces(fig_predict.data)
-            self._add_bar_chart_labels(temp_fig, df_bar, "date", theme, fontsize=10)
+            if today.to_period("M") == month:
+                temp_fig.add_traces(fig_predict.data)
+            self._add_bar_chart_labels(
+                temp_fig, df_bar, "date", theme, fontsize=10
+            )
 
             trace_collections.append(temp_fig.data)
             y_ranges.append(fig_bar.layout.yaxis.range)
@@ -518,7 +517,15 @@ class ServerTools(Base):
             )
             cumulative_trace_count += len(traces)
 
+        self._update_layout(fig, theme)
         fig.update_layout(
+            barmode="stack",
+            yaxis=dict(
+                tickprefix="¥",
+                tickformat=",",
+                autorange=True,
+                fixedrange=True,
+            ),
             updatemenus=[
                 dict(
                     active=0,
@@ -531,11 +538,8 @@ class ServerTools(Base):
                     y=1.15,
                     yanchor="top",
                 )
-            ]
+            ],
         )
-
-        self._update_layout(fig, theme)
-        fig.update_layout(barmode="stack")
         if processed_months and y_ranges:
             initial_month_str = processed_months[0].strftime("%Y年%-m月")
             fig.update_layout(
@@ -551,6 +555,7 @@ class ServerTools(Base):
                 displayModeBar=False,
             ),
         )
+        graph_html = f'<div style="-webkit-tap-highlight-color: transparent;">{graph_html}</div>'
         log.info("end 'generate_daily_chart' method")
         return graph_html
 
