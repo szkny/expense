@@ -420,6 +420,7 @@ class ServerTools(Base):
                 tickprefix="¥",
                 tickformat=",",
                 autorange=True,
+                fixedrange=True,
             ),
             dragmode=False,
             legend=dict(orientation="h"),
@@ -443,25 +444,106 @@ class ServerTools(Base):
         if df.empty:
             log.info("DataFrame is empty, skipping graph generation.")
             return ""
-        t = dt.datetime.today()
-        month_start, month_end = self._get_month_boundaries(t)
-        df_graph = self._prepare_graph_dataframe(df, month_start, month_end)
-        df_bar = self._prepare_bar_dataframe(df_graph)
-        df_graph = self._add_month_start_point(df_graph, month_start)
-        df_graph, df_predict = self._handle_predictions(
-            df_graph, t, month_start, month_end
+
+        df["date"] = pd.to_datetime(df["date"])
+        unique_months = sorted(df["date"].dt.to_period("M").unique(), reverse=True)
+
+        fig = go.Figure()
+
+        trace_collections = []
+        y_ranges = []
+        processed_months = []
+
+        for month in unique_months:
+            t = month.to_timestamp()
+            month_start, month_end = self._get_month_boundaries(t)
+
+            df_graph = self._prepare_graph_dataframe(df, month_start, month_end)
+            if df_graph.empty:
+                continue
+
+            df_bar = self._prepare_bar_dataframe(df_graph)
+            df_graph = self._add_month_start_point(df_graph, month_start)
+            df_graph, df_predict = self._handle_predictions(
+                df_graph, t, month_start, month_end
+            )
+
+            fig_bar = self._create_bar_figure(
+                df_bar, month_start, month_end, min_yrange, df_graph, df_predict
+            )
+            fig_line = self._create_line_figure(df_graph, theme)
+            fig_predict = self._create_prediction_figure(df_predict, theme)
+
+            self._update_traces(fig_bar, fig_line, fig_predict)
+
+            temp_fig = go.Figure()
+            temp_fig.add_traces(fig_bar.data)
+            temp_fig.add_traces(fig_line.data)
+            temp_fig.add_traces(fig_predict.data)
+            self._add_bar_chart_labels(temp_fig, df_bar, "date", theme, fontsize=10)
+
+            trace_collections.append(temp_fig.data)
+            y_ranges.append(fig_bar.layout.yaxis.range)
+            processed_months.append(month)
+
+        if not trace_collections:
+            return ""
+
+        # Add all traces to the main figure, making only the first month visible
+        for i, traces in enumerate(trace_collections):
+            for trace in traces:
+                fig.add_trace(trace.update(visible=(i == 0)))
+
+        # Create dropdown buttons
+        buttons = []
+        cumulative_trace_count = 0
+        for i, traces in enumerate(trace_collections):
+            visibility = [False] * len(fig.data)
+            for j in range(len(traces)):
+                visibility[cumulative_trace_count + j] = True
+
+            month_str = processed_months[i].strftime("%Y年%-m月")
+            buttons.append(
+                dict(
+                    label=month_str,
+                    method="update",
+                    args=[
+                        {"visible": visibility},
+                        {
+                            "title": {"text": f"支出内訳 日別（{month_str}）"},
+                            "yaxis.range": y_ranges[i],
+                        },
+                    ],
+                )
+            )
+            cumulative_trace_count += len(traces)
+
+        fig.update_layout(
+            updatemenus=[
+                dict(
+                    active=0,
+                    buttons=buttons,
+                    direction="down",
+                    pad={"r": 10, "t": 10},
+                    showactive=True,
+                    x=1,
+                    xanchor="right",
+                    y=1.15,
+                    yanchor="top",
+                )
+            ]
         )
-        fig_bar = self._create_bar_figure(
-            df_bar, month_start, month_end, min_yrange, df_graph, df_predict
-        )
-        fig_line = self._create_line_figure(df_graph, theme)
-        fig_predict = self._create_prediction_figure(df_predict, theme)
-        self._update_traces(fig_bar, fig_line, fig_predict)
-        fig_bar.add_traces(fig_line.data)
-        fig_bar.add_traces(fig_predict.data)
-        self._add_bar_chart_labels(fig_bar, df_bar, "date", theme, fontsize=10)
-        self._update_layout(fig_bar, theme)
-        graph_html = fig_bar.to_html(
+
+        self._update_layout(fig, theme)
+        fig.update_layout(barmode="stack")
+        if processed_months and y_ranges:
+            initial_month_str = processed_months[0].strftime("%Y年%-m月")
+            fig.update_layout(
+                title_text=f"支出内訳 日別（{initial_month_str}）",
+                yaxis_range=y_ranges[0],
+            )
+
+        graph_html = fig.to_html(
             full_html=False,
             include_plotlyjs=include_plotlyjs,
             config=dict(

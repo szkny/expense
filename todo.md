@@ -20,9 +20,9 @@
 - [x] recognize date text in ocr mode
 - [x] add feature to edit records
 - [x] upgrade config file
+- [x] add a feature to change monthes on daily chart
 - [ ] manage monthly subscription
 - [ ] data migration from spreadsheet records
-- [ ] add a feature to change monthes on daily chart
 - [ ] change web UI to SPA
 - [ ] add a feature of asset management
 - [ ] add a feature of sorting cards in the Web UI
