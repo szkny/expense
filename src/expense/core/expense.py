@@ -107,7 +107,7 @@ class Expense(Base):
                     ]
                 )
 
-                expense_type = self.select_expense_type(
+                expense_type = self.termux_api.select_expense_type(
                     item_list=[
                         {"icon": "⭐", "items": favorite_expenses},
                         {"icon": "🔥", "items": frequent_expenses},
@@ -125,8 +125,10 @@ class Expense(Base):
                         expense_memo = ""
                         expense_amount = int(re.sub(r"[^\d]", "", data[1]))
                 else:
-                    expense_amount = self.enter_expense_amount(expense_type)
-                    expense_memo = self.enter_expense_memo(
+                    expense_amount = self.termux_api.enter_expense_amount(
+                        expense_type
+                    )
+                    expense_memo = self.termux_api.enter_expense_memo(
                         f"{expense_type}(¥{expense_amount:,})"
                     )
             loop.run_in_executor(
