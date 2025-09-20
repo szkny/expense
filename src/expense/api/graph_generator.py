@@ -251,15 +251,16 @@ class GraphGenerator:
         key: str,
         theme: str,
         fontsize: int = 14,
-        threshold: int = 2000,
+        label_steps: int = 3,
+        label_threshold: int = 2000,
         label_offset: int = 3000,
     ) -> None:
         totals = df_bar.groupby(key, as_index=False)["expense_amount"].sum()
         totals["label"] = totals["expense_amount"].map(
-            lambda x: f"¥{x:,}" if x >= threshold else ""
+            lambda x: f"¥{x:,}" if x >= label_threshold else ""
         )
         y = [
-            j if (i + 1) % 2 else j + label_offset
+            j + ((i + 1) % label_steps) * label_offset
             for i, j in enumerate(totals["expense_amount"])
         ]
         fig.add_trace(
@@ -366,7 +367,14 @@ class GraphGenerator:
             if today.to_period("M") == month:
                 temp_fig.add_traces(fig_predict.data)
             self._add_bar_chart_labels(
-                temp_fig, df_bar, "date", theme, fontsize=10
+                temp_fig,
+                df_bar,
+                "date",
+                theme,
+                fontsize=10,
+                label_steps=3,
+                label_threshold=max(fig_bar.layout.yaxis.range[1] * 0.02, 2000),
+                label_offset=max(fig_bar.layout.yaxis.range[1] * 0.05, 3000),
             )
 
             trace_collections.append(temp_fig.data)
@@ -396,10 +404,7 @@ class GraphGenerator:
                     method="update",
                     args=[
                         {"visible": visibility},
-                        {
-                            "title": {"text": f"支出内訳 日別（{month_str}）"},
-                            "yaxis.range": y_ranges[i],
-                        },
+                        {"yaxis.range": y_ranges[i]},
                     ],
                 )
             )
@@ -413,8 +418,8 @@ class GraphGenerator:
                     active=0,
                     buttons=buttons,
                     direction="down",
-                    pad={"r": 10, "t": 10},
-                    showactive=True,
+                    pad={"r": 0, "t": 0},
+                    showactive=False,
                     x=1,
                     xanchor="right",
                     y=1.15,
@@ -424,9 +429,8 @@ class GraphGenerator:
             yaxis=dict(fixedrange=True),
         )
         if processed_months and y_ranges:
-            initial_month_str = processed_months[0].strftime("%Y年%-m月")
             fig.update_layout(
-                title_text=f"支出内訳 日別（{initial_month_str}）",
+                title_text="支出内訳 日別",
                 yaxis_range=y_ranges[0],
             )
 
