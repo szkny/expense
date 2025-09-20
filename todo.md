@@ -29,7 +29,11 @@
   - [x] ~~desynchronization of toast and notification~~
 - [ ] add a feature of asset management
 - [ ] data migration from spreadsheet records
+- [ ] add feature of setting target of expenses
 - [ ] manage monthly subscription
+- [ ] assist user input of expense's memo using device GPS
 - [ ] add a feature of sorting cards in the Web UI
+- [ ] personalized analysis and insight / prediction report by LLM
 - [ ] add feature of validation for usage history of credit card
+- [ ] optimize performance time
 - [ ] add test scripts
