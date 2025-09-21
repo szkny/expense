@@ -262,6 +262,30 @@ function filterTable() {
   });
 })();
 
+// ハンバーガーメニュー
+(function() {
+  const menuBtn = document.getElementById("hamburger-menu-btn");
+  const menu = document.getElementById("menu-container");
+  const themeBtn = document.getElementById("theme-toggle");
+  const assetBtn = document.getElementById("asset-management-btn");
+  const homeBtn = document.getElementById("home-btn");
+  function closeMenu() {
+    menu.classList.remove("show");
+  }
+  themeBtn.addEventListener("click", closeMenu);
+  assetBtn.addEventListener("click", closeMenu);
+  homeBtn.addEventListener("click", closeMenu);
+  menuBtn.addEventListener("click", () => {
+    menu.classList.toggle("show");
+  });
+  // メニューの外側をクリックしたら閉じる
+  document.addEventListener("click", (e) => {
+    if (!menu.contains(e.target) && !menuBtn.contains(e.target)) {
+      menu.classList.remove("show");
+    }
+  });
+})();
+
 // PWA インストール処理
 (function() {
   // Service Worker 登録
