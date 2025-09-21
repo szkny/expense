@@ -250,19 +250,25 @@ class GraphGenerator:
         df_bar: pd.DataFrame,
         key: str,
         theme: str,
-        fontsize: int = 14,
-        label_steps: int = 3,
-        label_threshold: int = 2000,
-        label_offset: int = 3000,
+        fontsize: int = 10,
+        label_nlags: int = 3,
+        label_threshold: int = 1000,
+        label_offset: int = 2000,
     ) -> None:
         totals = df_bar.groupby(key, as_index=False)["expense_amount"].sum()
         totals["label"] = totals["expense_amount"].map(
             lambda x: f"¥{x:,}" if x >= label_threshold else ""
         )
-        y = [
-            j + ((i + 1) % label_steps) * label_offset
-            for i, j in enumerate(totals["expense_amount"])
-        ]
+        y = totals["expense_amount"].to_list()
+        for _ in range(label_nlags):
+            for i, v in enumerate(y):
+                if any(
+                    [
+                        abs(y[i] - y[i - j - 1]) < label_threshold
+                        for j in range(min(i, label_nlags))
+                    ]
+                ):
+                    y[i] = y[i] + label_offset
         fig.add_trace(
             go.Scatter(
                 x=totals[key],
@@ -372,9 +378,9 @@ class GraphGenerator:
                 "date",
                 theme,
                 fontsize=10,
-                label_steps=3,
-                label_threshold=max(fig_bar.layout.yaxis.range[1] * 0.02, 2000),
-                label_offset=max(fig_bar.layout.yaxis.range[1] * 0.05, 3000),
+                label_nlags=3,
+                label_threshold=max(fig_bar.layout.yaxis.range[1] * 0.02, 1000),
+                label_offset=max(fig_bar.layout.yaxis.range[1] * 0.04, 2000),
             )
 
             trace_collections.append(temp_fig.data)
