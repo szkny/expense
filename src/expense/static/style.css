@@ -51,10 +51,13 @@ hr {
   background: #e5e7eb;
   color: #111;
   border: none;
-  border-radius: 50%;
-  width: 30px;
+  border-radius: 15px;
+  width: fit-content;
   height: 30px;
   font-size: 12px;
+  padding: 0 10px 0 10px;
+  text-align: left;
+  white-space: nowrap;
   cursor: not-allowed;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   transition:
