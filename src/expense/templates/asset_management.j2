@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Expense</title>
+  <link rel="stylesheet" href="/static/style.css?v={{ range(100000, 999999) | random }}" />
+  <link rel="manifest" href="/static/manifest.json" />
+  <meta name="theme-color" content="#111827">
+  <script src="/static/preload.js?v={{ range(100000, 999999) | random }}"></script>
+</head>
+
+<body>
+  <form method="get" action="/"><button type="submit" id="home-btn" class="small-btn"> {{ icons.get("home", "🏠") }} </button></form>
+  <div class="container">
+    <h1> {{ icons.get("title", "") }} Asset Management </h1>
+
+    {% if status and msg %}
+    <div class="success">
+      {{ msg }}
+    {% if info %}
+      <p><strong> {{ info }} </strong></p>
+    {% endif %}
+    </div>
+    {% elif not status and msg %}
+    <div class="failed">
+      {{ msg }}
+    {% if info %}
+      <p><strong> {{ info }} </strong></p>
+    {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <h3 id="xxx-section">
+          <span> xxx </span>
+          <span id="xxx-toggle"></span>
+        </h3>
+    </div>
+
+  </div>
+  <div id="loader" class="overlay" style="display: none;">
+    <div class="spinner"></div>
+  </div>
+</body>
+<script src="/static/main.js?v={{ range(100000, 999999) | random }}"></script>
+
+</html>

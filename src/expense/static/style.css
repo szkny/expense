@@ -43,16 +43,9 @@ hr {
   margin: 16px 0;
 }
 
-/* ホームボタン */
-#home-btn {
-  left: 12px;
-}
-
-/* テーマトグルボタン */
-.theme-toggle {
+.small-btn {
   position: fixed;
   top: 12px;
-  right: 12px;
   background: #e5e7eb;
   color: #111;
   border: none;
@@ -67,9 +60,26 @@ hr {
     transform 0.2s;
   z-index: 1000;
 }
-.theme-toggle:hover {
+.small-btn:hover {
   background: #d1d5db;
   transform: scale(1.1);
+}
+
+/* ホームボタン */
+#home-btn {
+  right: 12px;
+}
+
+/* 資産管理ページ切り替えボタン */
+#asset-management-btn {
+  top: 50px;
+  right: 12px;
+}
+
+/* テーマトグルボタン */
+#theme-toggle {
+  top: 88px;
+  right: 12px;
 }
 
 /* カード */
@@ -566,7 +576,7 @@ tr:nth-child(even) {
   border-color: #b91051;
 }
 
-.dark .theme-toggle {
+.dark .small-btn {
   background: #374151;
   color: #f3f4f6;
 }

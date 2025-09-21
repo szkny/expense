@@ -53,6 +53,31 @@ def read_root(
     )
 
 
+@app.get("/asset_management", response_class=HTMLResponse)
+def asset_management(
+    request: Request,
+    status: bool | None = None,
+    msg: str | None = None,
+    info: str | None = None,
+) -> HTMLResponse:
+    """
+    資産管理ページ
+    """
+    log.info("start 'asset_management' method")
+    server_tools: ServerTools = ServerTools(app, gspread_handler)
+    log.info("end 'asset_management' method")
+    return server_tools.templates.TemplateResponse(
+        "asset_management.j2",
+        {
+            "request": request,
+            "status": status,
+            "msg": msg,
+            "info": info,
+            "icons": server_tools.icons,
+        },
+    )
+
+
 @app.post("/register")
 def register(
     request: Request,

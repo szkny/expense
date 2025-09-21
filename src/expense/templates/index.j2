@@ -12,11 +12,12 @@
 </head>
 
 <body>
-  <form method="get" action="/"><button type="submit" id="home-btn" class="theme-toggle"> {{ icons.get("home", "🏠") }} </button></form>
-  <button id="theme-toggle" class="theme-toggle"> {% if theme == "dark" %} {{ icons.get("light_theme", "☀️") }} {% else %} {{ icons.get("dark_theme", "🌙") }} {% endif %} </button>
   <button id="install-btn" class="btn install" style="display: none;"> {{ icons.get("pwa_install", "📲") }} インストール</button>
+  <button id="theme-toggle" class="small-btn"> {% if theme == "dark" %} {{ icons.get("light_theme", "☀️") }} {% else %} {{ icons.get("dark_theme", "🌙") }} {% endif %} </button>
+  <form method="get" action="/asset_management"><button type="submit" id="asset-management-btn" class="small-btn"> {{ icons.get("asset_management", "📈") }} </button></form>
+  <form method="get" action="/"><button type="submit" id="home-btn" class="small-btn"> {{ icons.get("home", "🏠") }} </button></form>
   <div class="container">
-    <h1> {{ icons.get("title", "📝") }} Expense </h1>
+    <h1> {{ icons.get("title", "") }} Expense </h1>
 
     {% if status and msg %}
     <div class="success">
