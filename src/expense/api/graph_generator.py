@@ -256,15 +256,16 @@ class GraphGenerator:
         label_offset: int = 2000,
     ) -> None:
         totals = df_bar.groupby(key, as_index=False)["expense_amount"].sum()
-        totals["label"] = totals["expense_amount"].map(
+        label = totals["expense_amount"].map(
             lambda x: f"¥{x:,}" if x >= label_threshold else ""
         )
         y = totals["expense_amount"].to_list()
         for _ in range(label_nlags):
             for i, v in enumerate(y):
-                if any(
+                if label.iloc[i] and any(
                     [
                         abs(y[i] - y[i - j - 1]) < label_threshold
+                        and label.iloc[i - j - 1]
                         for j in range(min(i, label_nlags))
                     ]
                 ):
@@ -273,7 +274,7 @@ class GraphGenerator:
             go.Scatter(
                 x=totals[key],
                 y=y,
-                text=totals["label"],
+                text=label,
                 mode="text",
                 textposition="top center",
                 textfont=dict(
