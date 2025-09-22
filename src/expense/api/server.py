@@ -318,6 +318,7 @@ def edit_process(
     target_type: str = Form(...),
     target_amount: str | int = Form(...),
     target_memo: str = Form(...),
+    new_expense_date: str = Form(...),
     new_expense_type: str = Form(...),
     new_expense_amount: str | int = Form(...),
     new_expense_memo: str = Form(...),
@@ -333,6 +334,7 @@ def edit_process(
     try:
         # parse date
         target_date = re.sub(r"\(.+\)", "", target_date)
+        new_expense_date = re.sub(r"\(.+\)", "", new_expense_date)
         # parse amount
         target_amount = int(re.sub(r"[^\d]", "", str(target_amount)))
         new_expense_amount = int(re.sub(r"[^\d]", "", str(new_expense_amount)))
@@ -341,11 +343,13 @@ def edit_process(
         log.debug(f"target_type: {target_type}")
         log.debug(f"target_amount: {target_amount}")
         log.debug(f"target_memo: {target_memo}")
+        log.debug(f"new_expense_date: {new_expense_date}")
         log.debug(f"new_expense_type: {new_expense_type}")
         log.debug(f"new_expense_amount: {new_expense_amount}")
         log.debug(f"new_expense_memo: {new_expense_memo}")
         if (
-            target_type != new_expense_type
+            target_date != new_expense_date
+            or target_type != new_expense_type
             or target_amount != new_expense_amount
             or target_memo != new_expense_memo
         ):
@@ -360,6 +364,7 @@ def edit_process(
                 expense_memo=target_memo,
             )
             new_expense = dict(
+                expense_date=new_expense_date,
                 expense_type=new_expense_type,
                 expense_amount=new_expense_amount,
                 expense_memo=new_expense_memo,
@@ -384,6 +389,7 @@ def edit_process(
                 f"¥{target_amount:,}"
                 f"{', '+target_memo if target_memo else ''}"
                 " ▶ "
+                f"[{new_expense_date}] "
                 f"{new_expense_type}: "
                 f"¥{new_expense_amount:,}"
                 f"{', '+new_expense_memo if new_expense_memo else ''}"

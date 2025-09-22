@@ -109,7 +109,14 @@
               <input type="hidden" id="target-record-type" name="target_type">
               <input type="hidden" id="target-record-amount" name="target_amount">
               <input type="hidden" id="target-record-memo" name="target_memo">
-              <input type="text" id="show-record-date" disabled>
+              <input
+                type="date"
+                id="new-expense-date"
+                name="new_expense_date"
+                min="{{ expense_date_range[0] }}"
+                max="{{ expense_date_range[1] }}"
+                required
+              />
               <select id="new-expense-type" name="new_expense_type">
                 {% for item in items %}
                 {% if "/" not in item %}

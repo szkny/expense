@@ -201,7 +201,7 @@ function filterTable() {
     const targetType = document.getElementById("target-record-type");
     const targetAmount = document.getElementById("target-record-amount");
     const targetMemo = document.getElementById("target-record-memo");
-    const showDate = document.getElementById("show-record-date");
+    const newDate = document.getElementById("new-expense-date");
     const newType = document.getElementById("new-expense-type");
     const newAmount = document.getElementById("new-expense-amount");
     const newMemo = document.getElementById("new-expense-memo");
@@ -220,7 +220,7 @@ function filterTable() {
       targetType.value = type;
       targetAmount.value = amount;
       targetMemo.value = memo;
-      showDate.value = date;
+      newDate.value = date.replace(/\([月火水木金土日]\)/, "");
       newType.value = type;
       newAmount.value = amount;
       newMemo.value = memo;

@@ -597,6 +597,7 @@ class GspreadHandler(Base):
                 )
                 return False
 
+            new_expense_date = new_expense.get("expense_date", target_date)
             new_expense_type = new_expense.get("expense_type", target_type)
             new_expense_amount = new_expense.get(
                 "expense_amount", target_amount
@@ -609,7 +610,8 @@ class GspreadHandler(Base):
             )
 
             if (
-                target_type == new_expense_type
+                target_date == new_expense_date
+                and target_type == new_expense_type
                 and target_amount == new_expense_amount
                 and target_memo == new_expense_memo
             ):
@@ -618,7 +620,10 @@ class GspreadHandler(Base):
 
             self.load_sheet(target_date)
             column = self.get_column(target_date)
-            if target_type != new_expense_type:
+            if (
+                target_date != new_expense_date
+                or target_type != new_expense_type
+            ):
                 log.debug(
                     f"Change expense_type: '{target_type}' to '{new_expense_type}'"
                 )
@@ -629,7 +634,7 @@ class GspreadHandler(Base):
                     new_expense_type,
                     new_expense_amount,
                     new_expense_memo,
-                    target_date,
+                    new_expense_date,
                 )
             else:
                 if (

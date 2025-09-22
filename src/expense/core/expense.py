@@ -404,6 +404,7 @@ class Expense(Base):
             log.debug("Failed to edit record. target_amount must be specified.")
             return False
 
+        new_expense_date = new_expense.get("expense_date", target_date)
         new_expense_type = new_expense.get("expense_type", target_type)
         new_expense_amount = new_expense.get("expense_amount", target_amount)
         new_expense_memo = new_expense.get("expense_memo", "")
@@ -415,6 +416,7 @@ class Expense(Base):
         log.debug(f"target_type: {target_type}")
         log.debug(f"target_amount: {target_amount}")
         log.debug(f"target_memo: {target_memo}")
+        log.debug(f"new_expense_date: {new_expense_date}")
         log.debug(f"new_expense_type: {new_expense_type}")
         log.debug(f"new_expense_amount: {new_expense_amount}")
         log.debug(f"new_expense_memo: {new_expense_memo}")
@@ -437,9 +439,13 @@ class Expense(Base):
             log.debug(f"Target index: {target_idx}")
             target_row = ", ".join(df.loc[target_idx, columns].map(str))
             log.debug(f"Target expense: {target_row}")
+            df.loc[target_idx, "datetime"] = pd.Timestamp(
+                new_expense_date
+            ).strftime("%Y-%m-%dT%H:%M:%S.%f")
             df.loc[target_idx, "type"] = new_expense_type
             df.loc[target_idx, "memo"] = new_expense_memo
             df.loc[target_idx, "amount"] = new_expense_amount
+            df.sort_values("datetime", inplace=True)
             df.loc[:, columns].to_csv(
                 self.expense_history, index=False, header=False
             )
