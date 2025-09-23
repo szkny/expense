@@ -484,9 +484,12 @@ class GraphGenerator:
             hole=0.4,
         )
         fig.update_traces(
-            texttemplate="¥%{value:,} (%{percent})",
+            texttemplate="%{label}<br>%{percent}",
             hovertemplate="%{label}<br>¥%{value:,.0f}<br>%{customdata[0]}",
             textfont=dict(size=14),
+            textposition="auto",
+            insidetextorientation="horizontal",
+            showlegend=False,
         )
         fig.add_annotation(
             text=f"合計<br>¥{total_amount: ,.0f}",
@@ -515,6 +518,7 @@ class GraphGenerator:
         df: pd.DataFrame,
         theme: str = "light",
         max_monthes: int = 12,
+        label_amount_threshold: int = 10000,
         include_plotlyjs: bool = True,
     ) -> str:
         """
@@ -525,9 +529,13 @@ class GraphGenerator:
             self.log.info("DataFrame is empty, skipping graph generation.")
             return ""
         df_graph = df.copy()
-        df_graph.loc[:, "label"] = df_graph.loc[:, "expense_amount"].map(
-            lambda x: f"¥{x:,}" if 10000 <= x else ""
-        )
+        for i, r in df_graph.iterrows():
+            if r["expense_amount"] >= label_amount_threshold:
+                df_graph.loc[i, "label"] = (
+                    f"{r['expense_type']}<br>¥{r['expense_amount']:,.0f}"
+                )
+            else:
+                df_graph.loc[i, "label"] = ""
         df_graph["month"] = pd.to_datetime(df_graph["month"])
         cutoff_date = dt.datetime.today() - dt.timedelta(
             days=30 * (max_monthes - 1)
@@ -548,8 +556,11 @@ class GraphGenerator:
             color_discrete_map=self.graph_color,
         )
         fig.update_traces(
+            texttemplate="%{text}",
             hovertemplate="%{x|%-Y年%-m月}<br>¥%{value:,.0f}<br>%{customdata[0]}",
             textfont=dict(size=14),
+            textposition="auto",
+            textangle=0,
         )
         self._update_layout(fig, theme)
         self._add_bar_chart_labels(fig, df_graph, "month", theme, fontsize=14)
