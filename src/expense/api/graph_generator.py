@@ -484,7 +484,7 @@ class GraphGenerator:
             hole=0.4,
         )
         fig.update_traces(
-            texttemplate="%{label}<br>%{percent}",
+            texttemplate="%{label}<br>¥%{value:,.0f}<br>(%{percent})",
             hovertemplate="%{label}<br>¥%{value:,.0f}<br>%{customdata[0]}",
             textfont=dict(size=14),
             textposition="auto",
