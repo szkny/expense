@@ -8,7 +8,6 @@
     "icons": {
       "title": "",
       "home": "🏠",
-      "asset_management": "📈",
       "light_theme": "☀️",
       "dark_theme": "🌙",
       "pwa_install": "📲",
@@ -23,7 +22,10 @@
       "edit_record": "🔧",
       "delete_record": "🗑️",
       "link": "🔗",
-      "search": "🔍️"
+      "search": "🔍️",
+      "asset_management": "📈",
+      "asset_portfolio": "📊",
+      "asset_list": "📝"
     },
     "graph": {
       "color": {
@@ -39,7 +41,8 @@
         "医療費": "#8811bb",
         "書籍費": "#aaee77",
         "遊興費": "#ee99dd",
-        "雑費": "#448888"
+        "雑費": "#448888",
+        "QQQ": "#3366cc"
       }
     },
     "record_table": {

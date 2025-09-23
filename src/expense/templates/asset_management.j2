@@ -33,10 +33,100 @@
     {% endif %}
 
     <div class="card">
-        <h3 id="xxx-section">
-          <span> xxx </span>
-          <span id="xxx-toggle"></span>
-        </h3>
+      <h3 id="report-section">
+        <span> {{ icons.get("asset_portfolio", "📊") }} ポートフォリオ </span>
+        <span id="report-toggle"></span>
+      </h3>
+      <div id="report-container">
+        <div class="asset-summary-list">
+          <div class="asset-summary-content">
+            <span> 資産総額 </span>
+            <span class="asset-summary-details"> {{today.year}}年{{today.month}}月{{today.day}}日 {{"{:02d}".format(today.hour)}}:{{"{:02d}".format(today.minute)}}時点 </span>
+          </div>
+          <div class="asset-summary-display"> {{asset_summary.total}} </div>
+          <div class="asset-summary-details">
+            <span> 前日比 </span>
+            <span
+              {% if "+" in asset_summary.change %}
+                class="asset-color-up"
+              {% else %}
+                class="asset-color-down"
+              {% endif %}
+            > {{asset_summary.change}} </span>
+          </div>
+          <br>
+          <div class="asset-summary-content">
+            <span> 為替レート </span>
+            <span class="asset-summary-display"> {{asset_summary.usdjpy}} </span>
+          </div>
+        </div>
+        {% if graph_html %}
+          <div class="graph-container">
+            <hr>
+            {{ graph_html | safe }}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 id="record-section">
+        <span> {{ icons.get("asset_list", "📝") }} 資産一覧 </span>
+        <span id="record-toggle"></span>
+      </h3>
+      <a href="{{ gspread_url }}" class="link-spread"> {{ icons.get("link", "🔗") }} スプレッドシートを開く </a>
+      <div id="record-container">
+        <div class="search-wrapper">
+          <input type="text" id="search-input" placeholder="{{ icons.get('search', '🔍') }} 資産をフィルタリング" onkeyup="filterTable()" />
+          <button id="clear-search" type="button">✕</button>
+        </div>
+        <div class="table-container">
+          <table>
+            <colgroup>
+              <col>
+              <col>
+              <col>
+              <col>
+              <col>
+              <col>
+              <col>
+              <col>
+              <col>
+              <col>
+            </colgroup>
+            <thead>
+              <tr>
+                <th>銘柄</th>
+                <th>保有数</th>
+                <th>取得単価(¥)</th>
+                <th>現在値($)</th>
+                <th>現在値(¥)</th>
+                <th>投資額(¥)</th>
+                <th>評価額(¥)</th>
+                <th>含み益(¥)</th>
+                <th>保有比率(%)</th>
+                <th>評価損益率(%)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in asset_items %}
+              <tr>
+                <td>{{ item.ticker }}</td>
+                <td>{{ item.num }}</td>
+                <td>¥ {{ "{:,.0f}".format(item.acquisition) }}</td>
+                <td>$ {{ "{:,}".format(item.price_dollar) }}</td>
+                <td>¥ {{ "{:,.0f}".format(item.price) }}</td>
+                <td>¥ {{ "{:,.0f}".format(item.invest_amoumt) }}</td>
+                <td>¥ {{ "{:,.0f}".format(item.valuation) }}</td>
+                <td>¥ {{ "{:,.0f}".format(item.profit) }}</td>
+                <td>{{ "{:.2f}".format(item.weight) }}%</td>
+                <td>{{ "{:.2f}".format(item.roi) }}%</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
   </div>

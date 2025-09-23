@@ -39,7 +39,6 @@ class ServerTools(Base):
         self.icons: dict[str, str] = webui_config.get("icons", {})
         self.icons = self.icons | expense_config.get("icons", {})
         graph_config: dict[str, str] = webui_config.get("graph", {})
-        self.graph_color: dict[str, str] = graph_config.get("color", {})
 
         self.expense_handler = Expense()
         self.gspread_handler: GspreadHandler = gspread_handler
@@ -49,8 +48,7 @@ class ServerTools(Base):
         self.graph_generator = GraphGenerator(
             expense_types=self.expense_types,
             exclude_types=self.exclude_types,
-            graph_color=self.graph_color,
-            log=log,
+            graph_config=graph_config,
         )
 
         # setup FastAPI

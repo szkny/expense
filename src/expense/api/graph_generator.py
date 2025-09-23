@@ -1,3 +1,4 @@
+import logging
 import datetime as dt
 from typing import Any
 
@@ -5,25 +6,25 @@ import pandas as pd
 from plotly import express as px
 from plotly import graph_objects as go
 
+log: logging.Logger = logging.getLogger("expense")
+
 
 class GraphGenerator:
     def __init__(
         self,
         expense_types: list[str],
         exclude_types: list[str],
-        graph_color: dict[str, str],
-        log: Any,
+        graph_config: dict[str, Any],
     ):
         self.expense_types = expense_types
         self.exclude_types = exclude_types
-        self.graph_color = graph_color
-        self.log = log
+        self.graph_color = graph_config.get("color", {})
 
     def generate_monthly_df(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         月別のDataFrameを生成
         """
-        self.log.info("start 'generate_monthly_df' method")
+        log.info("start 'generate_monthly_df' method")
         df_new = df.copy()
         df_new.loc[:, "date"] = pd.to_datetime(df_new.loc[:, "date"])
         df_new.loc[:, "month"] = pd.to_datetime(
@@ -37,7 +38,7 @@ class GraphGenerator:
         )
         # extract memos for hover text of monthly chart
         df_new = self._add_expense_memo_summary(df_new, df_ref, "month")
-        self.log.info("end 'generate_monthly_df' method")
+        log.info("end 'generate_monthly_df' method")
         return df_new
 
     def _add_expense_memo_summary(
@@ -335,10 +336,10 @@ class GraphGenerator:
         """
         累積折れ線グラフを生成
         """
-        self.log.info("start 'generate_daily_chart' method")
+        log.info("start 'generate_daily_chart' method")
         df = df_org.copy()
         if df.empty:
-            self.log.info("DataFrame is empty, skipping graph generation.")
+            log.info("DataFrame is empty, skipping graph generation.")
             return ""
 
         today = pd.Timestamp(dt.date.today())
@@ -450,7 +451,7 @@ class GraphGenerator:
             ),
         )
         graph_html = f'<div style="-webkit-tap-highlight-color: transparent;">{graph_html}</div>'
-        self.log.info("end 'generate_daily_chart' method")
+        log.info("end 'generate_daily_chart' method")
         return graph_html
 
     def generate_pie_chart(
@@ -462,9 +463,9 @@ class GraphGenerator:
         """
         円グラフを生成
         """
-        self.log.info("start 'generate_pie_chart' method")
+        log.info("start 'generate_pie_chart' method")
         if df.empty:
-            self.log.info("DataFrame is empty, skipping graph generation.")
+            log.info("DataFrame is empty, skipping graph generation.")
             return ""
         df_pie = df.copy()
         df_pie = df_pie.loc[
@@ -510,7 +511,7 @@ class GraphGenerator:
                 displayModeBar=False,
             ),
         )
-        self.log.info("end 'generate_pie_chart' method")
+        log.info("end 'generate_pie_chart' method")
         return graph_html
 
     def generate_bar_chart(
@@ -524,9 +525,9 @@ class GraphGenerator:
         """
         月別の棒グラフを生成
         """
-        self.log.info("start 'generate_bar_chart' method")
+        log.info("start 'generate_bar_chart' method")
         if df.empty:
-            self.log.info("DataFrame is empty, skipping graph generation.")
+            log.info("DataFrame is empty, skipping graph generation.")
             return ""
         df_graph = df.copy()
         for i, r in df_graph.iterrows():
@@ -572,5 +573,116 @@ class GraphGenerator:
                 displayModeBar=False,
             ),
         )
-        self.log.info("end 'generate_bar_chart' method")
+        log.info("end 'generate_bar_chart' method")
+        return graph_html
+
+    def generate_asset_pie_chart(
+        self,
+        df: pd.DataFrame,
+        theme: str = "light",
+        include_plotlyjs: bool = True,
+    ) -> str:
+        """
+        ポートフォリオの円グラフを生成
+        """
+        log.info("start 'generate_asset_pie_chart' method")
+        if df.empty:
+            log.info("DataFrame is empty, skipping graph generation.")
+            return ""
+        df_pie = df.copy()
+        total = int(df_pie["valuation"].sum())
+        log.debug(f"total: {total}")
+        fig = px.pie(
+            df_pie,
+            names="ticker",
+            values="valuation",
+            color="ticker",
+            title="資産内訳",
+            category_orders={"ticker": df_pie["ticker"].to_list()},
+            color_discrete_map=self.graph_color,
+            hole=0.5,
+        )
+        fig.update_traces(
+            texttemplate="%{label}<br>%{percent}",
+            hovertemplate="%{label}<br>¥%{value:,.0f}<br>(%{percent})",
+            textfont=dict(size=12),
+            textposition="outside",
+            insidetextorientation="horizontal",
+            showlegend=False,
+        )
+        fig.add_annotation(
+            text=f"合計<br>¥{total: ,}",
+            x=0.5,
+            y=0.5,
+            font_size=16,
+            showarrow=False,
+            font=dict(
+                color="#ffffff" if theme == "dark" else "#000000",
+                size=20,
+                weight="bold",
+            ),
+        )
+        self._update_layout(fig, theme)
+        graph_html = fig.to_html(
+            full_html=False,
+            include_plotlyjs=include_plotlyjs,
+            config=dict(
+                responsive=True,
+                displayModeBar=False,
+            ),
+        )
+        log.info("end 'generate_asset_pie_chart' method")
+        return graph_html
+
+    def generate_asset_waterfall_chart(
+        self,
+        df: pd.DataFrame,
+        theme: str = "light",
+        include_plotlyjs: bool = True,
+    ) -> str:
+        """
+        銘柄別の含み益を表すウォーターフォールチャートを生成
+        """
+        log.info("start 'generate_asset_waterfall_chart' method")
+        total = df["profit"].sum()
+        fig = go.Figure(
+            go.Waterfall(
+                orientation="v",
+                x=df["ticker"].to_list() + ["合計"],
+                y=df["profit"].to_list() + [0],
+                measure=["relative"] * len(df) + ["total"],
+                increasing=dict(marker=dict(color="#6688dd")),
+                decreasing=dict(marker=dict(color="#dd3333")),
+                totals=dict(marker=dict(color="#999999")),
+                connector=dict(
+                    line=dict(
+                        color="#ffffff" if theme == "dark" else "#000000",
+                        width=0.2,
+                        dash="dot",
+                    )
+                ),
+                text=[
+                    f"{r['ticker']}<br>{'+' if r['profit'] >= 0 else '-'}¥{abs(r['profit']):,.0f}"
+                    for _, r in df.iterrows()
+                ]
+                + [f"合計<br>{'+' if total >= 0 else '-'}¥{abs(total):,.0f}"],
+                hoverinfo="text",
+            )
+        )
+        self._update_layout(fig, theme)
+        fig.update_layout(title="含み益 内訳", waterfallgap=0.2, height=400)
+        fig.update_traces(
+            textfont=dict(size=14),
+            textposition="auto",
+            textangle=0,
+        )
+        graph_html = fig.to_html(
+            full_html=False,
+            include_plotlyjs=include_plotlyjs,
+            config=dict(
+                responsive=True,
+                displayModeBar=False,
+            ),
+        )
+        log.info("end 'generate_asset_waterfall_chart' method")
         return graph_html

@@ -2,12 +2,14 @@ import re
 import os
 import json
 import logging
+import datetime as dt
 
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 
 from .server_tools import ServerTools
 from ..core.expense import get_fiscal_year
+from ..core.asset_manager import AssetManager
 from ..core.ocr import Ocr, get_latest_screenshot
 from ..core.gspread_wrapper import GspreadHandler
 
@@ -16,6 +18,7 @@ log: logging.Logger = logging.getLogger("expense")
 gspread_handler: GspreadHandler = GspreadHandler(
     f"CF ({get_fiscal_year()}年度)"
 )
+asset_manager: AssetManager = AssetManager()
 
 
 @app.get("/manifest.json")
@@ -65,6 +68,26 @@ def asset_management(
     """
     log.info("start 'asset_management' method")
     server_tools: ServerTools = ServerTools(app, gspread_handler)
+    df_summary = asset_manager.get_header_data()
+    df_items = asset_manager.get_table_data()
+    summary = df_summary.iloc[0].to_dict()
+    summary["total"] = f"¥ {df_items['valuation'].sum():,.0f}"
+    summary["change"] = (
+        f" {'+' if summary['change_jpy'] >= 0 else '-'} ¥ {abs(summary['change_jpy']):,.0f}"
+        + f" ( {'+' if summary['change_pct'] >= 0 else '-'} {abs(summary['change_pct']):,.2f}% )"
+    )
+    summary["usdjpy"] = f"¥ {summary['usdjpy']:,.2f}"
+    items = df_items.to_dict(orient="records")
+    theme = request.cookies.get("theme", "light")
+    graph_html = server_tools.graph_generator.generate_asset_pie_chart(
+        df_items,
+        theme=theme,
+        include_plotlyjs=True,
+    )
+    graph_html += "<hr>" if graph_html else ""
+    graph_html += server_tools.graph_generator.generate_asset_waterfall_chart(
+        df_items, theme=theme, include_plotlyjs=False
+    )
     log.info("end 'asset_management' method")
     return server_tools.templates.TemplateResponse(
         "asset_management.j2",
@@ -74,6 +97,11 @@ def asset_management(
             "msg": msg,
             "info": info,
             "icons": server_tools.icons,
+            "gspread_url": asset_manager.get_spreadsheet_url(),
+            "today": dt.datetime.today(),
+            "asset_summary": summary,
+            "asset_items": items,
+            "graph_html": graph_html,
         },
     )
 

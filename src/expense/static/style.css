@@ -640,3 +640,51 @@ tr:nth-child(even) {
     font-size: 0.9rem;
   }
 }
+
+/* 資産管理 */
+.asset-color-up {
+  color: #dd3333;
+}
+
+.asset-color-down {
+  color: #2233ff;
+}
+
+.dark .asset-color-up {
+  color: #ff3333;
+}
+
+.dark .asset-color-down {
+  color: #66aaff;
+}
+
+.asset-color-up:after {
+  content: "📈";
+}
+
+.asset-color-down:after {
+  content: "📉";
+}
+
+.asset-summary-list {
+  font-size: 0.95rem;
+  margin-left: 10px;
+}
+
+.asset-summary-content {
+  display: flex;
+  justify-content: space-between;
+}
+
+.asset-summary-display {
+  font-size: 2.5rem;
+  text-align: right;
+  margin-right: 10px;
+  font-weight: bold;
+}
+
+.asset-summary-details {
+  font-size: 0.8rem;
+  text-align: right;
+  margin-right: 10px;
+}
