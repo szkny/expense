@@ -683,11 +683,12 @@ class GraphGenerator:
                 hoverinfo="text",
             )
         )
+        fig.update_xaxes(showline=False, showticklabels=False, showgrid=False)
         self._update_layout(fig, theme)
         fig.update_layout(title="含み益 内訳", waterfallgap=0.2, height=400)
         fig.update_traces(
             textfont=dict(size=14),
-            textposition="auto",
+            textposition="outside",
             textangle=0,
             cliponaxis=False,
         )
