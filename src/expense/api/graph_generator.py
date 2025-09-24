@@ -591,7 +591,6 @@ class GraphGenerator:
             return ""
         df_pie = df.copy()
         total = int(df_pie["valuation"].sum())
-        log.debug(f"total: {total}")
         fig = px.pie(
             df_pie,
             names="ticker",
@@ -644,16 +643,31 @@ class GraphGenerator:
         銘柄別の含み益を表すウォーターフォールチャートを生成
         """
         log.info("start 'generate_asset_waterfall_chart' method")
-        total = df["profit"].sum()
+        df_graph = df.copy()
+        idx = df_graph[df_graph["ticker"].str.contains("現金")].index.to_list()
+        df_graph.drop(idx, inplace=True)
+        total = df_graph["profit"].sum()
         fig = go.Figure(
             go.Waterfall(
                 orientation="v",
-                x=df["ticker"].to_list() + ["合計"],
-                y=df["profit"].to_list() + [0],
-                measure=["relative"] * len(df) + ["total"],
-                increasing=dict(marker=dict(color="#6688dd")),
-                decreasing=dict(marker=dict(color="#dd3333")),
-                totals=dict(marker=dict(color="#999999")),
+                x=df_graph["ticker"].to_list() + ["合計"],
+                y=df_graph["profit"].to_list() + [0],
+                measure=["relative"] * len(df_graph) + ["total"],
+                increasing=dict(
+                    marker=dict(
+                        color="#4466bb" if theme == "dark" else "#6688dd"
+                    )
+                ),
+                decreasing=dict(
+                    marker=dict(
+                        color="#bb3333" if theme == "dark" else "#dd3333"
+                    )
+                ),
+                totals=dict(
+                    marker=dict(
+                        color="#666666" if theme == "dark" else "#bbbbbb"
+                    )
+                ),
                 connector=dict(
                     line=dict(
                         color="#ffffff" if theme == "dark" else "#000000",
@@ -663,7 +677,7 @@ class GraphGenerator:
                 ),
                 text=[
                     f"{r['ticker']}<br>{'+' if r['profit'] >= 0 else '-'}¥{abs(r['profit']):,.0f}"
-                    for _, r in df.iterrows()
+                    for _, r in df_graph.iterrows()
                 ]
                 + [f"合計<br>{'+' if total >= 0 else '-'}¥{abs(total):,.0f}"],
                 hoverinfo="text",
@@ -675,6 +689,7 @@ class GraphGenerator:
             textfont=dict(size=14),
             textposition="auto",
             textangle=0,
+            cliponaxis=False,
         )
         graph_html = fig.to_html(
             full_html=False,
