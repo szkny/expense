@@ -647,11 +647,13 @@ class GraphGenerator:
         idx = df_graph[df_graph["ticker"].str.contains("現金")].index.to_list()
         df_graph.drop(idx, inplace=True)
         total = df_graph["profit"].sum()
+        x = df_graph["ticker"].to_list() + ["合計"]
+        y = df_graph["profit"].to_list() + [0]
         fig = go.Figure(
             go.Waterfall(
                 orientation="v",
-                x=df_graph["ticker"].to_list() + ["合計"],
-                y=df_graph["profit"].to_list() + [0],
+                x=x,
+                y=y,
                 measure=["relative"] * len(df_graph) + ["total"],
                 increasing=dict(
                     marker=dict(
@@ -680,18 +682,23 @@ class GraphGenerator:
                     for _, r in df_graph.iterrows()
                 ]
                 + [f"合計<br>{'+' if total >= 0 else '-'}¥{abs(total):,.0f}"],
+                textposition="none",
                 hoverinfo="text",
             )
         )
+        for i, v in enumerate(y):
+            fig.add_annotation(
+                x=x[i],
+                y=sum(y[: i + 1]),
+                text=f"{x[i]}<br>{'+' if v >= 0 else '-'}¥{abs(v):,.0f}",
+                showarrow=False,
+                font=dict(
+                    size=8, color="#ffffff" if theme == "dark" else "#000000"
+                ),
+            )
         fig.update_xaxes(showline=False, showticklabels=False, showgrid=False)
         self._update_layout(fig, theme)
         fig.update_layout(title="含み益 内訳", waterfallgap=0.4, height=300)
-        fig.update_traces(
-            textfont=dict(size=14),
-            textposition="outside",
-            textangle=0,
-            cliponaxis=False,
-        )
         graph_html = fig.to_html(
             full_html=False,
             include_plotlyjs=include_plotlyjs,
