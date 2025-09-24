@@ -1,7 +1,7 @@
 if (localStorage.getItem("theme") === "dark")
   document.documentElement.classList.add("dark");
 
-(function () {
+(function() {
   function preloadCollapsedOrOpen(key) {
     if (!key) return;
     document.documentElement.classList.add(
@@ -13,4 +13,6 @@ if (localStorage.getItem("theme") === "dark")
   preloadCollapsedOrOpen("ocr");
   preloadCollapsedOrOpen("record");
   preloadCollapsedOrOpen("report");
+  preloadCollapsedOrOpen("asset-record");
+  preloadCollapsedOrOpen("asset-report");
 })();

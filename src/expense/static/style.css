@@ -310,7 +310,9 @@ img.screenshot {
 /* 折りたたみ関連 */
 #ocr-section,
 #record-section,
-#report-section {
+#report-section,
+#asset-record-section,
+#asset-report-section {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -318,7 +320,9 @@ img.screenshot {
 
 #ocr-container,
 #record-container,
-#report-container {
+#report-container,
+#asset-record-container,
+#asset-report-container {
   max-height: 0;
   overflow: hidden;
   opacity: 0;
@@ -329,14 +333,18 @@ img.screenshot {
 
 .ocr-open #ocr-container,
 .record-open #record-container,
-.report-open #report-container {
+.report-open #report-container,
+.asset-record-open #asset-record-container,
+.asset-report-open #asset-report-container {
   max-height: 10000px;
   opacity: 1;
 }
 
 .ocr-collapsed #ocr-container,
 .record-collapsed #record-container,
-.report-collapsed #report-container {
+.report-collapsed #report-container,
+.asset-record-collapsed #asset-record-container,
+.asset-report-collapsed #asset-report-container {
   max-height: 0;
   overflow: hidden;
   opacity: 0;
@@ -347,7 +355,9 @@ img.screenshot {
 
 #ocr-toggle,
 #record-toggle,
-#report-toggle {
+#report-toggle,
+#asset-record-toggle,
+#asset-report-toggle {
   background: transparent;
   color: #97a1b1;
   cursor: pointer;
@@ -357,7 +367,9 @@ img.screenshot {
 
 #ocr-toggle::after,
 #record-toggle::after,
-#report-toggle::after {
+#report-toggle::after,
+#asset-record-toggle::after,
+#asset-report-toggle::after {
   position: absolute;
   content: "▲";
   display: inline-block;
@@ -367,7 +379,9 @@ img.screenshot {
 
 .ocr-collapsed #ocr-toggle::after,
 .record-collapsed #record-toggle::after,
-.report-collapsed #report-toggle::after {
+.report-collapsed #report-toggle::after,
+.asset-record-collapsed #asset-record-toggle::after,
+.asset-report-collapsed #asset-report-toggle::after {
   content: "▼";
 }
 
@@ -678,9 +692,16 @@ tr:nth-child(even) {
 
 .asset-summary-display {
   font-size: 2.5rem;
+  font-weight: bold;
   text-align: right;
   margin-right: 10px;
+}
+
+.asset-summary-display-sub {
+  font-size: 1.5rem;
   font-weight: bold;
+  text-align: right;
+  margin-right: 10px;
 }
 
 .asset-summary-details {

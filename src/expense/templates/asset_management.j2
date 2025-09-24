@@ -33,11 +33,11 @@
     {% endif %}
 
     <div class="card">
-      <h3 id="report-section">
+      <h3 id="asset-report-section">
         <span> {{ icons.get("asset_portfolio", "📊") }} ポートフォリオ </span>
-        <span id="report-toggle"></span>
+        <span id="asset-report-toggle"></span>
       </h3>
-      <div id="report-container">
+      <div id="asset-report-container">
         <div class="asset-summary-list">
           <div class="asset-summary-content">
             <span> 資産総額 </span>
@@ -57,7 +57,7 @@
           <br>
           <div class="asset-summary-content">
             <span> 為替レート </span>
-            <span class="asset-summary-display"> {{asset_summary.usdjpy}} </span>
+            <span class="asset-summary-display-sub"> {{asset_summary.usdjpy}} </span>
           </div>
         </div>
         {% if graph_html %}
@@ -70,12 +70,12 @@
     </div>
 
     <div class="card">
-      <h3 id="record-section">
+      <h3 id="asset-record-section">
         <span> {{ icons.get("asset_list", "📝") }} 資産一覧 </span>
-        <span id="record-toggle"></span>
+        <span id="asset-record-toggle"></span>
       </h3>
       <a href="{{ gspread_url }}" class="link-spread"> {{ icons.get("link", "🔗") }} スプレッドシートを開く </a>
-      <div id="record-container">
+      <div id="asset-record-container">
         <div class="search-wrapper">
           <input type="text" id="search-input" placeholder="{{ icons.get('search', '🔍') }} 資産をフィルタリング" onkeyup="filterTable()" />
           <button id="clear-search" type="button">✕</button>

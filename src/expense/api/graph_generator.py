@@ -685,7 +685,7 @@ class GraphGenerator:
         )
         fig.update_xaxes(showline=False, showticklabels=False, showgrid=False)
         self._update_layout(fig, theme)
-        fig.update_layout(title="含み益 内訳", waterfallgap=0.2, height=400)
+        fig.update_layout(title="含み益 内訳", waterfallgap=0.4, height=300)
         fig.update_traces(
             textfont=dict(size=14),
             textposition="outside",

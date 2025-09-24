@@ -100,7 +100,13 @@ document.addEventListener("DOMContentLoaded", () => {
   setupCollapsible("ocr");
   setupCollapsible("record");
   setupCollapsible("report", () => {
-    // グラフをリサイズ
+    requestAnimationFrame(() => {
+      const graphs = document.querySelectorAll(".plotly-graph-div");
+      graphs.forEach((g) => Plotly.Plots.resize(g));
+    });
+  });
+  setupCollapsible("asset-record");
+  setupCollapsible("asset-report", () => {
     requestAnimationFrame(() => {
       const graphs = document.querySelectorAll(".plotly-graph-div");
       graphs.forEach((g) => Plotly.Plots.resize(g));
