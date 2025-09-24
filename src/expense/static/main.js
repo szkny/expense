@@ -8,65 +8,76 @@ document.addEventListener("DOMContentLoaded", () => {
 // 経費タイプ選択に応じた入力欄の表示・非表示
 (function() {
   const typeSelect = document.getElementById("expense-type");
-  const amountInput = document.getElementById("expense-amount");
-  const memoInput = document.getElementById("expense-memo");
-  typeSelect.addEventListener("change", function() {
-    if (this.value.includes("/")) {
-      amountInput.style.display = "none";
-      memoInput.style.display = "none";
-      amountInput.required = false;
-    } else {
-      amountInput.style.display = "block";
-      memoInput.style.display = "block";
-      amountInput.required = true;
-    }
-  });
+  if (typeSelect) {
+    const amountInput = document.getElementById("expense-amount");
+    const memoInput = document.getElementById("expense-memo");
+    typeSelect.addEventListener("change", function() {
+      if (this.value.includes("/")) {
+        amountInput.style.display = "none";
+        memoInput.style.display = "none";
+        amountInput.required = false;
+      } else {
+        amountInput.style.display = "block";
+        memoInput.style.display = "block";
+        amountInput.required = true;
+      }
+    });
+  }
 })();
 
 // フォーム送信時にローディング表示
 (function() {
-  document.querySelectorAll("form").forEach((form) => {
-    form.addEventListener("submit", () => {
-      document.getElementById("loader").style.display = "flex";
+  const forms = document.querySelectorAll("form");
+  const loader = document.getElementById("loader");
+  if (forms.length > 0 && loader) {
+    forms.forEach((form) => {
+      form.addEventListener("submit", () => {
+        loader.style.display = "flex";
+      });
     });
-  });
+  }
 })();
 
 // テーマ切り替え処理
 (function() {
-  document.getElementById("theme-toggle").addEventListener("click", () => {
-    const isDark = document.documentElement.classList.toggle("dark");
-    const newTheme = isDark ? "dark" : "light";
-    localStorage.setItem("theme", newTheme);
-    document.cookie = `theme=${newTheme};path=/;max-age=31536000`;
-    location.reload();
-  });
+  const themeToggle = document.getElementById("theme-toggle");
+  if (themeToggle) {
+    themeToggle.addEventListener("click", () => {
+      const isDark = document.documentElement.classList.toggle("dark");
+      const newTheme = isDark ? "dark" : "light";
+      localStorage.setItem("theme", newTheme);
+      document.cookie = `theme=${newTheme};path=/;max-age=31536000`;
+      location.reload();
+    });
+  }
 })();
 
 // スクショの拡大・縮小動作
 (function() {
   const screenshot = document.getElementById("screenshot");
   const overlay = document.getElementById("img-overlay");
-  screenshot.addEventListener("click", () => {
-    overlay.innerHTML = "";
-    const zoomedImg = screenshot.cloneNode();
-    overlay.appendChild(zoomedImg);
-    requestAnimationFrame(() => {
-      overlay.classList.add("show");
+  if (screenshot && overlay) {
+    screenshot.addEventListener("click", () => {
+      overlay.innerHTML = "";
+      const zoomedImg = screenshot.cloneNode();
+      overlay.appendChild(zoomedImg);
+      requestAnimationFrame(() => {
+        overlay.classList.add("show");
+      });
     });
-  });
-  overlay.addEventListener("click", () => {
-    overlay.classList.remove("show");
-    overlay.addEventListener(
-      "transitionend",
-      () => {
-        if (!overlay.classList.contains("show")) {
-          overlay.innerHTML = "";
-        }
-      },
-      { once: true },
-    );
-  });
+    overlay.addEventListener("click", () => {
+      overlay.classList.remove("show");
+      overlay.addEventListener(
+        "transitionend",
+        () => {
+          if (!overlay.classList.contains("show")) {
+            overlay.innerHTML = "";
+          }
+        },
+        { once: true },
+      );
+    });
+  }
 })();
 
 // 折りたたみ処理
@@ -149,55 +160,87 @@ function fuzzyMatch(pattern, text) {
 }
 // 検索入力に応じてテーブルをフィルタリング
 function filterTable() {
-  const input = document.getElementById("search-input").value.trim();
+  const inputElement = document.getElementById("search-input");
+  if (!inputElement) return;
+  const input = inputElement.value.trim();
   const table = document.querySelector("table tbody");
+  if (!table) return;
   const rows = table.getElementsByTagName("tr");
   let total = 0;
   let n_match = 0;
+  // ヘッダーをチェックしてテーブルの種類を判別
+  const headers = Array.from(document.querySelectorAll("thead th")).map(
+    (th) => th.textContent,
+  );
+  const isAssetTable = headers.includes("銘柄");
   for (let i = 0; i < rows.length; i++) {
     const cells = rows[i].getElementsByTagName("td");
-    if (cells.length < 4) continue;
-    const date = cells[0].textContent || "";
-    const expenseType = cells[1].textContent || "";
-    const memo = cells[3].textContent || "";
-    const text = date + " " + expenseType + " " + memo;
+    let text = "";
+    if (isAssetTable) {
+      // 資産テーブルの場合：銘柄(1列目)を検索対象にする
+      if (cells.length > 0) {
+        text = cells[0].textContent || "";
+      }
+    } else {
+      // 経費テーブルの場合
+      if (cells.length < 4) continue;
+      const date = cells[0].textContent || "";
+      const expenseType = cells[1].textContent || "";
+      const memo = cells[3].textContent || "";
+      text = date + " " + expenseType + " " + memo;
+    }
     const score = fuzzyMatch(input, text);
     if (!input || score > 0) {
       rows[i].style.display = "";
-      // 金額を数値化して加算
-      const amountText = cells[2].textContent.replace(/[^\d]/g, "");
-      total += parseInt(amountText, 10) || 0;
-      n_match += 1;
+      if (!isAssetTable) {
+        // 経費テーブルの場合のみ合計金額を計算
+        const amountText = cells[2].textContent.replace(/[^\d]/g, "");
+        total += parseInt(amountText, 10) || 0;
+        n_match += 1;
+      }
     } else {
       rows[i].style.display = "none";
     }
   }
-  // 合計を表示
-  totalAmount = document.getElementById("total-amount");
-  if (input && total) {
-    totalAmount.textContent = `合計: ¥${total.toLocaleString()}  (${n_match}件)`;
-    totalAmount.style.display = "block";
-  } else {
-    totalAmount.textContent = "";
-    totalAmount.style.display = "none";
+  // 合計金額の表示は経費テーブルの場合のみ
+  if (!isAssetTable) {
+    const totalAmount = document.getElementById("total-amount");
+    if (totalAmount) {
+      if (input && total) {
+        totalAmount.textContent = `合計: ¥${total.toLocaleString()}  (${n_match}件)`;
+        totalAmount.style.display = "block";
+      } else {
+        totalAmount.textContent = "";
+        totalAmount.style.display = "none";
+      }
+    }
   }
-  document.getElementById("clear-search").style.display = "block";
+  const clearButton = document.getElementById("clear-search");
+  if (clearButton) {
+    clearButton.style.display = input ? "block" : "none";
+  }
 }
 
 // 検索入力窓をクリア
 (function() {
-  document.getElementById("clear-search").addEventListener("click", () => {
-    const input = document.getElementById("search-input");
-    input.value = "";
-    filterTable();
-    document.getElementById("clear-search").style.display = "none";
-  });
+  const clearButton = document.getElementById("clear-search");
+  if (clearButton) {
+    clearButton.addEventListener("click", () => {
+      const input = document.getElementById("search-input");
+      if (input) {
+        input.value = "";
+        filterTable();
+        clearButton.style.display = "none";
+      }
+    });
+  }
 })();
 
 // レコード長押し処理
 (function() {
   document.addEventListener("DOMContentLoaded", () => {
     const overlay = document.getElementById("confirmation-overlay");
+    if (!overlay) return; // このページに機能がなければ何もしない
     const dialog = document.getElementById("confirmation-dialog");
     const deleteDate = document.getElementById("delete-record-date");
     const deleteType = document.getElementById("delete-record-type");
@@ -252,16 +295,17 @@ function filterTable() {
     });
 
     // 閉じるボタンをクリックして確認ダイアログを閉じる
-    document
-      .getElementById("confirmation-close-btn")
-      .addEventListener("click", () => {
+    const closeBtn = document.getElementById("confirmation-close-btn");
+    if (closeBtn) {
+      closeBtn.addEventListener("click", () => {
         overlay.style.display = "none";
       });
+    }
 
     // オーバーレイをクリックしたら閉じる
     overlay.addEventListener("click", function(e) {
       // クリック対象がダイアログ自身ではない場合のみ閉じる
-      if (!dialog.contains(e.target)) {
+      if (dialog && !dialog.contains(e.target)) {
         overlay.style.display = "none";
       }
     });
@@ -272,41 +316,46 @@ function filterTable() {
 (function() {
   const menuBtn = document.getElementById("hamburger-menu-btn");
   const menu = document.getElementById("menu-container");
-  const themeBtn = document.getElementById("theme-toggle");
-  const assetBtn = document.getElementById("asset-management-btn");
-  const homeBtn = document.getElementById("home-btn");
-  function closeMenu() {
-    menu.classList.remove("show");
-  }
-  themeBtn.addEventListener("click", closeMenu);
-  assetBtn.addEventListener("click", closeMenu);
-  homeBtn.addEventListener("click", closeMenu);
-  menuBtn.addEventListener("click", () => {
-    menu.classList.toggle("show");
-  });
-  // メニューの外側をクリックしたら閉じる
-  document.addEventListener("click", (e) => {
-    if (!menu.contains(e.target) && !menuBtn.contains(e.target)) {
+  if (menuBtn && menu) {
+    const themeBtn = document.getElementById("theme-toggle");
+    const assetBtn = document.getElementById("asset-management-btn");
+    const homeBtn = document.getElementById("home-btn");
+    function closeMenu() {
       menu.classList.remove("show");
     }
-  });
+    if (themeBtn) themeBtn.addEventListener("click", closeMenu);
+    if (assetBtn) assetBtn.addEventListener("click", closeMenu);
+    if (homeBtn) homeBtn.addEventListener("click", closeMenu);
+    menuBtn.addEventListener("click", () => {
+      menu.classList.toggle("show");
+    });
+    // メニューの外側をクリックしたら閉じる
+    document.addEventListener("click", (e) => {
+      if (!menu.contains(e.target) && !menuBtn.contains(e.target)) {
+        menu.classList.remove("show");
+      }
+    });
+  }
 })();
 
 // PWA インストール処理
 (function() {
-  // Service Worker 登録
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/static/service-worker.js");
+  const installBtn = document.getElementById("install-btn");
+  if (installBtn) {
+    // Service Worker 登録
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/static/service-worker.js");
+    }
+    // インストールイベント処理
+    let deferredPrompt;
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.style.display = "block";
+    });
+    installBtn.addEventListener("click", () => {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(() => (deferredPrompt = null));
+    });
   }
-  // インストールイベント処理
-  let deferredPrompt;
-  window.addEventListener("beforeinstallprompt", (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    document.getElementById("install-btn").style.display = "block";
-  });
-  document.getElementById("install-btn").addEventListener("click", () => {
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(() => (deferredPrompt = null));
-  });
 })();
