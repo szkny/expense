@@ -204,12 +204,14 @@ class ServerTools(Base):
             report_summary = self.generate_report_summary(df_records)
             # グラフを生成
             df_graph = self.graph_generator.generate_monthly_df(df_records)
-            graph_html = self.graph_generator.generate_daily_chart(
-                df_records, theme, include_plotlyjs=True
+            graph_html = self.graph_generator.generate_pie_chart(
+                df_graph, theme, include_plotlyjs=True
             )
             graph_html += "<hr>" if graph_html else ""
-            graph_html += self.graph_generator.generate_pie_chart(
-                df_graph, theme, include_plotlyjs=False if graph_html else True
+            graph_html += self.graph_generator.generate_daily_chart(
+                df_records,
+                theme,
+                include_plotlyjs=False if graph_html else True,
             )
             graph_html += "<hr>" if graph_html else ""
             graph_html += self.graph_generator.generate_bar_chart(

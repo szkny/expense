@@ -441,7 +441,7 @@ class GraphGenerator:
         )
         if processed_months and y_ranges:
             fig.update_layout(
-                title_text="変動費内訳 日別",
+                title_text="変動費内訳（日別）",
                 yaxis_range=y_ranges[0],
             )
 
@@ -539,6 +539,7 @@ class GraphGenerator:
             log.info("DataFrame is empty, skipping graph generation.")
             return ""
         df_graph = df.copy()
+        df_graph.query("expense_type in @self.variable_types", inplace=True)
         for i, r in df_graph.iterrows():
             if r["expense_amount"] >= label_amount_threshold:
                 df_graph.loc[i, "label"] = (
@@ -559,7 +560,7 @@ class GraphGenerator:
             y="expense_amount",
             color="expense_type",
             text="label",
-            title="支出内訳（月別）",
+            title="変動費内訳（月別）",
             hover_data=["expense_memo"],
             range_y=[0, None],
             category_orders={"expense_type": self.expense_types},
