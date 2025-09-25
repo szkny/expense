@@ -652,9 +652,9 @@ class GraphGenerator:
         df_graph = df.copy()
         idx = df_graph[df_graph["ticker"].str.contains("現金")].index.to_list()
         df_graph.drop(idx, inplace=True)
-        total = df_graph["profit"].sum()
         x = df_graph["ticker"].to_list() + ["合計"]
-        y = df_graph["profit"].to_list() + [0]
+        x = [s.replace("(", "<br>(") for s in x]
+        y = df_graph["profit"].to_list() + [df_graph["profit"].sum()]
         fig = go.Figure(
             go.Waterfall(
                 orientation="v",
@@ -684,18 +684,21 @@ class GraphGenerator:
                     )
                 ),
                 text=[
-                    f"{r['ticker']}<br>{'+' if r['profit'] >= 0 else '-'}¥{abs(r['profit']):,.0f}"
-                    for _, r in df_graph.iterrows()
-                ]
-                + [f"合計<br>{'+' if total >= 0 else '-'}¥{abs(total):,.0f}"],
+                    f"{x[i]}<br>{'+' if v >= 0 else '-'}¥{abs(v):,.0f}"
+                    for i, v in enumerate(y)
+                ],
                 textposition="none",
                 hoverinfo="text",
             )
         )
         for i, v in enumerate(y):
+            if i < len(y) - 1:
+                _y = sum(y[:i]) + y[i] // 2
+            else:
+                _y = y[-1] // 2
             fig.add_annotation(
                 x=x[i],
-                y=sum(y[: i + 1]),
+                y=_y,
                 text=f"{x[i]}<br>{'+' if v >= 0 else '-'}¥{abs(v):,.0f}",
                 showarrow=False,
                 font=dict(
