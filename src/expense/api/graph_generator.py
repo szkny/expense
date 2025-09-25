@@ -479,14 +479,20 @@ class GraphGenerator:
             values="expense_amount",
             color="expense_type",
             title=f"支出内訳（{month_str}）",
-            hover_data=["expense_memo"],
+            # NOTE: color引数で指定したラベルが、自動的にcustom_dataの末尾に
+            # 追加されてしまう仕様のため明示的に追加してcustom_dataを制御
+            # custom_data=["expense_memo"],
+            custom_data=["expense_type", "expense_memo"],
             category_orders={"expense_type": self.expense_types},
             color_discrete_map=self.graph_color,
             hole=0.4,
         )
         fig.update_traces(
             texttemplate="%{label}<br>¥%{value:,.0f}<br>(%{percent})",
-            hovertemplate="%{label}<br>¥%{value:,.0f}<br>%{customdata[0]}",
+            # NOTE: color引数で指定したラベルが、自動的にcustom_dataの末尾に追加され
+            # ラベルが２つ表示されてしまう仕様のため%{label}は削除
+            # hovertemplate="%{label}<br>¥%{value:,.0f}<br>%{customdata[0]}",
+            hovertemplate="¥%{value:,.0f},%{customdata[0]}",
             textfont=dict(size=14),
             textposition="auto",
             insidetextorientation="horizontal",
