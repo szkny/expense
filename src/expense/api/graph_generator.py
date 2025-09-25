@@ -564,7 +564,7 @@ class GraphGenerator:
         )
         fig.update_traces(
             texttemplate="%{text}",
-            hovertemplate="%{x|%-Y年%-m月}<br>¥%{value:,.0f}<br>%{customdata[0]}",
+            hovertemplate="%{x|%-Y年%-m月}<br>¥%{value:,.0f}%{customdata[0]}",
             textfont=dict(size=14),
             textposition="auto",
             textangle=0,
