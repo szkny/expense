@@ -13,10 +13,12 @@ class GraphGenerator:
     def __init__(
         self,
         expense_types: list[str],
+        variable_types: list[str],
         exclude_types: list[str],
         graph_config: dict[str, Any],
     ):
         self.expense_types = expense_types
+        self.variable_types = variable_types
         self.exclude_types = exclude_types
         self.graph_color = graph_config.get("color", {})
 
@@ -343,6 +345,7 @@ class GraphGenerator:
             return ""
 
         today = pd.Timestamp(dt.date.today())
+        df.query("expense_type in @self.variable_types", inplace=True)
         df["date"] = pd.to_datetime(df["date"])
         unique_months = sorted(
             df["date"].dt.to_period("M").unique(), reverse=True
@@ -438,7 +441,7 @@ class GraphGenerator:
         )
         if processed_months and y_ranges:
             fig.update_layout(
-                title_text="支出内訳 日別",
+                title_text="変動費内訳 日別",
                 yaxis_range=y_ranges[0],
             )
 

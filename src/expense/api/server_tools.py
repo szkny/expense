@@ -47,6 +47,7 @@ class ServerTools(Base):
 
         self.graph_generator = GraphGenerator(
             expense_types=self.expense_types,
+            variable_types=variable_types,
             exclude_types=self.exclude_types,
             graph_config=graph_config,
         )
