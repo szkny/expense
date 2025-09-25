@@ -64,7 +64,7 @@ class GraphGenerator:
                 .sum()
                 .reset_index()
             ).sort_values("expense_amount")
-            _add_memo = ""
+            _add_memo = "<br>"
             for memo in _data["expense_memo"].iloc[::-1]:
                 if memo in _add_memo:
                     continue
@@ -75,7 +75,7 @@ class GraphGenerator:
                     _add_memo += ", ⋯"
                     break
                 if len(memo) > 0:
-                    _add_memo += ",<br>" + memo if len(_add_memo) else memo
+                    _add_memo += ",<br>" + memo if _add_memo != "<br>" else memo
             df.loc[i, "expense_memo"] = _add_memo
         return df
 
@@ -292,7 +292,7 @@ class GraphGenerator:
         self, fig_bar: px.bar, fig_line: px.line, fig_predict: px.line
     ) -> None:
         fig_bar.update_traces(
-            hovertemplate="%{x|%-m月%-d日} ¥%{y:,.0f}<br>%{customdata[0]}",
+            hovertemplate="%{x|%-m月%-d日} ¥%{y:,.0f}%{customdata[0]}",
             textfont=dict(size=14),
         )
         fig_line.update_traces(
@@ -492,7 +492,7 @@ class GraphGenerator:
             # NOTE: color引数で指定したラベルが、自動的にcustom_dataの末尾に追加され
             # ラベルが２つ表示されてしまう仕様のため%{label}は削除
             # hovertemplate="%{label}<br>¥%{value:,.0f}<br>%{customdata[0]}",
-            hovertemplate="¥%{value:,.0f},%{customdata[0]}",
+            hovertemplate="¥%{value:,.0f} %{customdata[0]}",
             textfont=dict(size=14),
             textposition="auto",
             insidetextorientation="horizontal",
