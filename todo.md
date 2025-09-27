@@ -27,13 +27,14 @@
 - [x] ~~adapt to deficiencies of amount for instant registeration item~~
 - [x] ~~cardanalyse/improve processing time~~
   - [x] ~~desynchronization of toast and notification~~
-- [ ] add a feature of asset management
+- [x] add a feature of asset management
 - [ ] data migration from spreadsheet records
-- [ ] add feature of setting target of expenses
+- [ ] add a feature of setting target budget of expenses
+- [ ] add a feature of target assets
 - [ ] manage monthly subscription
 - [ ] assist user input of expense's memo using device GPS
 - [ ] add a feature of sorting cards in the Web UI
 - [ ] personalized analysis and insight / prediction report by LLM
-- [ ] add feature of validation for usage history of credit card
+- [ ] add a feature of validation for usage history of credit card
 - [ ] optimize performance time
 - [ ] add test scripts
