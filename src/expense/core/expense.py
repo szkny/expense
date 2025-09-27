@@ -439,9 +439,12 @@ class Expense(Base):
             log.debug(f"Target index: {target_idx}")
             target_row = ", ".join(df.loc[target_idx, columns].map(str))
             log.debug(f"Target expense: {target_row}")
-            df.loc[target_idx, "datetime"] = pd.Timestamp(
-                new_expense_date
-            ).strftime("%Y-%m-%dT%H:%M:%S.%f")
+            tar_dt = pd.Timestamp(df.loc[target_idx, "datetime"])
+            new_dt = pd.Timestamp(new_expense_date)
+            if tar_dt.date() != new_dt.date():
+                df.loc[target_idx, "datetime"] = new_dt.strftime(
+                    "%Y-%m-%dT%H:%M:%S.%f"
+                )
             df.loc[target_idx, "type"] = new_expense_type
             df.loc[target_idx, "memo"] = new_expense_memo
             df.loc[target_idx, "amount"] = new_expense_amount
