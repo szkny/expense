@@ -48,3 +48,23 @@ It features receipt scanning via OCR, a web-based user interface, and integratio
     ```bash
     make webui
     ```
+
+## Configuration
+
+The application's behavior can be customized through the `~/.config/expense/config.json` file.
+
+| Category     | Setting                  | Description                                                                     |
+| ------------ | ------------------------ | ------------------------------------------------------------------------------- |
+|              | `log_level`              | Sets the logging level (e.g., "DEBUG", "INFO").                                 |
+| `termux_api` | `toast`                  | Enable/disable Toast notifications on Termux.                                   |
+|              | `notify`                 | Enable/disable system notifications on Termux.                                  |
+| `web_ui`     | `icons`                  | Emojis used for various UI elements.                                            |
+|              | `graph.color`            | Colors for each expense category in the graphs.                                 |
+|              | `record_table.n_records` | Number of records to display in the history table.                              |
+| `expense`    | `icons`                  | Emojis for "Favorite," "Frequent," and "Recent" items.                          |
+|              | `expense_types`          | Categorization of income, fixed costs, and variable costs.                      |
+|              | `exclude_types`          | Expense types to exclude from summaries.                                        |
+|              | `favorites`              | Pre-defined templates for frequently registered expenses.                       |
+| `ocr`        | `tesseract_config`       | Command-line options for Tesseract OCR.                                         |
+|              | `regions`                | Pre-defined cropping areas for screenshots from specific apps (e.g., "PayPay"). |
+|              | `normalize`              | Settings for correcting OCR results, such as similarity thresholds.             |
