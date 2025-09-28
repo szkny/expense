@@ -58,6 +58,8 @@ The application's behavior can be customized through the `~/.config/expense/conf
     <tr>
       <th>Category</th>
       <th>Setting</th>
+      <th>Type</th>
+      <th>Default</th>
       <th>Description</th>
     </tr>
   </thead>
@@ -65,59 +67,85 @@ The application's behavior can be customized through the `~/.config/expense/conf
     <tr>
       <td>(General)</td>
       <td><code>log_level</code></td>
-      <td>Sets the logging level (e.g., "DEBUG", "INFO").</td>
+      <td><code>string</code></td>
+      <td><code>"DEBUG"</code></td>
+      <td>Sets the logging level.</td>
     </tr>
     <tr>
       <td rowspan="2"><code>termux_api</code></td>
       <td><code>toast</code></td>
+      <td><code>boolean</code></td>
+      <td><code>true</code></td>
       <td>Enable/disable Toast notifications on Termux.</td>
     </tr>
     <tr>
       <td><code>notify</code></td>
+      <td><code>boolean</code></td>
+      <td><code>true</code></td>
       <td>Enable/disable system notifications on Termux.</td>
     </tr>
     <tr>
       <td rowspan="3"><code>web_ui</code></td>
       <td><code>icons</code></td>
+      <td><code>object</code></td>
+      <td><code>See config.json</code></td>
       <td>Emojis used for various UI elements.</td>
     </tr>
     <tr>
       <td><code>graph.color</code></td>
+      <td><code>object</code></td>
+      <td><code>See config.json</code></td>
       <td>Colors for each expense category in the graphs.</td>
     </tr>
     <tr>
       <td><code>record_table.n_records</code></td>
+      <td><code>number</code></td>
+      <td><code>500</code></td>
       <td>Number of records to display in the history table.</td>
     </tr>
     <tr>
       <td rowspan="4"><code>expense</code></td>
       <td><code>icons</code></td>
+      <td><code>object</code></td>
+      <td><code>See config.json</code></td>
       <td>Emojis for "Favorite," "Frequent," and "Recent" items.</td>
     </tr>
     <tr>
       <td><code>expense_types</code></td>
+      <td><code>object</code></td>
+      <td><code>See config.json</code></td>
       <td>Categorization of income, fixed costs, and variable costs.</td>
     </tr>
     <tr>
       <td><code>exclude_types</code></td>
+      <td><code>array</code></td>
+      <td><code>[]</code></td>
       <td>Expense types to exclude from summaries.</td>
     </tr>
     <tr>
       <td><code>favorites</code></td>
+      <td><code>array</code></td>
+      <td><code>See config.json</code></td>
       <td>Pre-defined templates for frequently registered expenses.</td>
     </tr>
     <tr>
       <td rowspan="3"><code>ocr</code></td>
       <td><code>tesseract_config</code></td>
+      <td><code>string</code></td>
+      <td><code>"--psm 6 --oem 3"</code></td>
       <td>Command-line options for Tesseract OCR.</td>
     </tr>
     <tr>
       <td><code>regions</code></td>
-      <td>Pre-defined cropping areas for screenshots from specific apps (e.g., "PayPay").</td>
+      <td><code>object</code></td>
+      <td><code>See config.json</code></td>
+      <td>Pre-defined cropping areas for screenshots from specific apps.</td>
     </tr>
     <tr>
       <td><code>normalize</code></td>
-      <td>Settings for correcting OCR results, such as similarity thresholds.</td>
+      <td><code>object</code></td>
+      <td><code>See config.json</code></td>
+      <td>Settings for correcting OCR results.</td>
     </tr>
   </tbody>
 </table>
