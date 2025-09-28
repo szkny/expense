@@ -53,18 +53,71 @@ It features receipt scanning via OCR, a web-based user interface, and integratio
 
 The application's behavior can be customized through the `~/.config/expense/config.json` file.
 
-| Category     | Setting                  | Description                                                                     |
-| ------------ | ------------------------ | ------------------------------------------------------------------------------- |
-|              | `log_level`              | Sets the logging level (e.g., "DEBUG", "INFO").                                 |
-| `termux_api` | `toast`                  | Enable/disable Toast notifications on Termux.                                   |
-|              | `notify`                 | Enable/disable system notifications on Termux.                                  |
-| `web_ui`     | `icons`                  | Emojis used for various UI elements.                                            |
-|              | `graph.color`            | Colors for each expense category in the graphs.                                 |
-|              | `record_table.n_records` | Number of records to display in the history table.                              |
-| `expense`    | `icons`                  | Emojis for "Favorite," "Frequent," and "Recent" items.                          |
-|              | `expense_types`          | Categorization of income, fixed costs, and variable costs.                      |
-|              | `exclude_types`          | Expense types to exclude from summaries.                                        |
-|              | `favorites`              | Pre-defined templates for frequently registered expenses.                       |
-| `ocr`        | `tesseract_config`       | Command-line options for Tesseract OCR.                                         |
-|              | `regions`                | Pre-defined cropping areas for screenshots from specific apps (e.g., "PayPay"). |
-|              | `normalize`              | Settings for correcting OCR results, such as similarity thresholds.             |
+<table>
+  <thead>
+    <tr>
+      <th>Category</th>
+      <th>Setting</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>(General)</td>
+      <td><code>log_level</code></td>
+      <td>Sets the logging level (e.g., "DEBUG", "INFO").</td>
+    </tr>
+    <tr>
+      <td rowspan="2"><code>termux_api</code></td>
+      <td><code>toast</code></td>
+      <td>Enable/disable Toast notifications on Termux.</td>
+    </tr>
+    <tr>
+      <td><code>notify</code></td>
+      <td>Enable/disable system notifications on Termux.</td>
+    </tr>
+    <tr>
+      <td rowspan="3"><code>web_ui</code></td>
+      <td><code>icons</code></td>
+      <td>Emojis used for various UI elements.</td>
+    </tr>
+    <tr>
+      <td><code>graph.color</code></td>
+      <td>Colors for each expense category in the graphs.</td>
+    </tr>
+    <tr>
+      <td><code>record_table.n_records</code></td>
+      <td>Number of records to display in the history table.</td>
+    </tr>
+    <tr>
+      <td rowspan="4"><code>expense</code></td>
+      <td><code>icons</code></td>
+      <td>Emojis for "Favorite," "Frequent," and "Recent" items.</td>
+    </tr>
+    <tr>
+      <td><code>expense_types</code></td>
+      <td>Categorization of income, fixed costs, and variable costs.</td>
+    </tr>
+    <tr>
+      <td><code>exclude_types</code></td>
+      <td>Expense types to exclude from summaries.</td>
+    </tr>
+    <tr>
+      <td><code>favorites</code></td>
+      <td>Pre-defined templates for frequently registered expenses.</td>
+    </tr>
+    <tr>
+      <td rowspan="3"><code>ocr</code></td>
+      <td><code>tesseract_config</code></td>
+      <td>Command-line options for Tesseract OCR.</td>
+    </tr>
+    <tr>
+      <td><code>regions</code></td>
+      <td>Pre-defined cropping areas for screenshots from specific apps (e.g., "PayPay").</td>
+    </tr>
+    <tr>
+      <td><code>normalize</code></td>
+      <td>Settings for correcting OCR results, such as similarity thresholds.</td>
+    </tr>
+  </tbody>
+</table>
