@@ -53,7 +53,9 @@
           <div class="asset-summary-details">
             <span> 前日比 </span>
             <span
-              {% if "+" in asset_summary.change %}
+              {% if "¥ 0" in asset_summary.change %}
+                class=""
+              {% elif "+" in asset_summary.change %}
                 class="asset-color-up"
               {% else %}
                 class="asset-color-down"
