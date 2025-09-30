@@ -308,6 +308,7 @@ img.screenshot {
 }
 
 /* 折りたたみ関連 */
+#register-section,
 #ocr-section,
 #record-section,
 #report-section,
@@ -318,6 +319,7 @@ img.screenshot {
   gap: 10px;
 }
 
+#register-container,
 #ocr-container,
 #record-container,
 #report-container,
@@ -331,6 +333,7 @@ img.screenshot {
     opacity 0.5s ease;
 }
 
+.register-open #register-container,
 .ocr-open #ocr-container,
 .record-open #record-container,
 .report-open #report-container,
@@ -340,6 +343,7 @@ img.screenshot {
   opacity: 1;
 }
 
+.register-collapsed #register-container,
 .ocr-collapsed #ocr-container,
 .record-collapsed #record-container,
 .report-collapsed #report-container,
@@ -353,6 +357,7 @@ img.screenshot {
     opacity 0.3s ease;
 }
 
+#register-toggle,
 #ocr-toggle,
 #record-toggle,
 #report-toggle,
@@ -365,6 +370,7 @@ img.screenshot {
   transition: background 0.2s;
 }
 
+#register-toggle::after,
 #ocr-toggle::after,
 #record-toggle::after,
 #report-toggle::after,
@@ -377,6 +383,7 @@ img.screenshot {
   margin-top: -6px;
 }
 
+.register-collapsed #register-toggle::after,
 .ocr-collapsed #ocr-toggle::after,
 .record-collapsed #record-toggle::after,
 .report-collapsed #report-toggle::after,
@@ -616,9 +623,12 @@ tr:nth-child(even) {
   color: #f3f4f6;
 }
 
+.dark #register-toggle,
 .dark #ocr-toggle,
 .dark #record-toggle,
-.dark #report-toggle {
+.dark #report-toggle,
+.dark #asset-record-toggle,
+.dark #asset-report-toggle {
   color: #61656b;
 }
 

@@ -108,6 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+  setupCollapsible("register");
   setupCollapsible("ocr");
   setupCollapsible("record");
   setupCollapsible("report", () => {

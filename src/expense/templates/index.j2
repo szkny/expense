@@ -40,34 +40,34 @@
 
     <div class="card">
       <form method="post" action="/register">
-        <h3> {{ icons.get("register", "🚀") }} 家計簿に登録する情報を入力</h3>
-
-        <input
-          type="date"
-          id="expense-date"
-          name="expense_date"
-          value="{{ expense_date or today }}"
-          min="{{ expense_date_range[0] }}"
-          max="{{ expense_date_range[1] }}"
-          required
-        />
-
-        <select id="expense-type" name="expense_type">
-          {% for item in items %}
-          <option value="{{ item }}">
-            {{ item }}
-          </option>
-          {% endfor %}
-        </select>
-
-        <input type="number" id="expense-amount" name="expense_amount" value=""
-          placeholder="{{ icons.get('input_amount', '💴') }} 金額を入力" {% if items | length and "/" in items[0] %} style="display: none;" {% else %} required
-          {% endif %} />
-
-        <input type="text" id="expense-memo" name="expense_memo" value="" placeholder="{{ icons.get('input_memo', '✏️') }} メモを入力"
-          {% if items | length and "/" in items[0] %} style="display: none;" {% endif %} />
-
-        <button type="submit" class="btn">＋ 登録</button>
+        <h3 id="register-section">
+          <span> {{ icons.get("register", "🚀") }} 家計簿に登録する情報を入力 </span>
+          <span id="register-toggle"></span>
+        </h3>
+        <div id="register-container">
+          <input
+            type="date"
+            id="expense-date"
+            name="expense_date"
+            value="{{ expense_date or today }}"
+            min="{{ expense_date_range[0] }}"
+            max="{{ expense_date_range[1] }}"
+            required
+          />
+          <select id="expense-type" name="expense_type">
+            {% for item in items %}
+            <option value="{{ item }}">
+              {{ item }}
+            </option>
+            {% endfor %}
+          </select>
+          <input type="number" id="expense-amount" name="expense_amount" value=""
+            placeholder="{{ icons.get('input_amount', '💴') }} 金額を入力" {% if items | length and "/" in items[0] %} style="display: none;" {% else %} required
+            {% endif %} />
+          <input type="text" id="expense-memo" name="expense_memo" value="" placeholder="{{ icons.get('input_memo', '✏️') }} メモを入力"
+            {% if items | length and "/" in items[0] %} style="display: none;" {% endif %} />
+          <button type="submit" class="btn">＋ 登録</button>
+        </div>
       </form>
     </div>
 

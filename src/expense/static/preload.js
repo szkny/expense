@@ -10,6 +10,7 @@ if (localStorage.getItem("theme") === "dark")
         : key + "-open",
     );
   }
+  preloadCollapsedOrOpen("register");
   preloadCollapsedOrOpen("ocr");
   preloadCollapsedOrOpen("record");
   preloadCollapsedOrOpen("report");
