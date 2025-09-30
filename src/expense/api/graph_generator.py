@@ -474,6 +474,9 @@ class GraphGenerator:
         df_pie = df_pie.loc[
             df_pie.loc[:, "month"] == dt.datetime.today().strftime("%Y-%m")
         ]
+        if df_pie.empty:
+            log.info("DataFrame (df_pie) is empty, skipping graph generation.")
+            return ""
         month_str = pd.Timestamp(df_pie.iloc[-1]["month"]).strftime("%Y年%-m月")
         total_amount = df_pie["expense_amount"].sum()
         fig = px.pie(
