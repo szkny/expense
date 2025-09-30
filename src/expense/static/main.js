@@ -82,23 +82,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // 折りたたみ処理
 (function() {
-  function setupCollapsible(key, onOpen) {
-    const sectionId = key + "-section";
-    const localVarId = key + "Collapsed";
-    const openClass = key + "-open";
-    const collapsedClass = key + "-collapsed";
-    const section = document.getElementById(sectionId);
-    if (!section) return;
-    section.addEventListener("click", () => {
-      const isCollapsed =
-        document.documentElement.classList.contains(collapsedClass);
+  const onOpenCallbacks = {
+    report: () => {
+      requestAnimationFrame(() => {
+        const graphs = document.querySelectorAll(".plotly-graph-div");
+        graphs.forEach((g) => Plotly.Plots.resize(g));
+      });
+    },
+    "asset-report": () => {
+      requestAnimationFrame(() => {
+        const graphs = document.querySelectorAll(".plotly-graph-div");
+        graphs.forEach((g) => Plotly.Plots.resize(g));
+      });
+    },
+  };
+
+  document.querySelectorAll(".collapsible-trigger").forEach(trigger => {
+    trigger.addEventListener("click", () => {
+      const key = trigger.dataset.key;
+      if (!key) return;
+
+      const openClass = key + "-open";
+      const collapsedClass = key + "-collapsed";
+      const localVarId = key + "Collapsed";
+      const isCollapsed = document.documentElement.classList.contains(collapsedClass);
+
       if (isCollapsed) {
         // 開く
         document.documentElement.classList.remove(collapsedClass);
         document.documentElement.classList.add(openClass);
         localStorage.setItem(localVarId, "false");
-        if (typeof onOpen === "function") {
-          onOpen();
+        if (onOpenCallbacks[key]) {
+          onOpenCallbacks[key]();
         }
       } else {
         // 閉じる
@@ -106,22 +121,6 @@ document.addEventListener("DOMContentLoaded", () => {
         document.documentElement.classList.add(collapsedClass);
         localStorage.setItem(localVarId, "true");
       }
-    });
-  }
-  setupCollapsible("register");
-  setupCollapsible("ocr");
-  setupCollapsible("record");
-  setupCollapsible("report", () => {
-    requestAnimationFrame(() => {
-      const graphs = document.querySelectorAll(".plotly-graph-div");
-      graphs.forEach((g) => Plotly.Plots.resize(g));
-    });
-  });
-  setupCollapsible("asset-record");
-  setupCollapsible("asset-report", () => {
-    requestAnimationFrame(() => {
-      const graphs = document.querySelectorAll(".plotly-graph-div");
-      graphs.forEach((g) => Plotly.Plots.resize(g));
     });
   });
 })();

@@ -39,11 +39,11 @@
     {% endif %}
 
     <div class="card">
-      <h3 id="asset-report-section">
+      <h3 class="collapsible-trigger" data-key="asset-report">
         <span> {{ icons.get("asset_portfolio", "📊") }} ポートフォリオ </span>
-        <span id="asset-report-toggle"></span>
+        <span class="collapsible-toggle"></span>
       </h3>
-      <div id="asset-report-container">
+      <div id="asset-report-container" class="collapsible-content">
         <div class="asset-summary-list">
           <div class="asset-summary-content">
             <span> 資産総額 </span>
@@ -78,12 +78,12 @@
     </div>
 
     <div class="card">
-      <h3 id="asset-record-section">
+      <h3 class="collapsible-trigger" data-key="asset-record">
         <span> {{ icons.get("asset_list", "📝") }} 資産一覧 </span>
-        <span id="asset-record-toggle"></span>
+        <span class="collapsible-toggle"></span>
       </h3>
       <a href="{{ gspread_url }}" class="link-spread"> {{ icons.get("link", "🔗") }} スプレッドシートを開く </a>
-      <div id="asset-record-container">
+      <div id="asset-record-container" class="collapsible-content">
         <div class="search-wrapper">
           <input type="text" id="search-input" placeholder="{{ icons.get('search', '🔍') }} 資産をフィルタリング" onkeyup="filterTable()" />
           <button id="clear-search" type="button">✕</button>

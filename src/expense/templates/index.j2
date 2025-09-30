@@ -40,11 +40,11 @@
 
     <div class="card">
       <form method="post" action="/register">
-        <h3 id="register-section">
+        <h3 class="collapsible-trigger" data-key="register">
           <span> {{ icons.get("register", "🚀") }} 家計簿に登録する情報を入力 </span>
-          <span id="register-toggle"></span>
+          <span class="collapsible-toggle"></span>
         </h3>
-        <div id="register-container">
+        <div id="register-container" class="collapsible-content">
           <input
             type="date"
             id="expense-date"
@@ -74,13 +74,13 @@
     {% if screenshot_name %}
     <div class="card">
       <form method="post" action="/ocr">
-        <h3 id="ocr-section">
+        <h3 class="collapsible-trigger" data-key="ocr">
           <span> {{ icons.get("ocr", "📷") }} QR決済の画像から支払情報を取得 </span>
-          <span id="ocr-toggle"></span>
+          <span class="collapsible-toggle"></span>
         </h3>
-        <div id="ocr-container">
+        <div id="ocr-container" class="collapsible-content">
           <div id="screenshot-name">
-            {{ icons.get("screenshot_name", "▶️") }} 対象画像 : {{ screenshot_name.split("/") | last }}
+            {{ icons.get("screenshot_name", "") }} 対象画像 : {{ screenshot_name.split("/") | last }}
           </div>
           <div id="img-overlay" class="overlay"></div>
           <img id="screenshot" class="screenshot" alt="{{ screenshot_name.split(" /") | last }}"
@@ -95,9 +95,9 @@
     {% endif %}
 
     <div class="card">
-      <h3 id="record-section">
+      <h3 class="collapsible-trigger" data-key="record">
         <span> {{ icons.get("record_table", "🧾") }} 直近の支出履歴 ({{n_records}}件) </span>
-        <span id="record-toggle"></span>
+        <span class="collapsible-toggle"></span>
       </h3>
       <div id="confirmation-overlay" class="overlay" style="display: none;">
         <div id="confirmation-dialog" class="confirm">
@@ -142,7 +142,7 @@
         </div>
       </div>
       <a href="{{ gspread_url }}" class="link-spread"> {{ icons.get("link", "🔗") }} スプレッドシートを開く </a>
-      <div id="record-container">
+      <div id="record-container" class="collapsible-content">
         <div class="search-wrapper">
           <input type="text" id="search-input" placeholder="{{ icons.get('search', '🔍') }} 履歴を検索" onkeyup="filterTable()" />
           <button id="clear-search" type="button">✕</button>
@@ -180,11 +180,11 @@
     </div>
 
     <div class="card">
-      <h3 id="report-section">
+      <h3 class="collapsible-trigger" data-key="report">
         <span> {{ icons.get("report", "📊") }} 支出レポート ({{today}}) </span>
-        <span id="report-toggle"></span>
+        <span class="collapsible-toggle"></span>
       </h3>
-      <div id="report-container">
+      <div id="report-container" class="collapsible-content">
         <div class="summary-list">
           <li> 本日の支出金額 : ¥{{ "{:,}".format(today_total) }} </li>
           <li> 今月の支出金額 : ¥{{ "{:,}".format(monthly_total) }} </li>
