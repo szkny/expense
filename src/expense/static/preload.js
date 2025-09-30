@@ -1,9 +1,16 @@
 if (localStorage.getItem("theme") === "dark")
   document.documentElement.classList.add("dark");
 
-(function() {
-  const keys = ["register", "ocr", "record", "report", "asset-record", "asset-report"];
-  keys.forEach(key => {
+(function () {
+  const keys = [
+    "register",
+    "ocr",
+    "record",
+    "report",
+    "asset-record",
+    "asset-report",
+  ];
+  keys.forEach((key) => {
     const isCollapsed = localStorage.getItem(key + "Collapsed");
     let shouldBeOpen;
     if (isCollapsed === null) {
