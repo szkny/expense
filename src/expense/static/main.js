@@ -5,6 +5,24 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+// メッセージの閉じるボタン
+(function () {
+  const closeBtn1 = document.getElementById("success-close-btn");
+  const closeBtn2 = document.getElementById("failed-close-btn");
+  const msg1 = document.getElementById("success-msg");
+  const msg2 = document.getElementById("failed-msg");
+  if (closeBtn1) {
+    closeBtn1.addEventListener("click", () => {
+      msg1.style.display = "none";
+    });
+  }
+  if (closeBtn2) {
+    closeBtn2.addEventListener("click", () => {
+      msg2.style.display = "none";
+    });
+  }
+})();
+
 // 経費タイプ選択に応じた入力欄の表示・非表示
 (function () {
   const typeSelect = document.getElementById("expense-type");

@@ -23,18 +23,20 @@
     <h1> {{ icons.get("title", "") }} Expense </h1>
 
     {% if status and msg %}
-    <div class="success">
+    <div id="success-msg" class="msg">
       {{ msg }}
     {% if info %}
       <p><strong> {{ info }} </strong></p>
     {% endif %}
+      <button id="success-close-btn" type="button" class="btn-close"> ✕ </button>
     </div>
     {% elif not status and msg %}
-    <div class="failed">
+    <div id="failed-msg" class="msg">
       {{ msg }}
     {% if info %}
       <p><strong> {{ info }} </strong></p>
     {% endif %}
+      <button id="failed-close-btn" type="button" class="btn-close"> ✕ </button>
     </div>
     {% endif %}
 

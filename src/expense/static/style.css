@@ -224,26 +224,38 @@ select:focus {
 }
 
 /* 登録完了 失敗メッセージ */
-.success {
+.msg {
+  position: relative;
   margin-top: 20px;
   padding: 12px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+#success-msg {
   background: #ecfdf5;
   color: #065f46;
   border: 1px solid #a7f3d0;
-  border-radius: 8px;
-  font-size: 0.95rem;
 }
 
-.failed {
-  margin-top: 20px;
-  padding: 12px;
+#failed-msg {
   background: #fdecec;
   color: #5f0606;
   border: 1px solid #f387a0;
-  border-radius: 8px;
-  font-size: 0.95rem;
 }
 
+.btn-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  text-align: right;
+  background: transparent;
+  border: none;
+  font-size: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  color: #97a1b1;
+}
 /* スクリーンショット */
 #screenshot-name {
   font-size: 0.8rem;
@@ -322,6 +334,7 @@ img.screenshot {
     opacity 0.5s ease;
 }
 
+/* TODO: refactor */
 .register-open #register-container,
 .ocr-open #ocr-container,
 .record-open #record-container,
@@ -332,6 +345,7 @@ img.screenshot {
   opacity: 1;
 }
 
+/* TODO: refactor */
 .register-collapsed #register-container,
 .ocr-collapsed #ocr-container,
 .record-collapsed #record-container,
@@ -444,7 +458,7 @@ tr:nth-child(even) {
   position: relative;
 }
 
-.btn-close {
+#confirmation-close-btn {
   position: absolute;
   top: 10px;
   right: 10px;
@@ -579,16 +593,20 @@ tr:nth-child(even) {
   z-index: 0;
 }
 
-.dark .success {
+.dark #success-msg {
   background: #064e3b;
   color: #d1fae5;
   border-color: #10b981;
 }
 
-.dark .failed {
+.dark #failed-msg {
   background: #5e062b;
   color: #fad1e5;
   border-color: #b91051;
+}
+
+.dark .btn-close {
+  color: #61656b;
 }
 
 .dark .small-btn {
