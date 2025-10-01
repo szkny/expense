@@ -56,11 +56,48 @@
               {% if "¥ 0" in asset_summary.change %}
                 class=""
               {% elif "+" in asset_summary.change %}
+                class="asset-color-up asset-up"
+              {% else %}
+                class="asset-color-down asset-down"
+              {% endif %}
+            > {{asset_summary.change}} </span>
+          </div>
+          <br>
+          <div class="asset-summary-content">
+            <span> 含み益 </span>
+            <span
+              {% if "¥ 0" in asset_summary.profit %}
+                class="asset-summary-display-sub"
+              {% elif "+" in asset_summary.profit %}
+                class="asset-summary-display-sub asset-color-up"
+              {% else %}
+                class="asset-summary-display-sub asset-color-down"
+              {% endif %}
+            > {{asset_summary.profit}} </span>
+          </div>
+          <div class="asset-summary-details">
+            <span> 内 ETF 含み益 </span>
+            <span
+              {% if "¥ 0" in asset_summary.profit_etf %}
+                class=""
+              {% elif "+" in asset_summary.profit_etf %}
                 class="asset-color-up"
               {% else %}
                 class="asset-color-down"
               {% endif %}
-            > {{asset_summary.change}} </span>
+            > {{asset_summary.profit_etf}} </span>
+          </div>
+          <div class="asset-summary-details">
+            <span> ROI </span>
+            <span
+              {% if "¥ 0" in asset_summary.roi %}
+                class=""
+              {% elif "+" in asset_summary.roi %}
+                class="asset-color-up"
+              {% else %}
+                class="asset-color-down"
+              {% endif %}
+            > {{asset_summary.roi}} </span>
           </div>
           <br>
           <div class="asset-summary-content">

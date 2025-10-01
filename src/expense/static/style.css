@@ -650,11 +650,11 @@ tr:nth-child(even) {
   color: #66aaff;
 }
 
-.asset-color-up:after {
+.asset-up:after {
   content: "📈";
 }
 
-.asset-color-down:after {
+.asset-down:after {
   content: "📉";
 }
 
