@@ -654,7 +654,7 @@ tr:nth-child(even) {
 
 /* 資産管理 */
 .asset-color-up {
-  color: #dd3333;
+  color: #cc3333;
 }
 
 .asset-color-down {
@@ -662,7 +662,7 @@ tr:nth-child(even) {
 }
 
 .dark .asset-color-up {
-  color: #ff3333;
+  color: #dd3333;
 }
 
 .dark .asset-color-down {
