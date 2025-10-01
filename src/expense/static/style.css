@@ -256,6 +256,7 @@ select:focus {
   cursor: pointer;
   color: #97a1b1;
 }
+
 /* スクリーンショット */
 #screenshot-name {
   font-size: 0.8rem;

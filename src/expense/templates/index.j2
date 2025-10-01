@@ -22,23 +22,22 @@
   <div class="container">
     <h1> {{ icons.get("title", "") }} Expense </h1>
 
+    <div
+      class="msg"
     {% if status and msg %}
-    <div id="success-msg" class="msg">
-      {{ msg }}
-    {% if info %}
-      <p><strong> {{ info }} </strong></p>
-    {% endif %}
-      <button id="success-close-btn" type="button" class="btn-close"> ✕ </button>
-    </div>
+      id="success-msg"
     {% elif not status and msg %}
-    <div id="failed-msg" class="msg">
+      id="failed-msg"
+    {% else %}
+      style="display: none;"
+    {% endif %}
+    >
       {{ msg }}
     {% if info %}
       <p><strong> {{ info }} </strong></p>
     {% endif %}
-      <button id="failed-close-btn" type="button" class="btn-close"> ✕ </button>
+      <button id="msg-close-btn" type="button" class="btn-close"> ✕ </button>
     </div>
-    {% endif %}
 
     <div class="card">
       <form method="post" action="/register">

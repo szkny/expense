@@ -7,17 +7,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // メッセージの閉じるボタン
 (function () {
-  const closeBtn1 = document.getElementById("success-close-btn");
-  const closeBtn2 = document.getElementById("failed-close-btn");
+  const closeBtn = document.getElementById("msg-close-btn");
   const msg1 = document.getElementById("success-msg");
   const msg2 = document.getElementById("failed-msg");
-  if (closeBtn1) {
-    closeBtn1.addEventListener("click", () => {
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => {
       msg1.style.display = "none";
-    });
-  }
-  if (closeBtn2) {
-    closeBtn2.addEventListener("click", () => {
       msg2.style.display = "none";
     });
   }
