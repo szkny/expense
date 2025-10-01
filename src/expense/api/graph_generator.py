@@ -662,6 +662,10 @@ class GraphGenerator:
         x = df_graph["ticker"].to_list() + ["合計"]
         x = [s.replace("(", "<br>(") for s in x]
         y = df_graph["profit"].to_list() + [df_graph["profit"].sum()]
+        opr = ["+" if v >= 0 else "-" for i, v in enumerate(y)]
+        roi = [r["roi"] for _, r in df_graph.iterrows()] + [
+            y[-1] / df_graph["invest_amount"].sum() * 100
+        ]
         fig = go.Figure(
             go.Waterfall(
                 orientation="v",
@@ -691,7 +695,7 @@ class GraphGenerator:
                     )
                 ),
                 text=[
-                    f"{x[i]}<br>{'+' if v >= 0 else '-'}¥{abs(v):,.0f}"
+                    f"{x[i]}<br>{opr[i]}¥{abs(v):,.0f}<br>({opr[i]}{abs(roi[i]):.2f}%)"
                     for i, v in enumerate(y)
                 ],
                 textposition="none",
@@ -706,7 +710,7 @@ class GraphGenerator:
             fig.add_annotation(
                 x=x[i],
                 y=_y,
-                text=f"{x[i]}<br>{'+' if v >= 0 else '-'}¥{abs(v):,.0f}",
+                text=f"{x[i]}<br>{opr[i]}¥{abs(v):,.0f}",
                 showarrow=False,
                 font=dict(
                     size=8, color="#ffffff" if theme == "dark" else "#000000"

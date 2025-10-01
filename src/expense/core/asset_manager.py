@@ -73,7 +73,7 @@ class AssetManager(Base):
                     "acquisition",
                     "price_dollar",
                     "price",
-                    "invest_amoumt",
+                    "invest_amount",
                     "valuation",
                     "profit",
                     "weight",
