@@ -49,15 +49,17 @@
           <br>
           <div class="asset-summary-content">
             <span> 含み益 </span>
-            <span
-              {% if "¥ 0" in asset_summary.profit %}
-                class="asset-summary-display-sub"
-              {% elif "+" in asset_summary.profit %}
-                class="asset-summary-display-sub asset-color-up"
-              {% else %}
-                class="asset-summary-display-sub asset-color-down"
-              {% endif %}
-            > {{asset_summary.profit}} </span>
+            <div class="asset-summary-display-sub">
+              <span
+                {% if "¥ 0" in asset_summary.profit %}
+                  class=""
+                {% elif "+" in asset_summary.profit %}
+                  class="asset-color-up"
+                {% else %}
+                  class="asset-color-down"
+                {% endif %}
+              > {{asset_summary.profit}} </span>
+            </div>
           </div>
           <div class="asset-summary-details">
             <span> 内 ETF 含み益 </span>
