@@ -657,6 +657,7 @@ class GraphGenerator:
         """
         log.info("start 'generate_asset_waterfall_chart' method")
         df_graph = df.copy()
+        invest_amount_total = df_graph["invest_amount"].sum()
         idx = df_graph[df_graph["ticker"].str.contains("現金")].index.to_list()
         df_graph.drop(idx, inplace=True)
         x = df_graph["ticker"].to_list() + ["合計"]
@@ -664,7 +665,7 @@ class GraphGenerator:
         y = df_graph["profit"].to_list() + [df_graph["profit"].sum()]
         opr = ["+" if v >= 0 else "-" for i, v in enumerate(y)]
         roi = [r["roi"] for _, r in df_graph.iterrows()] + [
-            y[-1] / df_graph["invest_amount"].sum() * 100
+            y[-1] / invest_amount_total * 100
         ]
         fig = go.Figure(
             go.Waterfall(
