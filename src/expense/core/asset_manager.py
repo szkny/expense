@@ -84,7 +84,20 @@ class AssetManager(Base):
             return df
         except Exception:
             log.exception("Error occurred.")
-            return pd.DataFrame()
+            return pd.DataFrame(
+                columns=[
+                    "ticker",
+                    "num",
+                    "acquisition",
+                    "price_dollar",
+                    "price",
+                    "invest_amount",
+                    "valuation",
+                    "profit",
+                    "weight",
+                    "roi",
+                ]
+            )
         finally:
             log.info("end 'get_table_data' method")
 
@@ -116,6 +129,17 @@ class AssetManager(Base):
             return df
         except Exception:
             log.exception("Error occurred.")
-            return pd.DataFrame()
+            return pd.DataFrame(
+                columns=[
+                    "total",
+                    "profit",
+                    "profit_etf",
+                    "roi",
+                    "change_jpy",
+                    "change_pct",
+                    "drawdown",
+                    "usdjpy",
+                ]
+            )
         finally:
             log.info("end 'get_header_data' method")

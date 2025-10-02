@@ -70,23 +70,26 @@ def asset_management(
     server_tools: ServerTools = ServerTools(app, gspread_handler)
     df_summary = asset_manager.get_header_data()
     df_items = asset_manager.get_table_data()
-    summary = df_summary.iloc[0].to_dict()
-    summary["total"] = f"¥ {df_items['valuation'].sum():,.0f}"
-    summary["change"] = (
-        f" {'+' if summary['change_jpy'] >= 0 else '-'} ¥ {abs(summary['change_jpy']):,.0f}"
-        + f" ( {'+' if summary['change_pct'] >= 0 else '-'} {abs(summary['change_pct']):,.2f}% )"
-    )
-    summary["usdjpy"] = f"¥ {summary['usdjpy']:,.2f}"
-    summary["profit"] = df_items["profit"].sum()
-    summary["profit"] = (
-        f"{'+' if summary['profit'] >= 0 else '-'} ¥ {abs(summary['profit']):,.0f}"
-    )
-    summary["profit_etf"] = (
-        f"{'+' if summary['profit_etf'] >= 0 else '-'} ¥ {abs(summary['profit_etf']):,.0f}"
-    )
-    summary["roi"] = (
-        f"{'+' if summary['roi'] >= 0 else '-'} {abs(summary['roi']):,.2f}%"
-    )
+    summary = df_summary.to_dict()
+    summary = df_summary.to_dict(orient="records")
+    if len(summary):
+        summary = summary[0]
+        summary["total"] = f"¥ {df_items['valuation'].sum():,.0f}"
+        summary["change"] = (
+            f" {'+' if summary['change_jpy'] >= 0 else '-'} ¥ {abs(summary['change_jpy']):,.0f}"
+            + f" ( {'+' if summary['change_pct'] >= 0 else '-'} {abs(summary['change_pct']):,.2f}% )"
+        )
+        summary["usdjpy"] = f"¥ {summary['usdjpy']:,.2f}"
+        summary["profit"] = df_items["profit"].sum()
+        summary["profit"] = (
+            f"{'+' if summary['profit'] >= 0 else '-'} ¥ {abs(summary['profit']):,.0f}"
+        )
+        summary["profit_etf"] = (
+            f"{'+' if summary['profit_etf'] >= 0 else '-'} ¥ {abs(summary['profit_etf']):,.0f}"
+        )
+        summary["roi"] = (
+            f"{'+' if summary['roi'] >= 0 else '-'} {abs(summary['roi']):,.2f}%"
+        )
     items = df_items.to_dict(orient="records")
     theme = request.cookies.get("theme", "light")
     graph_html = server_tools.graph_generator.generate_asset_pie_chart(
