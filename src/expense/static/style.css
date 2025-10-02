@@ -60,8 +60,8 @@ hr {
   white-space: nowrap;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   transition:
-    background 0.2s,
-    transform 0.2s;
+    background 0.5s ease,
+    transform 0.5s ease;
   z-index: 1000;
 }
 
@@ -167,7 +167,7 @@ select:focus {
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: 0.2s;
+  transition: 0.5s;
 }
 
 .btn:hover {
@@ -266,7 +266,7 @@ select:focus {
 img.screenshot {
   width: auto;
   height: 150px;
-  transition: transform 0.2s;
+  transition: transform 0.5s;
   transform-origin: center;
   transform: scale(1);
   margin: 5px auto 20px;
@@ -291,7 +291,7 @@ img.screenshot {
   z-index: 3000;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.5s ease;
   overflow: auto;
 }
 
@@ -310,8 +310,8 @@ img.screenshot {
   transform: scale(0.7);
   opacity: 0;
   transition:
-    transform 0.3s ease,
-    opacity 0.3s ease;
+    transform 0.5s ease,
+    opacity 0.5s ease;
 }
 
 #img-overlay.show img {
@@ -357,15 +357,15 @@ img.screenshot {
   overflow: hidden;
   opacity: 0;
   transition:
-    max-height 0.3s ease,
-    opacity 0.3s ease;
+    max-height 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .collapsible-toggle {
   background: transparent;
   color: #97a1b1;
   font-size: 8px;
-  transition: background 0.2s;
+  transition: background 0.5s ease;
 }
 
 .collapsible-toggle::after {
