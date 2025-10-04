@@ -364,7 +364,7 @@ class GraphGenerator:
             df_bar = self._prepare_bar_dataframe(df_graph)
             df_graph = self._add_month_start_point(df_graph, month_start)
             df_graph, df_predict = self._handle_predictions(
-                df_graph, t, month_start, month_end
+                df_graph, today, month_start, month_end
             )
             fig_bar = self._create_bar_figure(
                 df_bar, month_start, month_end, min_yrange, df_graph, df_predict
