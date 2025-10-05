@@ -749,7 +749,7 @@ class GspreadHandler(Base):
             log.info("end 'get_all_expense_df' method")
 
     def convert_expense_sheet_to_history_records(
-        self, df: pd.DataFrame, transport_memo_threshold: int = 500
+        self, df: pd.DataFrame, memo_correct_threshold: int = 500
     ) -> pd.DataFrame:
         log.info("start 'convert_expense_sheet_to_history_records' method")
         try:
@@ -787,8 +787,7 @@ class GspreadHandler(Base):
                             memos = [
                                 (
                                     memos.pop(0)
-                                    if len(memos)
-                                    and i > transport_memo_threshold
+                                    if len(memos) and i > memo_correct_threshold
                                     else ""
                                 )
                                 for i in amounts
