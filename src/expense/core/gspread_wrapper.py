@@ -816,21 +816,21 @@ class GspreadHandler(Base):
         for f in csv_files:
             df = pd.read_csv(f, header=None)
             df.columns = pd.Index(
-                ["date", "expense_type", "expense_memo", "expense_amount"]
+                ["datetime", "expense_type", "expense_memo", "expense_amount"]
             )
             df["expense_memo"] = df["expense_memo"].fillna("")
             df["__source__"] = f
             dfs.append(df)
         df_all = pd.concat(dfs, ignore_index=True)
-        df_all["date"] = pd.to_datetime(df_all["date"])
-        df_all["date_only"] = df_all["date"].dt.date
-        df_all = df_all.sort_values("date")
+        df_all["datetime"] = pd.to_datetime(df_all["datetime"])
+        df_all["date"] = df_all["date"].dt.date
+        df_all = df_all.sort_values("datetime")
 
         # 各CSV内では削除しないように
         # 「date_only + その他すべての列」を基準に重複を判定し、
         # 同じデータが異なるCSVに存在する場合のみ削除
         cols_for_check = [
-            "date_only",
+            "date",
             "expense_type",
             "expense_memo",
             "expense_amount",
@@ -841,14 +841,18 @@ class GspreadHandler(Base):
         # 重複を抽出
         duplicated_mask = df_all.duplicated(subset=cols_for_check, keep=False)
         dupes = df_all[duplicated_mask].copy()
+        log.debug(f"duplicated_mask: {duplicated_mask}")
+        log.debug(f"dupes: {dupes}")
 
         # 異なるファイル間の重複のみを特定
         cross_file_dupes = dupes.groupby(cols_for_check).filter(
             lambda x: len(x["__source__"].unique()) > 1
         )
+        log.debug(f"cross_file_dupes: {cross_file_dupes}")
 
         # 異なるファイル間の重複のキーを取得
         cross_file_keys = cross_file_dupes[cols_for_check].drop_duplicates()
+        log.debug(f"cross_file_keys: {cross_file_keys}")
 
         # ファイル内重複は保持しつつ、ファイル間重複のみを処理
         final = df_all.copy()
@@ -859,7 +863,7 @@ class GspreadHandler(Base):
             # 該当する重複グループの中で最新のものだけを残す
             matching_rows = final[mask]
             if not matching_rows.empty:
-                latest_row = matching_rows.sort_values("date").iloc[-1:]
+                latest_row = matching_rows.sort_values("datetime").iloc[-1:]
                 final = pd.concat([final[~mask], latest_row], ignore_index=True)
 
         # # ファイル内重複は保持しつつ、ファイル間重複のみを処理
@@ -877,11 +881,11 @@ class GspreadHandler(Base):
         #         # 各ソースファイルから最新のレコードを取得
         #         latest_rows = []
         #         for name, group in source_groups:
-        #             latest_rows.append(group.sort_values("date").iloc[-1:])
+        #             latest_rows.append(group.sort_values("datetime").iloc[-1:])
         #
         #         # 全ての最新レコードから最も新しいものを選択
         #         latest_row = (
-        #             pd.concat(latest_rows).sort_values("date").iloc[-1:]
+        #             pd.concat(latest_rows).sort_values("datetime").iloc[-1:]
         #         )
         #
         #         # 更新：マスクの適用方法を変更
@@ -898,9 +902,9 @@ class GspreadHandler(Base):
         #         )
 
         # 不要列削除
-        final = final.drop(columns=["date_only", "__source__"])
-        final = final.sort_values("date")
-        final["date"] = final["date"].map(
+        final = final.drop(columns=["date", "__source__"])
+        final = final.sort_values("datetime")
+        final["datetime"] = final["datetime"].map(
             lambda d: d.strftime("%Y-%m-%dT%H:%M:%S.%f")
         )
 
