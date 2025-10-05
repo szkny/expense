@@ -29,7 +29,7 @@
   - [x] ~~desynchronization of toast and notification~~
 - [x] add a feature of asset management
 - [x] add a README.md
-- [ ] data migration from spreadsheet records
+- [x] data migration from spreadsheet records
 - [ ] add a feature of setting target budget of expenses
 - [ ] add a feature of target assets
 - [ ] manage monthly subscription
