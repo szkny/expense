@@ -823,7 +823,7 @@ class GspreadHandler(Base):
             dfs.append(df)
         df_all = pd.concat(dfs, ignore_index=True)
         df_all["datetime"] = pd.to_datetime(df_all["datetime"])
-        df_all["date"] = df_all["date"].dt.date
+        df_all["date"] = df_all["datetime"].dt.date
         df_all = df_all.sort_values("datetime")
 
         # 各CSV内では削除しないように
