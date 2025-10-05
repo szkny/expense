@@ -735,11 +735,13 @@ class GspreadHandler(Base):
             log.debug(f"df:\n{df}")
             df_records = self.convert_expense_sheet_to_history_records(df)
             log.debug(f"df_records:\n{df_records}")
+            output_path = self.cache_path / "expense_history_downloaded.log"
             df_records.to_csv(
-                self.cache_path / "expense_history_downloaded.log",
+                output_path,
                 index=False,
                 header=False,
             )
+            log.debug(f"Generated downloaded history file: {output_path}")
             self.merge_expense_history_log()
             return True
         except Exception:
@@ -821,10 +823,14 @@ class GspreadHandler(Base):
         df_all = pd.concat(dfs, ignore_index=True)
         df_all["datetime"] = pd.to_datetime(df_all["datetime"])
         df_all["date"] = df_all["datetime"].dt.date
-        df_all = df_all.sort_values("datetime")
+        cols_for_sort = [
+            "datetime",
+            "expense_type",
+            "expense_memo",
+        ]
+        df_all = df_all.sort_values(cols_for_sort)
 
-        # 各CSV内では削除しないように
-        # 「date_only + その他すべての列」を基準に重複を判定し、
+        # 各CSV内では削除しないように重複を判定し、
         # 同じデータが異なるCSVに存在する場合のみ削除
         cols_for_check = [
             "date",
@@ -832,84 +838,26 @@ class GspreadHandler(Base):
             "expense_memo",
             "expense_amount",
         ]
-
-        # FIXME: 各CSV内の重複が意図せず削除されてしまう
-
-        # 重複を抽出
-        duplicated_mask = df_all.duplicated(subset=cols_for_check, keep=False)
-        dupes = df_all[duplicated_mask].copy()
-        log.debug(f"duplicated_mask: {duplicated_mask}")
-        log.debug(f"dupes: {dupes}")
-
-        # 異なるファイル間の重複のみを特定
-        cross_file_dupes = dupes.groupby(cols_for_check).filter(
-            lambda x: len(x["__source__"].unique()) > 1
-        )
-        log.debug(f"cross_file_dupes: {cross_file_dupes}")
-
-        # 異なるファイル間の重複のキーを取得
-        cross_file_keys = cross_file_dupes[cols_for_check].drop_duplicates()
-        log.debug(f"cross_file_keys: {cross_file_keys}")
-
-        # ファイル内重複は保持しつつ、ファイル間重複のみを処理
-        final = df_all.copy()
-        for _, key in cross_file_keys.iterrows():
-            mask = True
-            for col, val in key.items():
-                mask &= final[col] == val
-            # 該当する重複グループの中で最新のものだけを残す
-            matching_rows = final[mask]
-            if not matching_rows.empty:
-                latest_row = matching_rows.sort_values("datetime").iloc[-1:]
-                final = pd.concat([final[~mask], latest_row], ignore_index=True)
-
-        # # ファイル内重複は保持しつつ、ファイル間重複のみを処理
-        # final = df_all.copy()
-        # for _, key in cross_file_keys.iterrows():
-        #     mask = True
-        #     for col, val in key.items():
-        #         mask &= final[col] == val
-        #
-        #     # 該当するレコードをソースファイルごとにグループ化
-        #     matching_rows = final[mask]
-        #     source_groups = matching_rows.groupby("__source__")
-        #
-        #     if len(source_groups) > 1:  # 異なるファイルに存在する場合のみ処理
-        #         # 各ソースファイルから最新のレコードを取得
-        #         latest_rows = []
-        #         for name, group in source_groups:
-        #             latest_rows.append(group.sort_values("datetime").iloc[-1:])
-        #
-        #         # 全ての最新レコードから最も新しいものを選択
-        #         latest_row = (
-        #             pd.concat(latest_rows).sort_values("datetime").iloc[-1:]
-        #         )
-        #
-        #         # 更新：マスクの適用方法を変更
-        #         source = latest_row["__source__"].iloc[0]
-        #         final = pd.concat(
-        #             [
-        #                 final[~mask],  # マッチしないレコード
-        #                 final[
-        #                     mask & (final["__source__"] == source)
-        #                 ],  # 同じソースの重複は保持
-        #                 latest_row[final.columns],  # 異なるソースの最新レコード
-        #             ],
-        #             ignore_index=True,
-        #         )
+        df_all["dup_count"] = df_all.groupby(
+            cols_for_check + ["__source__"]
+        ).cumcount()
+        cols_for_check += ["dup_count"]
+        df_merged = df_all.drop_duplicates(cols_for_check, keep="last")
 
         # 不要列削除
-        final = final.drop(columns=["date", "__source__"])
-        final = final.sort_values("datetime")
-        final["datetime"] = final["datetime"].map(
+        df_merged = df_merged.drop(columns=["date", "__source__", "dup_count"])
+        df_merged = df_merged.sort_values(cols_for_sort)
+        df_merged["datetime"] = df_merged["datetime"].map(
             lambda d: d.strftime("%Y-%m-%dT%H:%M:%S.%f")
         )
 
         # 保存
-        log.debug(f"merged DataFrame:\n{final}")
-        final.to_csv(
-            self.cache_path / "merged_expense_history.log",
+        log.debug(f"merged DataFrame:\n{df_merged}")
+        output_path = self.cache_path / "merged_expense_history.log"
+        df_merged.to_csv(
+            output_path,
             index=False,
             header=False,
         )
+        log.debug(f"Generated merged history file: {output_path}")
         log.info("end 'merge_expense_history_log' method")
