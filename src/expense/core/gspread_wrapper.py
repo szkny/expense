@@ -777,11 +777,9 @@ class GspreadHandler(Base):
                             if len(memo_list)
                             else [""] * len(amounts)
                         )
-                        # NOTE: 交通費/特別経費の金額リストとメモリストの長さが合わない場合
+                        # NOTE: 金額リストとメモリストの長さが合わない場合
                         # 500円以下はメモが残されていない前提で空文字列とする
-                        if t in ["交通費", "特別経費"] and len(amounts) > len(
-                            memos
-                        ):
+                        if len(amounts) > len(memos):
                             log.debug(
                                 f"modify memos for: {pd.Timestamp(date).date()}, {t}, {amounts}"
                             )
