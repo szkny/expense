@@ -1,14 +1,30 @@
 import re
 import gspread
 import logging
+import pandas as pd
 import datetime as dt
+from glob import glob
 from typing import Any
 from tenacity import retry, stop_after_attempt
 from google.oauth2 import service_account
 
 from .base import Base
+from .expr_analyzer import expand_multiplication
 
 log: logging.Logger = logging.getLogger("expense")
+
+
+def get_fiscal_year() -> int:
+    """
+    get fiscal year
+    """
+    log.info("start 'get_fiscal_year' function")
+    today = dt.date.today()
+    year = today.year
+    if today.month < 4:
+        year -= 1
+    log.info("end 'get_fiscal_year' function")
+    return year
 
 
 class GspreadHandler(Base):
@@ -16,16 +32,6 @@ class GspreadHandler(Base):
     def __init__(self, book_name: str):
         super().__init__()
         log.info("start 'GspreadHandler' constructor")
-        credentials = service_account.Credentials.from_service_account_file(
-            self.config_path / "credentials.json",
-            scopes=[
-                "https://spreadsheets.google.com/feeds",
-                "https://www.googleapis.com/auth/drive",
-            ],
-        )
-        self.client = gspread.authorize(credentials)
-        self.workbook = self.client.open(book_name)
-        self.load_sheet()
         expense_config: dict[str, Any] = self.config.get("expense", {})
         expense_types_all: dict[str, list] = expense_config.get(
             "expense_types", {}
@@ -37,15 +43,16 @@ class GspreadHandler(Base):
             income_types + fixed_types + variable_types
         )
         self.exclude_types: list[str] = expense_config.get("exclude_types", [])
-        log.info("end 'GspreadHandler' constructor")
-
-    def get_spreadsheet_url(self) -> str:
-        return self.workbook.url + "/edit"
-
-    @retry(stop=stop_after_attempt(3))
-    def load_sheet(self, date_str: str = "") -> None:
-        log.info("start 'load_sheet' method")
-        sheetname_list: list[str] = [
+        credentials = service_account.Credentials.from_service_account_file(
+            self.config_path / "credentials.json",
+            scopes=[
+                "https://spreadsheets.google.com/feeds",
+                "https://www.googleapis.com/auth/drive",
+            ],
+        )
+        self.client = gspread.authorize(credentials)
+        self.workbook = self.client.open(book_name)
+        self.sheetname_list: list[str] = [
             "Jan",
             "Feb",
             "Mar",
@@ -59,11 +66,20 @@ class GspreadHandler(Base):
             "Nov",
             "Dec",
         ]
+        self.load_sheet()
+        log.info("end 'GspreadHandler' constructor")
+
+    def get_spreadsheet_url(self) -> str:
+        return self.workbook.url + "/edit"
+
+    @retry(stop=stop_after_attempt(3))
+    def load_sheet(self, date_str: str = "") -> None:
+        log.info("start 'load_sheet' method")
         try:
             date = dt.datetime.fromisoformat(date_str)
         except ValueError:
             date = dt.datetime.today()
-        sheetname = sheetname_list[date.month - 1]
+        sheetname = self.sheetname_list[date.month - 1]
         sheets = self.workbook.worksheets()
         if not any([sheetname == s.title for s in sheets]):
             raise ValueError(f"sheetname '{sheetname}' not found.")
@@ -658,3 +674,241 @@ class GspreadHandler(Base):
         finally:
             self.load_sheet()
             log.info("end 'end_record' method")
+
+    @retry(stop=stop_after_attempt(3))
+    def get_all_expense_df(
+        self, offset: int = 31, exclude_rows_offset: int = 10
+    ) -> bool:
+        log.info("start 'get_all_expense_df' method")
+        try:
+            fyear = get_fiscal_year()
+            month_list = [pd.Timestamp(m).month for m in self.sheetname_list]
+            target_date_list = [
+                pd.Timestamp(f"{fyear + 1 if m < 4 else fyear}-{m}-1").date()
+                for m in month_list
+            ]
+            target_date_list.sort()
+            t = dt.date.today()
+            df = pd.DataFrame()
+            for d in target_date_list:
+                log.debug(f"target: {d}")
+                month_start_str = d.isoformat()
+                month_end_str = (
+                    dt.date(
+                        d.year if d.month < 12 else d.year + 1,
+                        d.month + 1 if d.month < 12 else 1,
+                        1,
+                    )
+                    - dt.timedelta(days=1)
+                ).isoformat()
+                if t < d:
+                    log.debug(
+                        f"stopped loop caused by the condition: {t} < {d}"
+                    )
+                    break
+                date_list = pd.date_range(
+                    month_start_str, month_end_str, freq="D"
+                )
+                self.load_sheet(date_str=month_start_str)
+                column_start = self.get_column(date_str=month_start_str)
+                column_end = self.get_column(date_str=month_end_str)
+                cell_range = (
+                    f"{column_start}{offset}:"
+                    f"{column_end}{offset+len(self.expense_types)+exclude_rows_offset}"
+                )
+                cells = self.sheet.get(
+                    cell_range,
+                    value_render_option=gspread.worksheet.ValueRenderOption.formula,
+                )
+                _df_add = pd.DataFrame(cells, columns=date_list).T
+                df = pd.concat([df, _df_add])
+            if df.empty:
+                return df
+            df_memo = df.iloc[:, -4:]
+            df_memo = df_memo.apply(
+                lambda r: [s for s in r.to_list() if s], axis=1
+            )
+            df = pd.concat(
+                [df.iloc[:, : len(self.expense_types)], df_memo], axis=1
+            )
+            df.columns = pd.Index(self.expense_types + ["memo"])
+            log.debug(f"df:\n{df}")
+            df_records = self.convert_expense_sheet_to_history_records(df)
+            log.debug(f"df_records:\n{df_records}")
+            df_records.to_csv(
+                self.cache_path / "expense_history_downloaded.log",
+                index=False,
+                header=False,
+            )
+            self.merge_expense_history_log()
+            return True
+        except Exception:
+            log.exception("Error occured.")
+            return False
+        finally:
+            log.info("end 'get_all_expense_df' method")
+
+    def convert_expense_sheet_to_history_records(
+        self, df: pd.DataFrame, transport_memo_threshold: int = 500
+    ) -> pd.DataFrame:
+        log.info("start 'convert_expense_sheet_to_history_records' method")
+        try:
+            df_records = pd.DataFrame()
+            counter = 0
+            for _, r in df.iterrows():
+                date = pd.Timestamp(r.name).strftime("%Y-%m-%dT%H:%M:%S.%f")
+                for t in self.expense_types:
+                    amount_formula = str(r[t])
+                    if not re.match(r"^=?0", amount_formula):
+                        amount_formula = expand_multiplication(amount_formula)
+                        amounts = [
+                            int(s)
+                            for s in re.findall(r"(\d+)", amount_formula)
+                            if s != "0"
+                        ]
+                        memo_list = list(
+                            filter(
+                                lambda s: isinstance(s, str) and t + ": " in s,
+                                r["memo"],
+                            )
+                        )
+                        memos = (
+                            memo_list[0].split(": ")[1].split(", ")
+                            if len(memo_list)
+                            else [""] * len(amounts)
+                        )
+                        # NOTE: 交通費/特別経費の金額リストとメモリストの長さが合わない場合
+                        # 500円以下はメモが残されていない前提で空文字列とする
+                        if t in ["交通費", "特別経費"] and len(amounts) > len(
+                            memos
+                        ):
+                            log.debug(
+                                f"modify memos for: {pd.Timestamp(date).date()}, {t}, {amounts}"
+                            )
+                            log.debug(f"Before: {memos}")
+                            memos = [
+                                (
+                                    memos.pop(0)
+                                    if len(memos)
+                                    and i > transport_memo_threshold
+                                    else ""
+                                )
+                                for i in amounts
+                            ]
+                            log.debug(f"After : {memos}")
+                        for amount, memo in zip(amounts, memos):
+                            df_records.loc[counter, "date"] = date
+                            df_records.loc[counter, "expense_type"] = t
+                            df_records.loc[counter, "expense_memo"] = memo
+                            df_records.loc[counter, "expense_amount"] = amount
+                            counter += 1
+            df_records["expense_amount"] = df_records["expense_amount"].astype(
+                int
+            )
+            return df_records
+        finally:
+            log.info("end 'convert_expense_sheet_to_history_records' method")
+
+    def merge_expense_history_log(self) -> bool:
+        log.info("start 'merge_expense_history_log' method")
+        csv_files = glob((self.cache_path / "expense_history*.log").as_posix())
+        dfs = []
+        for f in csv_files:
+            df = pd.read_csv(f, header=None)
+            df.columns = pd.Index(
+                ["date", "expense_type", "expense_memo", "expense_amount"]
+            )
+            df["expense_memo"] = df["expense_memo"].fillna("")
+            df["__source__"] = f
+            dfs.append(df)
+        df_all = pd.concat(dfs, ignore_index=True)
+        df_all["date"] = pd.to_datetime(df_all["date"])
+        df_all["date_only"] = df_all["date"].dt.date
+        df_all = df_all.sort_values("date")
+
+        # 各CSV内では削除しないように
+        # 「date_only + その他すべての列」を基準に重複を判定し、
+        # 同じデータが異なるCSVに存在する場合のみ削除
+        cols_for_check = [
+            "date_only",
+            "expense_type",
+            "expense_memo",
+            "expense_amount",
+        ]
+
+        # FIXME: 各CSV内の重複が意図せず削除されてしまう
+
+        # 重複を抽出
+        duplicated_mask = df_all.duplicated(subset=cols_for_check, keep=False)
+        dupes = df_all[duplicated_mask].copy()
+
+        # 異なるファイル間の重複のみを特定
+        cross_file_dupes = dupes.groupby(cols_for_check).filter(
+            lambda x: len(x["__source__"].unique()) > 1
+        )
+
+        # 異なるファイル間の重複のキーを取得
+        cross_file_keys = cross_file_dupes[cols_for_check].drop_duplicates()
+
+        # ファイル内重複は保持しつつ、ファイル間重複のみを処理
+        final = df_all.copy()
+        for _, key in cross_file_keys.iterrows():
+            mask = True
+            for col, val in key.items():
+                mask &= final[col] == val
+            # 該当する重複グループの中で最新のものだけを残す
+            matching_rows = final[mask]
+            if not matching_rows.empty:
+                latest_row = matching_rows.sort_values("date").iloc[-1:]
+                final = pd.concat([final[~mask], latest_row], ignore_index=True)
+
+        # # ファイル内重複は保持しつつ、ファイル間重複のみを処理
+        # final = df_all.copy()
+        # for _, key in cross_file_keys.iterrows():
+        #     mask = True
+        #     for col, val in key.items():
+        #         mask &= final[col] == val
+        #
+        #     # 該当するレコードをソースファイルごとにグループ化
+        #     matching_rows = final[mask]
+        #     source_groups = matching_rows.groupby("__source__")
+        #
+        #     if len(source_groups) > 1:  # 異なるファイルに存在する場合のみ処理
+        #         # 各ソースファイルから最新のレコードを取得
+        #         latest_rows = []
+        #         for name, group in source_groups:
+        #             latest_rows.append(group.sort_values("date").iloc[-1:])
+        #
+        #         # 全ての最新レコードから最も新しいものを選択
+        #         latest_row = (
+        #             pd.concat(latest_rows).sort_values("date").iloc[-1:]
+        #         )
+        #
+        #         # 更新：マスクの適用方法を変更
+        #         source = latest_row["__source__"].iloc[0]
+        #         final = pd.concat(
+        #             [
+        #                 final[~mask],  # マッチしないレコード
+        #                 final[
+        #                     mask & (final["__source__"] == source)
+        #                 ],  # 同じソースの重複は保持
+        #                 latest_row[final.columns],  # 異なるソースの最新レコード
+        #             ],
+        #             ignore_index=True,
+        #         )
+
+        # 不要列削除
+        final = final.drop(columns=["date_only", "__source__"])
+        final = final.sort_values("date")
+        final["date"] = final["date"].map(
+            lambda d: d.strftime("%Y-%m-%dT%H:%M:%S.%f")
+        )
+
+        # 保存
+        log.debug(f"merged DataFrame:\n{final}")
+        final.to_csv(
+            self.cache_path / "merged_expense_history.log",
+            index=False,
+            header=False,
+        )
+        log.info("end 'merge_expense_history_log' method")

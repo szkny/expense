@@ -214,7 +214,10 @@ class Expense(Base):
         """
         log.info("start 'get_recent_expenses' method")
         try:
-            df = pd.read_csv(self.expense_history, header=None)
+            # df = pd.read_csv(self.expense_history, header=None)
+            df = pd.read_csv(
+                self.cache_path / "merged_expense_history.log", header=None
+            )
         except FileNotFoundError:
             return []
         df.columns = pd.Index(
