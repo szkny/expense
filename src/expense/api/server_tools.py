@@ -181,7 +181,7 @@ class ServerTools(Base):
         n_records = (
             self.config.get("web_ui", {})
             .get("record_table", {})
-            .get("n_records", 200)
+            .get("n_records", 2000)
         )
         try:
             recent_expenses = self.expense_handler.get_recent_expenses(
