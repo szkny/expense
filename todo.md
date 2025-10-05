@@ -30,6 +30,9 @@
 - [x] add a feature of asset management
 - [x] add a README.md
 - [x] data migration from spreadsheet records
+- [ ] make selected target month on pie chart switchable
+- [ ] annual fiscal report
+- [ ] monthly summary report of total expenses including fixed expenses
 - [ ] add a feature of setting target budget of expenses
 - [ ] add a feature of target assets
 - [ ] manage monthly subscription
