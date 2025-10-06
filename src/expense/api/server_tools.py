@@ -178,17 +178,18 @@ class ServerTools(Base):
         items = self.generate_items()
 
         # 最近の支出履歴を取得
-        n_records = (
+        max_n_records = (
             self.config.get("web_ui", {})
             .get("record_table", {})
-            .get("n_records", 2000)
+            .get("max_n_records", 5000)
         )
         try:
             recent_expenses = self.expense_handler.get_recent_expenses(
-                n_records, drop_duplicates=False, with_date=True
+                max_n_records, drop_duplicates=False, with_date=True
             )
         except Exception:
             recent_expenses = []
+        n_records = len(recent_expenses)
 
         # 支出レポートを計算
         df_records = pd.DataFrame(recent_expenses)
