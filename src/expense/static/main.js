@@ -5,6 +5,38 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+// ハンバーガーメニュー
+(function() {
+  const menuBtn = document.getElementById("hamburger-menu-btn");
+  const menu = document.getElementById("menu-container");
+  if (menuBtn && menu) {
+    const themeBtn = document.getElementById("theme-toggle");
+    const assetBtn = document.getElementById("asset-management-btn");
+    const homeBtn = document.getElementById("home-btn");
+    function closeMenu() {
+      menu.classList.remove("show");
+      menuBtn.classList.remove("clicked");
+      menuBtn.textContent = "☰";
+    }
+    if (themeBtn) themeBtn.addEventListener("click", closeMenu);
+    if (assetBtn) assetBtn.addEventListener("click", closeMenu);
+    if (homeBtn) homeBtn.addEventListener("click", closeMenu);
+    menuBtn.addEventListener("click", () => {
+      menu.classList.toggle("show");
+      menuBtn.classList.toggle("clicked");
+      menuBtn.textContent = menuBtn.textContent == "✕" ? "☰" : "✕";
+    });
+    // メニューの外側をクリックしたら閉じる
+    document.addEventListener("click", (e) => {
+      if (!menu.contains(e.target) && !menuBtn.contains(e.target)) {
+        menu.classList.remove("show");
+        menuBtn.classList.remove("clicked");
+        menuBtn.textContent = "☰";
+      }
+    });
+  }
+})();
+
 // メッセージの閉じるボタン
 (function() {
   const closeBtn = document.getElementById("msg-close-btn");
@@ -324,35 +356,6 @@ function filterTable() {
       }
     });
   });
-})();
-
-// ハンバーガーメニュー
-(function() {
-  const menuBtn = document.getElementById("hamburger-menu-btn");
-  const menu = document.getElementById("menu-container");
-  if (menuBtn && menu) {
-    const themeBtn = document.getElementById("theme-toggle");
-    const assetBtn = document.getElementById("asset-management-btn");
-    const homeBtn = document.getElementById("home-btn");
-    function closeMenu() {
-      menu.classList.remove("show");
-      menuBtn.textContent = "☰";
-    }
-    if (themeBtn) themeBtn.addEventListener("click", closeMenu);
-    if (assetBtn) assetBtn.addEventListener("click", closeMenu);
-    if (homeBtn) homeBtn.addEventListener("click", closeMenu);
-    menuBtn.addEventListener("click", () => {
-      menu.classList.toggle("show");
-      menuBtn.textContent = menuBtn.textContent == "✕" ? "☰" : "✕";
-    });
-    // メニューの外側をクリックしたら閉じる
-    document.addEventListener("click", (e) => {
-      if (!menu.contains(e.target) && !menuBtn.contains(e.target)) {
-        menu.classList.remove("show");
-        menuBtn.textContent = "☰";
-      }
-    });
-  }
 })();
 
 // PWA インストール処理

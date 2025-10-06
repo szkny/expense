@@ -74,13 +74,15 @@ hr {
   right: 12px;
 }
 
-#hamburger-menu-btn:hover {
-  transform: rotate(2turn);
+#hamburger-menu-btn.clicked {
+  transform: rotate(180deg);
+  background: none;
+  box-shadow: none;
 }
 
 #menu-container {
   position: fixed;
-  top: 50px;
+  top: 45px;
   right: 12px;
   display: flex;
   flex-direction: column;
