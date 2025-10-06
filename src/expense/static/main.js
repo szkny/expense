@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // メッセージの閉じるボタン
-(function () {
+(function() {
   const closeBtn = document.getElementById("msg-close-btn");
   const msg1 = document.getElementById("success-msg");
   const msg2 = document.getElementById("failed-msg");
@@ -19,12 +19,12 @@ document.addEventListener("DOMContentLoaded", () => {
 })();
 
 // 経費タイプ選択に応じた入力欄の表示・非表示
-(function () {
+(function() {
   const typeSelect = document.getElementById("expense-type");
   if (typeSelect) {
     const amountInput = document.getElementById("expense-amount");
     const memoInput = document.getElementById("expense-memo");
-    typeSelect.addEventListener("change", function () {
+    typeSelect.addEventListener("change", function() {
       if (this.value.includes("/")) {
         amountInput.style.display = "none";
         memoInput.style.display = "none";
@@ -39,7 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
 })();
 
 // フォーム送信時にローディング表示
-(function () {
+(function() {
   const forms = document.querySelectorAll("form");
   const loader = document.getElementById("loader");
   if (forms.length > 0 && loader) {
@@ -52,7 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
 })();
 
 // テーマ切り替え処理
-(function () {
+(function() {
   const themeToggle = document.getElementById("theme-toggle");
   if (themeToggle) {
     themeToggle.addEventListener("click", () => {
@@ -66,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
 })();
 
 // スクショの拡大・縮小動作
-(function () {
+(function() {
   const screenshot = document.getElementById("screenshot");
   const overlay = document.getElementById("img-overlay");
   if (screenshot && overlay) {
@@ -94,7 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
 })();
 
 // 折りたたみ処理
-(function () {
+(function() {
   const onOpenCallbacks = {
     report: () => {
       requestAnimationFrame(() => {
@@ -236,7 +236,7 @@ function filterTable() {
 }
 
 // 検索入力窓をクリア
-(function () {
+(function() {
   const clearButton = document.getElementById("clear-search");
   if (clearButton) {
     clearButton.addEventListener("click", () => {
@@ -251,7 +251,7 @@ function filterTable() {
 })();
 
 // レコード長押し処理
-(function () {
+(function() {
   document.addEventListener("DOMContentLoaded", () => {
     const overlay = document.getElementById("confirmation-overlay");
     if (!overlay) return; // このページに機能がなければ何もしない
@@ -317,7 +317,7 @@ function filterTable() {
     }
 
     // オーバーレイをクリックしたら閉じる
-    overlay.addEventListener("click", function (e) {
+    overlay.addEventListener("click", function(e) {
       // クリック対象がダイアログ自身ではない場合のみ閉じる
       if (dialog && !dialog.contains(e.target)) {
         overlay.style.display = "none";
@@ -327,7 +327,7 @@ function filterTable() {
 })();
 
 // ハンバーガーメニュー
-(function () {
+(function() {
   const menuBtn = document.getElementById("hamburger-menu-btn");
   const menu = document.getElementById("menu-container");
   if (menuBtn && menu) {
@@ -336,24 +336,27 @@ function filterTable() {
     const homeBtn = document.getElementById("home-btn");
     function closeMenu() {
       menu.classList.remove("show");
+      menuBtn.textContent = "☰";
     }
     if (themeBtn) themeBtn.addEventListener("click", closeMenu);
     if (assetBtn) assetBtn.addEventListener("click", closeMenu);
     if (homeBtn) homeBtn.addEventListener("click", closeMenu);
     menuBtn.addEventListener("click", () => {
       menu.classList.toggle("show");
+      menuBtn.textContent = menuBtn.textContent == "✕" ? "☰" : "✕";
     });
     // メニューの外側をクリックしたら閉じる
     document.addEventListener("click", (e) => {
       if (!menu.contains(e.target) && !menuBtn.contains(e.target)) {
         menu.classList.remove("show");
+        menuBtn.textContent = "☰";
       }
     });
   }
 })();
 
 // PWA インストール処理
-(function () {
+(function() {
   const installBtn = document.getElementById("install-btn");
   if (installBtn) {
     // Service Worker 登録
