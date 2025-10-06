@@ -460,6 +460,7 @@ class GraphGenerator:
     def generate_pie_chart(
         self,
         df: pd.DataFrame,
+        df_records: pd.DataFrame,
         theme: str = "light",
         include_plotlyjs: bool = True,
     ) -> str:
@@ -477,6 +478,12 @@ class GraphGenerator:
         if df_pie.empty:
             log.info("DataFrame (df_pie) is empty, skipping graph generation.")
             return ""
+        t = dt.datetime.today()
+        month_start, month_end = self._get_month_boundaries(t)
+        df_records_this_month = self._prepare_graph_dataframe(
+            df_records, month_start, month_end
+        )
+        n_records = df_records_this_month.shape[0]
         month_str = pd.Timestamp(df_pie.iloc[-1]["month"]).strftime("%Y年%-m月")
         total_amount = df_pie["expense_amount"].sum()
         fig = px.pie(
@@ -505,7 +512,7 @@ class GraphGenerator:
             showlegend=False,
         )
         fig.add_annotation(
-            text=f"合計<br>¥{total_amount: ,.0f}",
+            text=f"合計<br>¥{total_amount: ,.0f}<br>({int(n_records)}件)",
             x=0.5,
             y=0.5,
             font_size=20,

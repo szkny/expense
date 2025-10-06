@@ -206,7 +206,7 @@ class ServerTools(Base):
             # グラフを生成
             df_graph = self.graph_generator.generate_monthly_df(df_records)
             graph_html = self.graph_generator.generate_pie_chart(
-                df_graph, theme, include_plotlyjs=True
+                df_graph, df_records, theme, include_plotlyjs=True
             )
             graph_html += "<hr>" if graph_html else ""
             graph_html += self.graph_generator.generate_daily_chart(
