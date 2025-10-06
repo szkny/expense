@@ -74,6 +74,10 @@ hr {
   right: 12px;
 }
 
+#hamburger-menu-btn:hover {
+  transform: rotate(2turn);
+}
+
 #menu-container {
   position: fixed;
   top: 50px;
