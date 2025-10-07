@@ -682,12 +682,12 @@ class GraphGenerator:
                 measure=["relative"] * len(df_graph) + ["total"],
                 increasing=dict(
                     marker=dict(
-                        color="#4466bb" if theme == "dark" else "#6688dd"
+                        color="#4466bb" if theme == "dark" else "#6699ee"
                     )
                 ),
                 decreasing=dict(
                     marker=dict(
-                        color="#bb3333" if theme == "dark" else "#dd3333"
+                        color="#bb3333" if theme == "dark" else "#ee5555"
                     )
                 ),
                 totals=dict(
