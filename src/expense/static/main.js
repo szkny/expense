@@ -319,6 +319,10 @@ function filterTable() {
     let pressTimer;
     const longPressTime = 500;
     document.querySelectorAll("tbody tr").forEach((row) => {
+      // 右クリック / 長押しメニューを無効化
+      row.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+      });
       // PC用（マウス押しっぱなし）
       row.addEventListener("mousedown", (_) => {
         pressTimer = setTimeout(() => showOverlay(row), longPressTime);
