@@ -71,37 +71,37 @@ class ServerTools(Base):
         except Exception:
             favorite_expenses = []
         expense_config: dict[str, Any] = self.config.get("expense", {})
-        num_instant_items: dict[str, int] = expense_config.get(
-            "num_instant_items", {}
-        )
+        num_items: dict[str, int] = expense_config.get("num_instant_items", {})
         try:
-            frequent_expenses = self.expense_handler.get_frequent_expenses(
-                int(num_instant_items.get("frequent", 8))
-            )
+            frequent_expenses = self.expense_handler.get_frequent_expenses(30)
         except Exception:
             frequent_expenses = []
         try:
-            recent_expenses = self.expense_handler.get_recent_expenses(
-                int(num_instant_items.get("recent", 8))
-            )
+            recent_expenses = self.expense_handler.get_recent_expenses(30)
         except Exception:
             recent_expenses = []
         if expense_config.get("filter_duplicated_items", True):
             (
                 favorite_expenses,
-                frequent_expenses,
                 recent_expenses,
+                frequent_expenses,
             ) = self.expense_handler.filter_duplicates(
                 [
                     favorite_expenses,
-                    frequent_expenses,
                     recent_expenses,
+                    frequent_expenses,
                 ]
             )
         item_list = [
             {"icon": self.icons.get("favorite"), "items": favorite_expenses},
-            {"icon": self.icons.get("frequent"), "items": frequent_expenses},
-            {"icon": self.icons.get("recent"), "items": recent_expenses},
+            {
+                "icon": self.icons.get("frequent"),
+                "items": frequent_expenses[: int(num_items.get("frequent", 5))],
+            },
+            {
+                "icon": self.icons.get("recent"),
+                "items": recent_expenses[: int(num_items.get("recent", 5))],
+            },
         ]
         for item_data in item_list:
             icon: str = item_data.get("icon", "")

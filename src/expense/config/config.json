@@ -69,8 +69,8 @@
       }
     ],
     "num_instant_items": {
-      "frequent": 8,
-      "recent": 8
+      "frequent": 5,
+      "recent": 5
     },
     "filter_duplicated_items": true
   },
