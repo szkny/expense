@@ -326,6 +326,7 @@ class GraphGenerator:
             paper_bgcolor="#1f2937" if theme == "dark" else "#ffffff",
             plot_bgcolor="#1f2937" if theme == "dark" else "#ffffff",
             template="plotly_dark" if theme == "dark" else "plotly_white",
+            uniformtext=dict(minsize=10, mode="hide"),
         )
 
     def generate_daily_chart(
@@ -472,56 +473,123 @@ class GraphGenerator:
             log.info("DataFrame is empty, skipping graph generation.")
             return ""
         df_pie = df.copy()
-        df_pie = df_pie.loc[
-            df_pie.loc[:, "month"] == dt.datetime.today().strftime("%Y-%m")
-        ]
-        if df_pie.empty:
-            log.info("DataFrame (df_pie) is empty, skipping graph generation.")
+        df_pie = df.copy()
+        date_index = pd.to_datetime(df_records["date"])
+        unique_months = sorted(
+            date_index.dt.to_period("M").unique(),
+            reverse=True,
+        )
+
+        fig = go.Figure()
+        trace_collections = []
+        processed_months = []
+        for month in unique_months:
+            t = month.to_timestamp()
+            df_pie_this_month = df_pie.loc[
+                df_pie.loc[:, "month"] == t.strftime("%Y-%m")
+            ]
+            if df_pie_this_month.empty:
+                log.info(
+                    f"DataFrame (df_pie_this_month of {month}) is empty, skipping graph generation."
+                )
+                continue
+            month_start, month_end = self._get_month_boundaries(t)
+            df_records_this_month = self._prepare_graph_dataframe(
+                df_records, month_start, month_end
+            )
+            n_records = df_records_this_month.shape[0]
+            month_str = pd.Timestamp(
+                df_pie_this_month.iloc[-1]["month"]
+            ).strftime("%Y年%-m月")
+            total_amount = df_pie_this_month["expense_amount"].sum()
+            fig_pie = px.pie(
+                df_pie_this_month,
+                names="expense_type",
+                values="expense_amount",
+                color="expense_type",
+                # NOTE: color引数で指定したラベルが自動的にhovertemplateの%{customdata}の末尾に
+                # 追加されてしまう仕様だが、明示的にラベルと同じ系列名expense_typeをcustom_data引数に
+                # 追加することで、hovertemplateの%{customdata}の先頭にラベルを表示させるよう制御
+                custom_data=["expense_type", "expense_memo"],
+                category_orders={"expense_type": self.expense_types},
+                color_discrete_map=self.graph_color,
+                hole=0.4,
+            )
+            fig_pie.update_traces(
+                texttemplate="%{label}<br>¥%{value:,.0f}<br>(%{percent})",
+                # NOTE: 上記の仕様により、%{label}を使うとラベルが２つ表示されてしまうため使わない
+                hovertemplate="¥%{value:,.0f} (%{percent}), %{customdata[0]}",
+                textfont=dict(size=14),
+                textposition="inside",
+                insidetextorientation="horizontal",
+                showlegend=False,
+            )
+            fig_pie.add_trace(
+                go.Scatter(
+                    x=[0.5],
+                    y=[0.5],
+                    text=[
+                        f"合計<br>¥{total_amount: ,.0f}<br>({int(n_records)}件)"
+                    ],
+                    mode="text",
+                    textposition="middle center",
+                    textfont=dict(
+                        size=20,
+                        color="#ffffff" if theme == "dark" else "#000000",
+                    ),
+                    showlegend=False,
+                    hoverinfo="skip",
+                )
+            )
+            trace_collections.append(fig_pie.data)
+            processed_months.append(month)
+
+        if not trace_collections:
             return ""
-        t = dt.datetime.today()
-        month_start, month_end = self._get_month_boundaries(t)
-        df_records_this_month = self._prepare_graph_dataframe(
-            df_records, month_start, month_end
-        )
-        n_records = df_records_this_month.shape[0]
-        month_str = pd.Timestamp(df_pie.iloc[-1]["month"]).strftime("%Y年%-m月")
-        total_amount = df_pie["expense_amount"].sum()
-        fig = px.pie(
-            df_pie,
-            names="expense_type",
-            values="expense_amount",
-            color="expense_type",
-            title=f"支出内訳（{month_str}）",
-            # NOTE: color引数で指定したラベルが、自動的にcustom_dataの末尾に
-            # 追加されてしまう仕様のため明示的に追加してcustom_dataを制御
-            # custom_data=["expense_memo"],
-            custom_data=["expense_type", "expense_memo"],
-            category_orders={"expense_type": self.expense_types},
-            color_discrete_map=self.graph_color,
-            hole=0.4,
-        )
-        fig.update_traces(
-            texttemplate="%{label}<br>¥%{value:,.0f}<br>(%{percent})",
-            # NOTE: color引数で指定したラベルが、自動的にcustom_dataの末尾に追加され
-            # ラベルが２つ表示されてしまう仕様のため%{label}は削除
-            # hovertemplate="%{label}<br>¥%{value:,.0f}<br>%{customdata[0]}",
-            hovertemplate="¥%{value:,.0f} %{customdata[0]}",
-            textfont=dict(size=14),
-            textposition="auto",
-            insidetextorientation="horizontal",
-            showlegend=False,
-        )
-        fig.add_annotation(
-            text=f"合計<br>¥{total_amount: ,.0f}<br>({int(n_records)}件)",
-            x=0.5,
-            y=0.5,
-            font_size=20,
-            showarrow=False,
-            font=dict(
-                color="#ffffff" if theme == "dark" else "#000000", size=20
-            ),
-        )
+
+        for i, traces in enumerate(trace_collections):
+            for trace in traces:
+                fig.add_trace(trace.update(visible=(i == 0)))
+
+        buttons = []
+        cumulative_trace_count = 0
+        for i, traces in enumerate(trace_collections):
+            visibility = [False] * len(fig.data)
+            for j in range(len(traces)):
+                visibility[cumulative_trace_count + j] = True
+            month_str = processed_months[i].strftime("%Y年%-m月")
+            buttons.append(
+                dict(
+                    label=month_str,
+                    method="update",
+                    args=[
+                        {"visible": visibility},
+                    ],
+                )
+            )
+            cumulative_trace_count += len(traces)
+
         self._update_layout(fig, theme)
+        fig.update_layout(
+            title_text="支出内訳（月別）",
+            barmode="stack",
+            updatemenus=[
+                dict(
+                    active=0,
+                    buttons=buttons,
+                    direction="down",
+                    pad={"r": 0, "t": 0},
+                    showactive=False,
+                    x=1,
+                    xanchor="right",
+                    y=1.15,
+                    yanchor="top",
+                )
+            ],
+            uniformtext=dict(minsize=14, mode="hide"),
+            xaxis=dict(visible=False),
+            yaxis=dict(visible=False),
+        )
         graph_html = fig.to_html(
             full_html=False,
             include_plotlyjs=include_plotlyjs,
@@ -538,7 +606,6 @@ class GraphGenerator:
         df: pd.DataFrame,
         theme: str = "light",
         max_monthes: int = 12,
-        label_amount_threshold: int = 10000,
         include_plotlyjs: bool = True,
     ) -> str:
         """
@@ -551,12 +618,9 @@ class GraphGenerator:
         df_graph = df.copy()
         df_graph.query("expense_type in @self.variable_types", inplace=True)
         for i, r in df_graph.iterrows():
-            if r["expense_amount"] >= label_amount_threshold:
-                df_graph.loc[i, "label"] = (
-                    f"{r['expense_type']}<br>¥{r['expense_amount']:,.0f}"
-                )
-            else:
-                df_graph.loc[i, "label"] = ""
+            df_graph.loc[i, "label"] = (
+                f"{r['expense_type']}<br>¥{r['expense_amount']:,.0f}"
+            )
         df_graph["month"] = pd.to_datetime(df_graph["month"])
         cutoff_date = dt.datetime.today() - dt.timedelta(
             days=30 * (max_monthes - 1)
@@ -580,11 +644,11 @@ class GraphGenerator:
             texttemplate="%{text}",
             hovertemplate="%{x|%-Y年%-m月}<br>¥%{value:,.0f}%{customdata[0]}",
             textfont=dict(size=14),
-            textposition="auto",
+            textposition="inside",
             textangle=0,
         )
         self._update_layout(fig, theme)
-        self._add_bar_chart_labels(fig, df_graph, "month", theme, fontsize=10)
+        self._add_bar_chart_labels(fig, df_graph, "month", theme, fontsize=12)
         graph_html = fig.to_html(
             full_html=False,
             include_plotlyjs=include_plotlyjs,
@@ -610,6 +674,11 @@ class GraphGenerator:
             log.info("DataFrame is empty, skipping graph generation.")
             return ""
         df_pie = df.copy()
+        df_pie["ticker"] = [s.replace("(", "<br>(") for s in df_pie["ticker"]]
+        graph_color = {
+            k.replace("(", "<br>("): self.graph_color[k]
+            for k in self.graph_color
+        }
         total = int(df_pie["valuation"].sum())
         fig = px.pie(
             df_pie,
@@ -618,14 +687,14 @@ class GraphGenerator:
             color="ticker",
             title="資産内訳",
             category_orders={"ticker": df_pie["ticker"].to_list()},
-            color_discrete_map=self.graph_color,
+            color_discrete_map=graph_color,
             hole=0.5,
         )
         fig.update_traces(
             texttemplate="%{label}<br>%{percent}",
             hovertemplate="%{label}<br>¥%{value:,.0f}<br>(%{percent})",
             textfont=dict(size=12),
-            textposition="outside",
+            textposition="inside",
             insidetextorientation="horizontal",
             showlegend=False,
         )
