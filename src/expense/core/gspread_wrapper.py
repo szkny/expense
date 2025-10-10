@@ -36,11 +36,11 @@ class GspreadHandler(Base):
         expense_types_all: dict[str, list] = expense_config.get(
             "expense_types", {}
         )
-        income_types: list[str] = expense_types_all.get("income", [])
-        fixed_types: list[str] = expense_types_all.get("fixed", [])
-        variable_types: list[str] = expense_types_all.get("variable", [])
+        self.income_types: list[str] = expense_types_all.get("income", [])
+        self.fixed_types: list[str] = expense_types_all.get("fixed", [])
+        self.variable_types: list[str] = expense_types_all.get("variable", [])
         self.expense_types: list[str] = (
-            income_types + fixed_types + variable_types
+            self.income_types + self.fixed_types + self.variable_types
         )
         self.exclude_types: list[str] = expense_config.get("exclude_types", [])
         credentials = service_account.Credentials.from_service_account_file(
@@ -224,7 +224,7 @@ class GspreadHandler(Base):
             excluded_expenses = list(
                 filter(
                     lambda item: item.get("expense_type")
-                    not in self.exclude_types,
+                    not in self.income_type + self.exclude_types,
                     todays_expenses,
                 )
             )

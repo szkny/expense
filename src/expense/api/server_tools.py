@@ -28,11 +28,11 @@ class ServerTools(Base):
         expense_types_all: dict[str, list] = expense_config.get(
             "expense_types", {}
         )
-        income_types: list[str] = expense_types_all.get("income", [])
-        fixed_types: list[str] = expense_types_all.get("fixed", [])
-        variable_types: list[str] = expense_types_all.get("variable", [])
+        self.income_types: list[str] = expense_types_all.get("income", [])
+        self.fixed_types: list[str] = expense_types_all.get("fixed", [])
+        self.variable_types: list[str] = expense_types_all.get("variable", [])
         self.expense_types: list[str] = (
-            variable_types + fixed_types + income_types
+            self.variable_types + self.fixed_types + self.income_types
         )
         self.exclude_types: list[str] = expense_config.get("exclude_types", [])
         webui_config: dict[str, Any] = self.config.get("web_ui", {})
@@ -47,7 +47,7 @@ class ServerTools(Base):
 
         self.graph_generator = GraphGenerator(
             expense_types=self.expense_types,
-            variable_types=variable_types,
+            variable_types=self.variable_types,
             exclude_types=self.exclude_types,
             graph_config=graph_config,
         )
@@ -126,6 +126,9 @@ class ServerTools(Base):
             t.month - 1 if t.month > 1 else 12,
             1,
         ).isoformat()
+        prev_month_end = (
+            dt.date(t.year, t.month, 1) - dt.timedelta(days=1)
+        ).isoformat()
 
         def calc_total(start: str, end: str = None) -> int:
             operator = ">=" if end else "=="
@@ -137,7 +140,7 @@ class ServerTools(Base):
 
         today_total = calc_total(today_str)
         monthly_total = calc_total(month_start, today_str)
-        prev_monthly_total = calc_total(prev_month_start, month_start)
+        prev_monthly_total = calc_total(prev_month_start, prev_month_end)
         log.info("end 'generate_report_summary' method")
         return {
             "today_total": today_total,
@@ -204,7 +207,7 @@ class ServerTools(Base):
         df_records = pd.DataFrame(recent_expenses)
         if not df_records.empty:
             df_records = df_records.query(
-                "expense_type not in @self.exclude_types"
+                "expense_type not in @self.income_types and expense_type not in @self.exclude_types"
             )
             df_records.loc[:, "date"] = pd.to_datetime(
                 df_records.loc[:, "date"].map(

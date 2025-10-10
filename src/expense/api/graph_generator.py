@@ -97,7 +97,6 @@ class GraphGenerator:
         self, df: pd.DataFrame, month_start: str, month_end: str
     ) -> pd.DataFrame:
         df_graph = df.copy()
-        df_graph = df_graph.query("expense_type not in @self.exclude_types")
         df_graph["date"] = pd.to_datetime(df_graph["date"])
         df_graph = df_graph.query(
             f"date >= @pd.Timestamp('{month_start}') and date <= @pd.Timestamp('{month_end}')"
