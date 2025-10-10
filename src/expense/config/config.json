@@ -67,7 +67,12 @@
         "expense_memo": "コンビニ",
         "expense_amount": 100
       }
-    ]
+    ],
+    "num_instant_items": {
+      "frequent": 8,
+      "recent": 8
+    },
+    "filter_duplicated_items": true
   },
   "ocr": {
     "tesseract_config": "--psm 6 --oem 3",

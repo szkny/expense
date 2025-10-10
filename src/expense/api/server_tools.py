@@ -70,25 +70,34 @@ class ServerTools(Base):
             favorite_expenses = self.expense_handler.get_favorite_expenses()
         except Exception:
             favorite_expenses = []
+        expense_config: dict[str, Any] = self.config.get("expense", {})
+        num_instant_items: dict[str, int] = expense_config.get(
+            "num_instant_items", {}
+        )
         try:
-            frequent_expenses = self.expense_handler.get_frequent_expenses(8)
+            frequent_expenses = self.expense_handler.get_frequent_expenses(
+                int(num_instant_items.get("frequent", 8))
+            )
         except Exception:
             frequent_expenses = []
         try:
-            recent_expenses = self.expense_handler.get_recent_expenses(8)
+            recent_expenses = self.expense_handler.get_recent_expenses(
+                int(num_instant_items.get("recent", 8))
+            )
         except Exception:
             recent_expenses = []
-        (
-            favorite_expenses,
-            frequent_expenses,
-            recent_expenses,
-        ) = self.expense_handler.filter_duplicates(
-            [
+        if expense_config.get("filter_duplicated_items", True):
+            (
                 favorite_expenses,
                 frequent_expenses,
                 recent_expenses,
-            ]
-        )
+            ) = self.expense_handler.filter_duplicates(
+                [
+                    favorite_expenses,
+                    frequent_expenses,
+                    recent_expenses,
+                ]
+            )
         item_list = [
             {"icon": self.icons.get("favorite"), "items": favorite_expenses},
             {"icon": self.icons.get("frequent"), "items": frequent_expenses},
