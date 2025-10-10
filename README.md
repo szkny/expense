@@ -35,7 +35,7 @@ It features receipt scanning via OCR, a web-based user interface, and integratio
     make install
     ```
 3.  Place your Google Cloud Platform credentials file at:
-    - `src/expense/config/credentials.json`
+    - `~/.config/expense/credentials.json`
 
 ## Usage
 
