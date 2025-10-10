@@ -1,10 +1,3 @@
-// 右クリック / 長押しメニューを無効化
-document.addEventListener("DOMContentLoaded", () => {
-  document.addEventListener("contextmenu", (e) => {
-    e.preventDefault();
-  });
-});
-
 // ハンバーガーメニュー
 (function() {
   const menuBtn = document.getElementById("hamburger-menu-btn");
