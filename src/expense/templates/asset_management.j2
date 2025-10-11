@@ -39,7 +39,7 @@
             <span
               {% if "¥ 0" in asset_summary.change %}
                 class=""
-              {% elif "+" in asset_summary.change %}
+              {% elif "+¥" in asset_summary.change %}
                 class="asset-color-up asset-up"
               {% else %}
                 class="asset-color-down asset-down"
@@ -53,7 +53,7 @@
               <span
                 {% if "¥ 0" in asset_summary.profit %}
                   class=""
-                {% elif "+" in asset_summary.profit %}
+                {% elif "+¥" in asset_summary.profit %}
                   class="asset-color-up"
                 {% else %}
                   class="asset-color-down"
@@ -66,7 +66,7 @@
             <span
               {% if "¥ 0" in asset_summary.profit_etf %}
                 class=""
-              {% elif "+" in asset_summary.profit_etf %}
+              {% elif "+¥" in asset_summary.profit_etf %}
                 class="asset-color-up"
               {% else %}
                 class="asset-color-down"
