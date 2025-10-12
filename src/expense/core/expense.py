@@ -91,31 +91,63 @@ class Expense(Base):
                     indent=2,
                 )
             else:
+                expense_config: dict[str, Any] = self.config.get("expense", {})
+                icon_config: dict[str, str] = expense_config.get("icons", {})
+                num_items: dict[str, int] = expense_config.get(
+                    "num_instant_items", {}
+                )
+                icons: list[str] = [
+                    icon_config.get("favorite", ""),
+                    icon_config.get("frequent", ""),
+                    icon_config.get("recent", ""),
+                ]
                 favorite_expenses = self.get_favorite_expenses()
-                frequent_expenses = self.get_frequent_expenses(8)
-                recent_expenses = self.get_recent_expenses(8)
+                frequent_expenses = self.get_frequent_expenses(30)
+                recent_expenses = self.get_recent_expenses(30)
 
-                (
-                    favorite_expenses,
-                    frequent_expenses,
-                    recent_expenses,
-                ) = self.filter_duplicates(
-                    [
+                if expense_config.get("filter_duplicated_items", True):
+                    (
                         favorite_expenses,
-                        frequent_expenses,
                         recent_expenses,
-                    ]
-                )
+                        frequent_expenses,
+                    ) = self.filter_duplicates(
+                        [
+                            favorite_expenses,
+                            recent_expenses,
+                            frequent_expenses,
+                        ]
+                    )
 
+                item_list = [
+                    {
+                        "icon": icon_config.get("favorite", ""),
+                        "items": favorite_expenses,
+                    },
+                    {
+                        "icon": icon_config.get("frequent", ""),
+                        "items": frequent_expenses[
+                            : int(num_items.get("frequent", 5))
+                        ],
+                    },
+                    {
+                        "icon": icon_config.get("recent", ""),
+                        "items": recent_expenses[
+                            : int(num_items.get("recent", 5))
+                        ],
+                    },
+                ]
                 expense_type = self.termux_api.select_expense_type(
-                    item_list=[
-                        {"icon": "⭐", "items": favorite_expenses},
-                        {"icon": "🔥", "items": frequent_expenses},
-                        {"icon": "🕒️", "items": recent_expenses},
-                    ],
+                    item_list=item_list,
                 )
-                if any([emoji in expense_type for emoji in "⭐🔥🕒️"]):
-                    data = re.sub("(⭐|🔥|🕒️) ", "", expense_type).split("/")
+                icons: list[str] = [
+                    icon_config.get("favorite", ""),
+                    icon_config.get("frequent", ""),
+                    icon_config.get("recent", ""),
+                ]
+                if any([emoji in expense_type for emoji in icons]):
+                    data = re.sub(
+                        f"({'|'.join(icons)}) ", "", expense_type
+                    ).split("/")
                     if len(data) == 3:
                         expense_type = data[0]
                         expense_memo = data[1]
