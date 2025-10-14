@@ -419,7 +419,7 @@ thead th {
 th,
 td {
   padding: 14px 5px 14px 5px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 0.5px solid #e5e7eb;
   font-size: 0.8rem;
   text-align: center;
   white-space: nowrap;
@@ -570,7 +570,7 @@ tr:nth-child(even) {
 
 .dark th,
 .dark td {
-  border-bottom: 1px solid #374151;
+  border-bottom: 0.5px solid #374151;
 }
 
 .dark th {
