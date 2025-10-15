@@ -81,19 +81,24 @@ hr {
 }
 
 #menu-container {
+  background: #e5e7eb;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  padding: 5px 5px 5px 5px;
   position: fixed;
   top: 45px;
   right: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 5px;
   z-index: 1000;
   opacity: 0;
-  transform: scale(0.95);
   transform-origin: top right;
   transition:
+    background 0.5s ease,
     opacity 0.5s ease,
     transform 0.5s ease;
+  border: none;
+  border-radius: 10px;
   pointer-events: none;
 }
 
@@ -624,6 +629,11 @@ tr:nth-child(even) {
 .dark .small-btn {
   background: #374151;
   color: #f3f4f6;
+}
+
+.dark #menu-container {
+  background: #1f2937;
+  box-shadow: 0 2px 6px rgba(255, 255, 255, 0.1);
 }
 
 .dark .collapsible-toggle::after {
