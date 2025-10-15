@@ -545,7 +545,10 @@ class GspreadHandler(Base):
                 new_value: str = ""
                 s = str(cell.value)
                 if matches := list(
-                    re.finditer(f"({target_type}:|,) *{target_memo}", s)
+                    re.finditer(
+                        f"({target_type}:|,) *{target_memo.replace('(', '\\(').replace(')', '\\)')}",
+                        s,
+                    )
                 ):
                     last_match = matches[-1]
                     start, end = last_match.span()
