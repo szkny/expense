@@ -3,6 +3,7 @@ import os
 import json
 import logging
 import datetime as dt
+import pandas as pd
 
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
@@ -19,6 +20,21 @@ gspread_handler: GspreadHandler = GspreadHandler(
     f"CF ({get_fiscal_year()}年度)"
 )
 asset_manager: AssetManager = AssetManager()
+_df_cache: dict = {}
+
+
+def get_cached_records(server_tools: ServerTools) -> pd.DataFrame:
+    now = dt.datetime.now()
+    if (
+        _df_cache
+        and (now - _df_cache.get("timestamp", now)).total_seconds() < 5
+    ):
+        return _df_cache.get("df_records")
+
+    df_records = get_dataframes(server_tools)
+    _df_cache["df_records"] = df_records
+    _df_cache["timestamp"] = now
+    return df_records
 
 
 @app.get("/manifest.json")
@@ -117,6 +133,67 @@ def asset_management(
             "graph_html": graph_html,
         },
     )
+
+
+def get_dataframes(server_tools):
+    max_n_records = (
+        server_tools.config.get("web_ui", {})
+        .get("record_table", {})
+        .get("max_n_records", 5000)
+    )
+    try:
+        recent_expenses = server_tools.expense_handler.get_recent_expenses(
+            max_n_records, drop_duplicates=False, with_date=True
+        )
+    except Exception:
+        recent_expenses = []
+
+    df_records = pd.DataFrame(recent_expenses)
+    if not df_records.empty:
+        df_records = df_records.query(
+            "expense_type not in @server_tools.income_types and expense_type not in @server_tools.exclude_types"
+        ).copy()
+        df_records["date"] = pd.to_datetime(
+            df_records["date"].map(lambda s: re.sub(r"[^\d\-]+", "", str(s))),
+            errors="coerce",
+        )
+        df_records.dropna(subset=["date"], inplace=True)
+    return df_records
+
+
+@app.get("/api/pie_chart", response_class=HTMLResponse)
+def get_pie_chart(request: Request) -> HTMLResponse:
+    server_tools = ServerTools(app, gspread_handler)
+    theme = request.cookies.get("theme", "light")
+    df_records = get_cached_records(server_tools)
+    df_graph = server_tools.graph_generator.generate_monthly_df(df_records)
+    graph_html = server_tools.graph_generator.generate_pie_chart(
+        df_graph, df_records, theme, include_plotlyjs=True
+    )
+    return HTMLResponse(content=graph_html)
+
+
+@app.get("/api/daily_chart", response_class=HTMLResponse)
+def get_daily_chart(request: Request) -> HTMLResponse:
+    server_tools = ServerTools(app, gspread_handler)
+    theme = request.cookies.get("theme", "light")
+    df_records = get_cached_records(server_tools)
+    graph_html = server_tools.graph_generator.generate_daily_chart(
+        df_records, theme, include_plotlyjs=False
+    )
+    return HTMLResponse(content=graph_html)
+
+
+@app.get("/api/bar_chart", response_class=HTMLResponse)
+def get_bar_chart(request: Request) -> HTMLResponse:
+    server_tools = ServerTools(app, gspread_handler)
+    theme = request.cookies.get("theme", "light")
+    df_records = get_cached_records(server_tools)
+    df_graph = server_tools.graph_generator.generate_monthly_df(df_records)
+    graph_html = server_tools.graph_generator.generate_bar_chart(
+        df_graph, theme, include_plotlyjs=False
+    )
+    return HTMLResponse(content=graph_html)
 
 
 @app.post("/register")

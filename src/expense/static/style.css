@@ -397,6 +397,13 @@ img.screenshot {
   margin-left: 30px;
 }
 
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100px;
+}
+
 /* テーブル */
 .table-container {
   overflow-x: auto;

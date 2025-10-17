@@ -191,12 +191,14 @@
           <li> 今月の支出金額 : ¥{{ "{:,}".format(monthly_total) }} </li>
           <li> 前月の支出金額 : ¥{{ "{:,}".format(prev_monthly_total) }} </li>
         </div>
-        {% if graph_html %}
-          <div class="graph-container">
-            <hr>
-            {{ graph_html | safe }}
-          </div>
-        {% endif %}
+        <div class="graph-container">
+          <hr>
+          <div id="pie-chart-container" class="loading"><div class="spinner"></div></div>
+          <hr>
+          <div id="daily-chart-container" class="loading"><div class="spinner"></div></div>
+          <hr>
+          <div id="bar-chart-container" class="loading"><div class="spinner"></div></div>
+        </div>
       </div>
     </div>
 

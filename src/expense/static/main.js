@@ -376,3 +376,102 @@ function filterTable() {
     });
   }
 })();
+
+// グラフの非同期読み込み処理
+(function() {
+  const reportContainer = document.getElementById("report-container");
+  if (!reportContainer) {
+    return;
+  }
+
+  const pieChartContainer = document.getElementById("pie-chart-container");
+  const dailyChartContainer = document.getElementById("daily-chart-container");
+  const barChartContainer = document.getElementById("bar-chart-container");
+
+  if (!pieChartContainer || !dailyChartContainer || !barChartContainer) {
+    return;
+  }
+
+  const loadAllGraphs = async () => {
+    const piePromise = fetch("/api/pie_chart");
+    const dailyPromise = fetch("/api/daily_chart");
+    const barPromise = fetch("/api/bar_chart");
+
+    const pieResponse = await piePromise;
+    const pieHtml = await pieResponse.text();
+    await fetchGraph(pieChartContainer, pieHtml);
+
+    const [dailyResponse, barResponse] = await Promise.all([
+      dailyPromise,
+      barPromise,
+    ]);
+
+    const dailyHtml = await dailyResponse.text();
+    await fetchGraph(dailyChartContainer, dailyHtml);
+
+    const barHtml = await barResponse.text();
+    await fetchGraph(barChartContainer, barHtml);
+
+    const reportTrigger = document.querySelector(
+      '.collapsible-trigger[data-key="report"]',
+    );
+    if (
+      reportTrigger &&
+      !document.documentElement.classList.contains("report-collapsed")
+    ) {
+      requestAnimationFrame(() => {
+        const graphs = document.querySelectorAll(".plotly-graph-div");
+        graphs.forEach((g) => Plotly.Plots.resize(g));
+      });
+    }
+  };
+
+  const fetchGraph = async (container, html) => {
+    try {
+      if (html) {
+        container.innerHTML = html;
+        container.classList.remove("loading");
+        const scripts = container.getElementsByTagName("script");
+        for (let i = 0; i < scripts.length; i++) {
+          eval(scripts[i].innerHTML);
+        }
+      }
+    } catch (error) {
+      container.innerHTML = "<p>Error loading graph.</p>";
+      console.error(
+        "There has been a problem with your fetch operation:",
+        error,
+      );
+    }
+  };
+
+  // Load graphs when the report section is opened
+  const reportTrigger = document.querySelector(
+    '.collapsible-trigger[data-key="report"]',
+  );
+  if (reportTrigger) {
+    let hasLoaded = false;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !hasLoaded) {
+            loadAllGraphs();
+            hasLoaded = true;
+            observer.unobserve(reportTrigger);
+          }
+        });
+      },
+      { threshold: 0.1 },
+    );
+
+    observer.observe(reportTrigger);
+
+    reportTrigger.addEventListener("click", () => {
+      if (!hasLoaded) {
+        loadAllGraphs();
+        hasLoaded = true;
+        observer.unobserve(reportTrigger);
+      }
+    });
+  }
+})();
