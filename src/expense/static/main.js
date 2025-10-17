@@ -392,42 +392,19 @@ function filterTable() {
     return;
   }
 
-  const loadAllGraphs = async () => {
-    const piePromise = fetch("/api/pie_chart");
-    const dailyPromise = fetch("/api/daily_chart");
-    const barPromise = fetch("/api/bar_chart");
-
-    const pieResponse = await piePromise;
-    const pieHtml = await pieResponse.text();
-    await fetchGraph(pieChartContainer, pieHtml);
-
-    const [dailyResponse, barResponse] = await Promise.all([
-      dailyPromise,
-      barPromise,
-    ]);
-
-    const dailyHtml = await dailyResponse.text();
-    await fetchGraph(dailyChartContainer, dailyHtml);
-
-    const barHtml = await barResponse.text();
-    await fetchGraph(barChartContainer, barHtml);
-
-    const reportTrigger = document.querySelector(
-      '.collapsible-trigger[data-key="report"]',
-    );
-    if (
-      reportTrigger &&
-      !document.documentElement.classList.contains("report-collapsed")
-    ) {
-      requestAnimationFrame(() => {
-        const graphs = document.querySelectorAll(".plotly-graph-div");
-        graphs.forEach((g) => Plotly.Plots.resize(g));
-      });
-    }
+  const loadAllGraphs = () => {
+    fetchGraph(pieChartContainer, "/api/pie_chart");
+    fetchGraph(dailyChartContainer, "/api/daily_chart");
+    fetchGraph(barChartContainer, "/api/bar_chart");
   };
 
-  const fetchGraph = async (container, html) => {
+  const fetchGraph = async (container, url) => {
     try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      const html = await response.text();
       if (html) {
         container.innerHTML = html;
         container.classList.remove("loading");
