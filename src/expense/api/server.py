@@ -29,7 +29,7 @@ def get_cached_records(server_tools: ServerTools) -> pd.DataFrame:
         _df_cache
         and (now - _df_cache.get("timestamp", now)).total_seconds() < 5
     ):
-        return _df_cache.get("df_records")
+        return pd.DataFrame(_df_cache.get("df_records"))
 
     df_records = get_dataframes(server_tools)
     _df_cache["df_records"] = df_records
@@ -135,7 +135,7 @@ def asset_management(
     )
 
 
-def get_dataframes(server_tools):
+def get_dataframes(server_tools: ServerTools) -> pd.DataFrame:
     max_n_records = (
         server_tools.config.get("web_ui", {})
         .get("record_table", {})
