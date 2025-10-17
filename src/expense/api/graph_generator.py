@@ -739,9 +739,10 @@ class GraphGenerator:
         x = [s.replace("(", "<br>(") for s in x]
         y = df_graph["profit"].to_list() + [df_graph["profit"].sum()]
         opr = ["+" if v >= 0 else "-" for i, v in enumerate(y)]
-        roi = [r["roi"] for _, r in df_graph.iterrows()] + [
-            y[-1] / invest_amount_total * 100
-        ]
+        roi_total = (
+            y[-1] / invest_amount_total * 100 if invest_amount_total > 0 else 0
+        )
+        roi = [r["roi"] for _, r in df_graph.iterrows()] + [roi_total]
         fig = go.Figure(
             go.Waterfall(
                 orientation="v",

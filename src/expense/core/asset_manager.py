@@ -63,7 +63,7 @@ class AssetManager(Base):
             df = pd.DataFrame(item_list)
             df = pd.DataFrame(df.to_numpy().reshape(len(item_list) // 10, 10))
             df.columns = pd.Index(df.iloc[0], name=None)
-            df = df.drop(0).replace("", pd.NA).dropna()
+            df = df.drop(0).replace("", pd.NA).replace("#N/A", "0").dropna()
             df = df.map(lambda s: re.sub("[$¥%,]", "", s))
             df.iloc[:, 1:] = df.iloc[:, 1:].astype(float)
             df.columns = pd.Index(
@@ -110,7 +110,7 @@ class AssetManager(Base):
             df = pd.DataFrame(item_list)
             df = pd.DataFrame(df.to_numpy().reshape(len(item_list) // 8, 8))
             df.columns = pd.Index(df.iloc[0], name=None)
-            df = df.drop(0).replace("", pd.NA).dropna()
+            df = df.drop(0).replace("", pd.NA).replace("#N/A", "0").dropna()
             df = df.map(lambda s: re.sub("[$¥%,]", "", s))
             df = df.astype(float)
             df.columns = pd.Index(
