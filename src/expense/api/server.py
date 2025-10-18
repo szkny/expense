@@ -6,7 +6,12 @@ import datetime as dt
 import pandas as pd
 
 from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
+from fastapi.responses import (
+    HTMLResponse,
+    FileResponse,
+    RedirectResponse,
+    JSONResponse,
+)
 
 from .server_tools import ServerTools
 from ..core.expense import get_fiscal_year
@@ -170,35 +175,46 @@ def get_dataframes(server_tools: ServerTools) -> pd.DataFrame:
     return df_records
 
 
-@app.get("/api/pie_chart", response_class=HTMLResponse)
-def get_pie_chart(request: Request) -> HTMLResponse:
+@app.get("/api/pie_chart", response_class=JSONResponse)
+def get_pie_chart(request: Request, month: str | None = None) -> JSONResponse:
     log.info("start 'get_pie_chart' method")
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
     df_records = get_cached_records(server_tools)
     df_graph = server_tools.graph_generator.generate_monthly_df(df_records)
-    graph_html, available_monthes = (
+    graph_html, available_months = (
         server_tools.graph_generator.generate_pie_chart(
-            df_graph, df_records, theme=theme, include_plotlyjs=False
+            df_graph,
+            df_records,
+            target_month=month,
+            theme=theme,
+            include_plotlyjs=False,
         )
     )
     log.info("end 'get_pie_chart' method")
-    return HTMLResponse(content=graph_html)
+    return JSONResponse(
+        content={"html": graph_html, "months": available_months}
+    )
 
 
-@app.get("/api/daily_chart", response_class=HTMLResponse)
-def get_daily_chart(request: Request) -> HTMLResponse:
+@app.get("/api/daily_chart", response_class=JSONResponse)
+def get_daily_chart(request: Request, month: str | None = None) -> JSONResponse:
     log.info("start 'get_daily_chart' method")
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
     df_records = get_cached_records(server_tools)
-    graph_html, available_monthes = (
+    graph_html, available_months = (
         server_tools.graph_generator.generate_daily_chart(
-            df_records, theme=theme, include_plotlyjs=False
+            df_records,
+            target_month=month,
+            theme=theme,
+            include_plotlyjs=False,
         )
     )
     log.info("end 'get_daily_chart' method")
-    return HTMLResponse(content=graph_html)
+    return JSONResponse(
+        content={"html": graph_html, "months": available_months}
+    )
 
 
 @app.get("/api/bar_chart", response_class=HTMLResponse)

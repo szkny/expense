@@ -380,49 +380,106 @@ function filterTable() {
 // グラフの非同期読み込み処理
 (function() {
   const reportContainer = document.getElementById("report-container");
-  if (!reportContainer) {
-    return;
-  }
+  if (!reportContainer) return;
 
-  const pieChartContainer = document.getElementById("pie-chart-container");
-  const dailyChartContainer = document.getElementById("daily-chart-container");
-  const barChartContainer = document.getElementById("bar-chart-container");
+  const chartConfigs = [
+    {
+      id: "pie",
+      endpoint: "/api/pie_chart",
+      hasDropdown: true,
+    },
+    {
+      id: "daily",
+      endpoint: "/api/daily_chart",
+      hasDropdown: true,
+    },
+    {
+      id: "bar",
+      endpoint: "/api/bar_chart",
+      hasDropdown: false,
+    },
+  ];
 
-  if (!pieChartContainer || !dailyChartContainer || !barChartContainer) {
-    return;
-  }
+  const fetchAndRenderChart = async (config, month = null) => {
+    const container = document.getElementById(`${config.id}-chart-container`);
+    if (!container) return;
 
-  const loadAllGraphs = () => {
-    fetchGraph(pieChartContainer, "/api/pie_chart");
-    fetchGraph(dailyChartContainer, "/api/daily_chart");
-    fetchGraph(barChartContainer, "/api/bar_chart");
-  };
+    container.classList.add("loading");
+    container.innerHTML = '<div class="spinner"></div>';
 
-  const fetchGraph = async (container, url) => {
+    let url = config.endpoint;
+    if (month) {
+      url += `?month=${month}`;
+    }
+
     try {
       const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-      const html = await response.text();
-      if (html) {
-        container.innerHTML = html;
-        container.classList.remove("loading");
-        const scripts = container.getElementsByTagName("script");
-        for (let i = 0; i < scripts.length; i++) {
-          eval(scripts[i].innerHTML);
+      if (!response.ok) throw new Error("Network response was not ok");
+
+      if (config.hasDropdown) {
+        const data = await response.json();
+        if (data.html) {
+          container.innerHTML = data.html;
+          // Only create dropdown on initial load
+          if (!month) {
+            createDropdown(config, data.months);
+          }
+        } else {
+          container.innerHTML = ""; // No chart for this month
         }
+      } else {
+        // For charts without dropdown (like bar chart)
+        const html = await response.text();
+        if (html) {
+          container.innerHTML = html;
+        }
+      }
+
+      container.classList.remove("loading");
+      const scripts = container.getElementsByTagName("script");
+      for (let i = 0; i < scripts.length; i++) {
+        // Using a function to scope `script` variable in the loop
+        new Function(scripts[i].innerHTML)();
       }
     } catch (error) {
       container.innerHTML = "<p>Error loading graph.</p>";
-      console.error(
-        "There has been a problem with your fetch operation:",
-        error,
-      );
+      console.error("Fetch error for " + url + ":", error);
     }
   };
 
-  // Load graphs when the report section is opened
+  const createDropdown = (config, months) => {
+    const controlsContainer = document.getElementById(
+      `${config.id}-chart-controls`,
+    );
+    if (!controlsContainer || months.length === 0) return;
+
+    const select = document.createElement("select");
+    select.id = `${config.id}-month-select`;
+
+    const currentMonth = months[0]; // Default to the latest month
+    months.forEach((month) => {
+      const option = document.createElement("option");
+      option.value = month;
+      option.textContent = month.replace("-", "年") + "月";
+      if (month === currentMonth) {
+        option.selected = true;
+      }
+      select.appendChild(option);
+    });
+
+    select.addEventListener("change", (e) => {
+      fetchAndRenderChart(config, e.target.value);
+    });
+
+    controlsContainer.innerHTML = ""; // Clear previous controls
+    controlsContainer.appendChild(select);
+  };
+
+  const loadAllCharts = () => {
+    chartConfigs.forEach((config) => fetchAndRenderChart(config));
+  };
+
+  // Load graphs when the report section is opened or becomes visible
   const reportTrigger = document.querySelector(
     '.collapsible-trigger[data-key="report"]',
   );
@@ -432,7 +489,7 @@ function filterTable() {
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting && !hasLoaded) {
-            loadAllGraphs();
+            loadAllCharts();
             hasLoaded = true;
             observer.unobserve(reportTrigger);
           }
@@ -445,7 +502,7 @@ function filterTable() {
 
     reportTrigger.addEventListener("click", () => {
       if (!hasLoaded) {
-        loadAllGraphs();
+        loadAllCharts();
         hasLoaded = true;
         observer.unobserve(reportTrigger);
       }
