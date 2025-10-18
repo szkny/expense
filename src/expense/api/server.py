@@ -177,8 +177,10 @@ def get_pie_chart(request: Request) -> HTMLResponse:
     theme = request.cookies.get("theme", "light")
     df_records = get_cached_records(server_tools)
     df_graph = server_tools.graph_generator.generate_monthly_df(df_records)
-    graph_html = server_tools.graph_generator.generate_pie_chart(
-        df_graph, df_records, theme, include_plotlyjs=False
+    graph_html, available_monthes = (
+        server_tools.graph_generator.generate_pie_chart(
+            df_graph, df_records, theme=theme, include_plotlyjs=False
+        )
     )
     log.info("end 'get_pie_chart' method")
     return HTMLResponse(content=graph_html)
@@ -190,8 +192,10 @@ def get_daily_chart(request: Request) -> HTMLResponse:
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
     df_records = get_cached_records(server_tools)
-    graph_html = server_tools.graph_generator.generate_daily_chart(
-        df_records, theme, include_plotlyjs=False
+    graph_html, available_monthes = (
+        server_tools.graph_generator.generate_daily_chart(
+            df_records, theme=theme, include_plotlyjs=False
+        )
     )
     log.info("end 'get_daily_chart' method")
     return HTMLResponse(content=graph_html)

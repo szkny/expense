@@ -387,10 +387,11 @@ class GraphGenerator:
     def generate_daily_chart(
         self,
         df_org: pd.DataFrame,
+        target_month: str | None = None,
         theme: str = "light",
         min_yrange: int = 50000,
         include_plotlyjs: bool | str = True,
-    ) -> str:
+    ) -> tuple[str, list[str]]:
         """
         累積折れ線グラフを生成
         """
@@ -398,7 +399,7 @@ class GraphGenerator:
         df = df_org.copy()
         if df.empty:
             log.info("DataFrame is empty, skipping graph generation.")
-            return ""
+            return "", []
 
         today = pd.Timestamp(dt.date.today())
         df.query("expense_type in @self.variable_types", inplace=True)
@@ -406,111 +407,62 @@ class GraphGenerator:
         unique_months = sorted(
             df["date"].dt.to_period("M").unique(), reverse=True
         )
+        available_months = [m.strftime("%Y-%m") for m in unique_months]
 
-        # NOTE: テンプレートを明示的に指定しないと、稀に無限ループ→Invalid valueエラーが発生することがある
-        fig = go.Figure(
-            layout={
-                "template": "plotly_dark" if theme == "dark" else "plotly_white"
-            }
+        if not unique_months:
+            return "", []
+
+        log.debug(f"target_month: {target_month}")
+        target_period = (
+            pd.Period(target_month, "M") if target_month else unique_months[0]
         )
-        trace_collections = []
-        y_ranges = []
-        processed_months = []
-        for month in unique_months:
-            t = month.to_timestamp()
-            month_start, month_end = self._get_month_boundaries(t)
-            df_graph = self._prepare_graph_dataframe(df, month_start, month_end)
-            if df_graph.empty:
-                continue
-            df_bar = self._prepare_bar_dataframe(df_graph)
-            df_graph = self._add_month_start_point(df_graph, month_start)
-            df_graph, df_predict = self._handle_predictions(
-                df_graph, today, month_start, month_end
-            )
-            fig_bar = self._create_bar_figure(
-                df_bar,
-                month_start,
-                month_end,
-                min_yrange,
-                df_graph,
-                df_predict,
-                theme,
-            )
-            fig_line = self._create_line_figure(df_graph, theme)
-            fig_predict = self._create_prediction_figure(df_predict, theme)
-            self._update_traces(fig_bar, fig_line, fig_predict)
-            temp_fig = go.Figure()
-            temp_fig.add_traces(fig_bar.data)
-            temp_fig.add_traces(fig_line.data)
-            if today.to_period("M") == month:
-                temp_fig.add_traces(fig_predict.data)
-            self._add_bar_chart_labels(
-                temp_fig,
-                df_bar,
-                "date",
-                theme,
-                fontsize=10,
-                label_nlags=3,
-                label_threshold=max(fig_bar.layout.yaxis.range[1] * 0.02, 1000),
-                label_offset=max(fig_bar.layout.yaxis.range[1] * 0.04, 2000),
-            )
 
-            trace_collections.append(temp_fig.data)
-            y_ranges.append(fig_bar.layout.yaxis.range)
-            processed_months.append(month)
+        t = target_period.to_timestamp()
+        month_start, month_end = self._get_month_boundaries(t)
+        df_graph = self._prepare_graph_dataframe(df, month_start, month_end)
 
-        if not trace_collections:
-            return ""
+        if df_graph.empty:
+            # Return empty graph but with available months for dropdown
+            return "", available_months
 
-        # Add all traces to the main figure, making only the first month visible
-        for i, traces in enumerate(trace_collections):
-            for trace in traces:
-                fig.add_trace(trace.update(visible=(i == 0)))
+        df_bar = self._prepare_bar_dataframe(df_graph)
+        df_graph = self._add_month_start_point(df_graph, month_start)
+        df_graph, df_predict = self._handle_predictions(
+            df_graph, today, month_start, month_end
+        )
+        fig = self._create_bar_figure(
+            df_bar,
+            month_start,
+            month_end,
+            min_yrange,
+            df_graph,
+            df_predict,
+            theme,
+        )
+        fig_line = self._create_line_figure(df_graph, theme)
+        fig_predict = self._create_prediction_figure(df_predict, theme)
+        self._update_traces(fig, fig_line, fig_predict)
 
-        # Create dropdown buttons
-        buttons = []
-        cumulative_trace_count = 0
-        for i, traces in enumerate(trace_collections):
-            visibility = [False] * len(fig.data)
-            for j in range(len(traces)):
-                visibility[cumulative_trace_count + j] = True
+        fig.add_traces(fig_line.data)
+        if today.to_period("M") == target_period:
+            fig.add_traces(fig_predict.data)
 
-            month_str = processed_months[i].strftime("%Y年%-m月")
-            buttons.append(
-                dict(
-                    label=month_str,
-                    method="update",
-                    args=[
-                        {"visible": visibility},
-                        {"yaxis.range": y_ranges[i]},
-                    ],
-                )
-            )
-            cumulative_trace_count += len(traces)
+        self._add_bar_chart_labels(
+            fig,
+            df_bar,
+            "date",
+            theme,
+            fontsize=10,
+            label_nlags=3,
+            label_threshold=max(fig.layout.yaxis.range[1] * 0.02, 1000),
+            label_offset=max(fig.layout.yaxis.range[1] * 0.04, 2000),
+        )
 
         self._update_layout(fig, theme)
         fig.update_layout(
             barmode="stack",
-            updatemenus=[
-                dict(
-                    active=0,
-                    buttons=buttons,
-                    direction="down",
-                    pad={"r": 0, "t": 0},
-                    showactive=False,
-                    x=1,
-                    xanchor="right",
-                    y=1.15,
-                    yanchor="top",
-                )
-            ],
             yaxis=dict(fixedrange=True),
         )
-        if processed_months and y_ranges:
-            fig.update_layout(
-                title_text="変動費内訳（日別）",
-                yaxis_range=y_ranges[0],
-            )
 
         graph_html = fig.to_html(
             full_html=False,
@@ -522,138 +474,95 @@ class GraphGenerator:
         )
         graph_html = f'<div style="-webkit-tap-highlight-color: transparent;">{graph_html}</div>'
         log.info("end 'generate_daily_chart' method")
-        return graph_html
+        return graph_html, available_months
 
     def generate_pie_chart(
         self,
         df: pd.DataFrame,
         df_records: pd.DataFrame,
+        target_month: str | None = None,
         theme: str = "light",
         include_plotlyjs: bool | str = True,
-    ) -> str:
+    ) -> tuple[str, list[str]]:
         """
         円グラフを生成
         """
         log.info("start 'generate_pie_chart' method")
         if df.empty:
             log.info("DataFrame is empty, skipping graph generation.")
-            return ""
-        df_pie = df.copy()
+            return "", []
+
         df_pie = df.copy()
         date_index = pd.to_datetime(df_records["date"])
         unique_months = sorted(
             date_index.dt.to_period("M").unique(),
             reverse=True,
         )
+        available_months = [m.strftime("%Y-%m") for m in unique_months]
 
-        fig = go.Figure()
-        trace_collections = []
-        processed_months = []
-        for month in unique_months:
-            t = month.to_timestamp()
-            df_pie_this_month = df_pie.loc[
-                df_pie.loc[:, "month"] == t.strftime("%Y-%m")
-            ]
-            if df_pie_this_month.empty:
-                log.info(
-                    f"DataFrame (df_pie_this_month of {month}) is empty, skipping graph generation."
-                )
-                continue
-            month_start, month_end = self._get_month_boundaries(t)
-            df_records_this_month = self._prepare_graph_dataframe(
-                df_records, month_start, month_end
+        if not unique_months:
+            return "", []
+
+        target_month_str = target_month if target_month else available_months[0]
+        log.debug(f"target_month_str: {target_month_str}")
+        target_period = pd.Period(target_month_str, "M")
+
+        t = target_period.to_timestamp()
+        df_pie_this_month = df_pie.loc[
+            df_pie.loc[:, "month"] == t.strftime("%Y-%m")
+        ]
+
+        if df_pie_this_month.empty:
+            log.info(
+                f"DataFrame (df_pie_this_month of {target_period}) is empty, skipping graph generation."
             )
-            n_records = df_records_this_month.shape[0]
-            month_str = pd.Timestamp(
-                df_pie_this_month.iloc[-1]["month"]
-            ).strftime("%Y年%-m月")
-            total_amount = df_pie_this_month["expense_amount"].sum()
-            fig_pie = px.pie(
-                df_pie_this_month,
-                names="expense_type",
-                values="expense_amount",
-                color="expense_type",
-                # NOTE: color引数で指定したラベルが自動的にhovertemplateの%{customdata}の末尾に
-                # 追加されてしまう仕様だが、明示的にラベルと同じ系列名expense_typeをcustom_data引数に
-                # 追加することで、hovertemplateの%{customdata}の先頭にラベルを表示させるよう制御
-                custom_data=["expense_type", "expense_memo"],
-                category_orders={"expense_type": self.expense_types},
-                color_discrete_map=self.graph_color,
-                hole=0.4,
-                # NOTE: テンプレートを明示的に指定しないと、稀に無限ループ→Invalid valueエラーが発生することがある
-                template="plotly_dark" if theme == "dark" else "plotly_white",
-            )
-            fig_pie.update_traces(
-                texttemplate="%{label}<br>¥%{value:,.0f}<br>(%{percent})",
-                # NOTE: %{label}を使うとラベルが２つ表示されてしまうため使わない
-                hovertemplate="¥%{value:,.0f} (%{percent}), %{customdata[0]}",
-                textfont=dict(size=14),
-                textposition="inside",
-                insidetextorientation="horizontal",
+            return "", available_months
+
+        month_start, month_end = self._get_month_boundaries(t)
+        df_records_this_month = self._prepare_graph_dataframe(
+            df_records, month_start, month_end
+        )
+        n_records = df_records_this_month.shape[0]
+        total_amount = df_pie_this_month["expense_amount"].sum()
+
+        fig = px.pie(
+            df_pie_this_month,
+            names="expense_type",
+            values="expense_amount",
+            color="expense_type",
+            custom_data=["expense_type", "expense_memo"],
+            category_orders={"expense_type": self.expense_types},
+            color_discrete_map=self.graph_color,
+            hole=0.4,
+            template="plotly_dark" if theme == "dark" else "plotly_white",
+        )
+        fig.update_traces(
+            texttemplate="%{label}<br>¥%{value:,.0f}<br>(%{percent})",
+            hovertemplate="¥%{value:,.0f} (%{percent}), %{customdata[0]}",
+            textfont=dict(size=14),
+            textposition="inside",
+            insidetextorientation="horizontal",
+            showlegend=False,
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=[0.5],
+                y=[0.5],
+                text=[f"合計<br>¥{total_amount: ,.0f}<br>({int(n_records)}件)"],
+                mode="text",
+                textposition="middle center",
+                textfont=dict(
+                    size=20,
+                    color="#ffffff" if theme == "dark" else "#000000",
+                ),
                 showlegend=False,
+                hoverinfo="skip",
             )
-            fig_pie.add_trace(
-                go.Scatter(
-                    x=[0.5],
-                    y=[0.5],
-                    text=[
-                        f"合計<br>¥{total_amount: ,.0f}<br>({int(n_records)}件)"
-                    ],
-                    mode="text",
-                    textposition="middle center",
-                    textfont=dict(
-                        size=20,
-                        color="#ffffff" if theme == "dark" else "#000000",
-                    ),
-                    showlegend=False,
-                    hoverinfo="skip",
-                )
-            )
-            trace_collections.append(fig_pie.data)
-            processed_months.append(month)
-
-        if not trace_collections:
-            return ""
-
-        for i, traces in enumerate(trace_collections):
-            for trace in traces:
-                fig.add_trace(trace.update(visible=(i == 0)))
-
-        buttons = []
-        cumulative_trace_count = 0
-        for i, traces in enumerate(trace_collections):
-            visibility = [False] * len(fig.data)
-            for j in range(len(traces)):
-                visibility[cumulative_trace_count + j] = True
-            month_str = processed_months[i].strftime("%Y年%-m月")
-            buttons.append(
-                dict(
-                    label=month_str,
-                    method="update",
-                    args=[
-                        {"visible": visibility},
-                    ],
-                )
-            )
-            cumulative_trace_count += len(traces)
+        )
 
         self._update_layout(fig, theme)
         fig.update_layout(
-            title_text="支出内訳（月別）",
-            barmode="stack",
-            updatemenus=[
-                dict(
-                    active=0,
-                    buttons=buttons,
-                    direction="down",
-                    pad={"r": 0, "t": 0},
-                    showactive=False,
-                    x=1,
-                    xanchor="right",
-                    y=1.15,
-                    yanchor="top",
-                )
-            ],
+            title_text=f"支出内訳（{target_period.strftime('%Y年%-m月')}）",
             uniformtext=dict(minsize=14, mode="hide"),
             xaxis=dict(visible=False),
             yaxis=dict(visible=False),
@@ -667,7 +576,7 @@ class GraphGenerator:
             ),
         )
         log.info("end 'generate_pie_chart' method")
-        return graph_html
+        return graph_html, available_months
 
     def generate_bar_chart(
         self,
