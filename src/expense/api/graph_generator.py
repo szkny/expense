@@ -8,10 +8,6 @@ import plotly.io as pio
 from plotly import express as px
 from plotly import graph_objects as go
 
-# NOTE: サーバー起動の初回アクセス時に、plotlyのテンプレート関連の処理でエラーが発生することがあるため
-#       デフォルトのテンプレートを明示的に指定しておく
-pio.templates.default = "plotly_white"
-
 log: logging.Logger = logging.getLogger("expense")
 
 
@@ -27,6 +23,9 @@ class GraphGenerator:
         self.variable_types = variable_types
         self.exclude_types = exclude_types
         self.graph_color = graph_config.get("color", {})
+        # NOTE: サーバー起動の初回アクセス時に、plotlyのテンプレート関連の処理でエラーが発生することがあるため
+        #       デフォルトのテンプレートを明示的に指定しておく
+        pio.templates.default = "plotly_white"
 
     def get_plotlyjs(self) -> str:
         log.info("start 'get_plotlyjs' method")
