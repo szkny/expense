@@ -759,8 +759,6 @@ class GraphGenerator:
                 ],
                 textposition="none",
                 hoverinfo="text",
-                # NOTE: テンプレートを明示的に指定しないと、稀に無限ループ→Invalid valueエラーが発生することがある
-                template="plotly_dark" if theme == "dark" else "plotly_white",
             )
         )
         for i, v in enumerate(y):
