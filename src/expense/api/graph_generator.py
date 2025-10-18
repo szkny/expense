@@ -262,8 +262,8 @@ class GraphGenerator:
             color_discrete_map=self.graph_color,
             barmode="stack",
             range_x=[
-                pd.Timestamp(month_start),
-                pd.Timestamp(month_end),
+                pd.Timestamp(month_start) - pd.Timedelta(days=2),
+                pd.Timestamp(month_end) + pd.Timedelta(days=2),
             ],
             range_y=[
                 0,
