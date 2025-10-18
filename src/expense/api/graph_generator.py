@@ -208,6 +208,7 @@ class GraphGenerator:
         min_yrange: int,
         df_graph: pd.DataFrame,
         df_predict: pd.DataFrame,
+        theme: str,
     ) -> px.bar:
         month_str = pd.Timestamp(month_start).strftime("%Y年%-m月")
         return px.bar(
@@ -232,6 +233,8 @@ class GraphGenerator:
                     df_predict["predict"].max() * 1.2,
                 ),
             ],
+            # NOTE: テンプレートを明示的に指定しないと、稀に無限ループ→Invalid valueエラーが発生することがある
+            template="plotly_dark" if theme == "dark" else "plotly_white",
         )
 
     def _create_line_figure(
@@ -380,7 +383,13 @@ class GraphGenerator:
                 df_graph, today, month_start, month_end
             )
             fig_bar = self._create_bar_figure(
-                df_bar, month_start, month_end, min_yrange, df_graph, df_predict
+                df_bar,
+                month_start,
+                month_end,
+                min_yrange,
+                df_graph,
+                df_predict,
+                theme,
             )
             fig_line = self._create_line_figure(df_graph, theme)
             fig_predict = self._create_prediction_figure(df_predict, theme)
@@ -526,10 +535,12 @@ class GraphGenerator:
                 category_orders={"expense_type": self.expense_types},
                 color_discrete_map=self.graph_color,
                 hole=0.4,
+                # NOTE: テンプレートを明示的に指定しないと、稀に無限ループ→Invalid valueエラーが発生することがある
+                template="plotly_dark" if theme == "dark" else "plotly_white",
             )
             fig_pie.update_traces(
                 texttemplate="%{label}<br>¥%{value:,.0f}<br>(%{percent})",
-                # NOTE: 上記の仕様により、%{label}を使うとラベルが２つ表示されてしまうため使わない
+                # NOTE: %{label}を使うとラベルが２つ表示されてしまうため使わない
                 hovertemplate="¥%{value:,.0f} (%{percent}), %{customdata[0]}",
                 textfont=dict(size=14),
                 textposition="inside",
@@ -651,6 +662,8 @@ class GraphGenerator:
             range_y=[0, None],
             category_orders={"expense_type": self.expense_types},
             color_discrete_map=self.graph_color,
+            # NOTE: テンプレートを明示的に指定しないと、稀に無限ループ→Invalid valueエラーが発生することがある
+            template="plotly_dark" if theme == "dark" else "plotly_white",
         )
         fig.update_traces(
             texttemplate="%{text}",
@@ -701,6 +714,8 @@ class GraphGenerator:
             category_orders={"ticker": df_pie["ticker"].to_list()},
             color_discrete_map=graph_color,
             hole=0.5,
+            # NOTE: テンプレートを明示的に指定しないと、稀に無限ループ→Invalid valueエラーが発生することがある
+            template="plotly_dark" if theme == "dark" else "plotly_white",
         )
         fig.update_traces(
             texttemplate="%{label}<br>%{percent}",
@@ -790,6 +805,8 @@ class GraphGenerator:
                 ],
                 textposition="none",
                 hoverinfo="text",
+                # NOTE: テンプレートを明示的に指定しないと、稀に無限ループ→Invalid valueエラーが発生することがある
+                template="plotly_dark" if theme == "dark" else "plotly_white",
             )
         )
         for i, v in enumerate(y):
