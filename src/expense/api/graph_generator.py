@@ -63,35 +63,75 @@ class GraphGenerator:
         date_or_month: str,
         len_memo_text: int = 50,
     ) -> pd.DataFrame:
-        for i, r in df.iterrows():
-            key = r[date_or_month]
-            expense_type = r["expense_type"]
-            condition = f"expense_type=='{expense_type}' and "
-            condition += (
-                f"date==@pd.Timestamp('{key}')"
-                if date_or_month == "date"
-                else f"month=='{key}'"
+        # Make sure the grouping key column exists in the reference dataframe
+        df_ref_copy = df_ref.copy()
+        if date_or_month == "month" and "month" not in df_ref_copy.columns:
+            df_ref_copy["month"] = pd.to_datetime(
+                df_ref_copy["date"]
+            ).dt.strftime("%Y-%m")
+
+        # Filter out rows with no memo, as they don't contribute to the summary
+        df_ref_copy = df_ref_copy[
+            df_ref_copy["expense_memo"].str.len() > 0
+        ].copy()
+        if df_ref_copy.empty:
+            df["expense_memo"] = "<br>"
+            return df
+
+        # Pre-calculate counts and sums for each memo within the main grouping keys
+        memo_stats = (
+            df_ref_copy.groupby([date_or_month, "expense_type", "expense_memo"])
+            .agg(
+                total_amount=("expense_amount", "sum"),
+                count=("expense_memo", "size"),
             )
-            _data = df_ref.query(condition)
-            n_memo = _data["expense_memo"].value_counts()
-            _data = (
-                _data.groupby(["expense_memo"])["expense_amount"]
-                .sum()
-                .reset_index()
-            ).sort_values("expense_amount")
-            _add_memo = "<br>"
-            for memo in _data["expense_memo"].iloc[::-1]:
-                if memo in _add_memo:
-                    continue
-                n = n_memo[memo]
-                if n > 1:
-                    memo += f" ×{n}"
-                if len(_add_memo + memo) > len_memo_text:
-                    _add_memo += ", ⋯"
+            .reset_index()
+        )
+
+        # Sort by amount to prioritize important memos when building the summary string
+        memo_stats.sort_values("total_amount", ascending=False, inplace=True)
+
+        # Create the display memo string (e.g., "Lunch ×3")
+        memo_stats["display_memo"] = memo_stats.apply(
+            lambda r: (
+                f"{r['expense_memo']} ×{r['count']}"
+                if r["count"] > 1
+                else r["expense_memo"]
+            ),
+            axis=1,
+        )
+
+        # Use groupby().apply() to build the truncated summary string for each group.
+        # This is significantly faster than iterating over the main dataframe.
+        def create_summary_string(group):
+            memos = []
+            char_count = 0
+            for memo in group["display_memo"]:
+                # Length check includes the separator ",<br>"
+                if memos and char_count + len(memo) + 5 > len_memo_text:
+                    memos.append("⋯")
                     break
-                if len(memo) > 0:
-                    _add_memo += ",<br>" + memo if _add_memo != "<br>" else memo
-            df.loc[i, "expense_memo"] = _add_memo
+                memos.append(memo)
+                char_count += len(memo)
+            result = ",<br>".join(memos)
+            result = "<br>" + result if len(memos) else ""
+            return result
+
+        summaries = (
+            memo_stats.groupby([date_or_month, "expense_type"])
+            .apply(create_summary_string, include_groups=False)
+            .rename("expense_memo")
+            .reset_index()
+        )
+
+        # Merge the generated summaries back into the original aggregated dataframe
+        if "expense_memo" in df.columns:
+            df.drop(columns=["expense_memo"], inplace=True)
+        df = df.merge(summaries, on=[date_or_month, "expense_type"], how="left")
+
+        # Set default value for groups that had no memos
+        df.fillna({"expense_memo": "<br>"}, inplace=True)
+
         return df
 
     def _get_month_boundaries(self, t: dt.datetime) -> tuple[str, str]:
