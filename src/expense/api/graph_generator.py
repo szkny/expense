@@ -367,7 +367,12 @@ class GraphGenerator:
             df["date"].dt.to_period("M").unique(), reverse=True
         )
 
-        fig = go.Figure()
+        # NOTE: テンプレートを明示的に指定しないと、稀に無限ループ→Invalid valueエラーが発生することがある
+        fig = go.Figure(
+            layout={
+                "template": "plotly_dark" if theme == "dark" else "plotly_white"
+            }
+        )
         trace_collections = []
         y_ranges = []
         processed_months = []
