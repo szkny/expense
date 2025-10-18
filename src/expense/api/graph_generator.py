@@ -31,8 +31,9 @@ class GraphGenerator:
         scripts = re.findall(
             r'(<script type="text/javascript">.*?</script>)', html, re.DOTALL
         )
+        script_html = scripts[0] + scripts[1] if len(scripts) >= 2 else ""
         log.info("end 'get_plotlyjs' method")
-        return scripts[0] + scripts[1] if len(scripts) >= 2 else ""
+        return script_html
 
     def generate_monthly_df(self, df: pd.DataFrame) -> pd.DataFrame:
         """
