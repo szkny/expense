@@ -24,17 +24,24 @@ _df_cache: dict = {}
 
 
 def get_cached_records(server_tools: ServerTools) -> pd.DataFrame:
-    now = dt.datetime.now()
-    if (
-        _df_cache
-        and (now - _df_cache.get("timestamp", now)).total_seconds() < 5
-    ):
-        return pd.DataFrame(_df_cache.get("df_records"))
+    log.info("start 'get_cached_records' method")
+    try:
+        now = dt.datetime.now()
+        cache_life_time = (
+            now - _df_cache.get("timestamp", now)
+        ).total_seconds()
+        log.debug(f"lapsed time of latest cache: {cache_life_time: .2f} s")
+        if _df_cache and cache_life_time < 30:
+            log.debug("returning cache DataFrame (< 60s)")
+            return pd.DataFrame(_df_cache.get("df_records"))
 
-    df_records = get_dataframes(server_tools)
-    _df_cache["df_records"] = df_records
-    _df_cache["timestamp"] = now
-    return df_records
+        log.debug("generate new DataFrame")
+        df_records = get_dataframes(server_tools)
+        _df_cache["df_records"] = df_records
+        _df_cache["timestamp"] = now
+        return df_records
+    finally:
+        log.info("end 'get_cached_records' method")
 
 
 @app.get("/manifest.json")
@@ -136,6 +143,7 @@ def asset_management(
 
 
 def get_dataframes(server_tools: ServerTools) -> pd.DataFrame:
+    log.info("start 'get_dataframes' method")
     max_n_records = (
         server_tools.config.get("web_ui", {})
         .get("record_table", {})
@@ -158,11 +166,13 @@ def get_dataframes(server_tools: ServerTools) -> pd.DataFrame:
             errors="coerce",
         )
         df_records.dropna(subset=["date"], inplace=True)
+    log.info("end 'get_dataframes' method")
     return df_records
 
 
 @app.get("/api/pie_chart", response_class=HTMLResponse)
 def get_pie_chart(request: Request) -> HTMLResponse:
+    log.info("start 'get_pie_chart' method")
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
     df_records = get_cached_records(server_tools)
@@ -170,22 +180,26 @@ def get_pie_chart(request: Request) -> HTMLResponse:
     graph_html = server_tools.graph_generator.generate_pie_chart(
         df_graph, df_records, theme, include_plotlyjs=False
     )
+    log.info("end 'get_pie_chart' method")
     return HTMLResponse(content=graph_html)
 
 
 @app.get("/api/daily_chart", response_class=HTMLResponse)
 def get_daily_chart(request: Request) -> HTMLResponse:
+    log.info("start 'get_daily_chart' method")
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
     df_records = get_cached_records(server_tools)
     graph_html = server_tools.graph_generator.generate_daily_chart(
         df_records, theme, include_plotlyjs=False
     )
+    log.info("end 'get_daily_chart' method")
     return HTMLResponse(content=graph_html)
 
 
 @app.get("/api/bar_chart", response_class=HTMLResponse)
 def get_bar_chart(request: Request) -> HTMLResponse:
+    log.info("start 'get_bar_chart' method")
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
     df_records = get_cached_records(server_tools)
@@ -193,6 +207,7 @@ def get_bar_chart(request: Request) -> HTMLResponse:
     graph_html = server_tools.graph_generator.generate_bar_chart(
         df_graph, theme, include_plotlyjs=False
     )
+    log.info("end 'get_bar_chart' method")
     return HTMLResponse(content=graph_html)
 
 
