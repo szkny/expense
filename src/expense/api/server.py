@@ -32,7 +32,7 @@ def get_cached_records(server_tools: ServerTools) -> pd.DataFrame:
         ).total_seconds()
         log.debug(f"lapsed time of latest cache: {cache_life_time: .2f} s")
         if _df_cache and cache_life_time < 30:
-            log.debug("returning cache DataFrame (< 60s)")
+            log.debug("returning cache DataFrame (< 30s)")
             return pd.DataFrame(_df_cache.get("df_records"))
 
         log.debug("generate new DataFrame")
