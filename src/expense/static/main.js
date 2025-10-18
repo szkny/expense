@@ -479,33 +479,6 @@ function filterTable() {
     chartConfigs.forEach((config) => fetchAndRenderChart(config));
   };
 
-  // Load graphs when the report section is opened or becomes visible
-  const reportTrigger = document.querySelector(
-    '.collapsible-trigger[data-key="report"]',
-  );
-  if (reportTrigger) {
-    let hasLoaded = false;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && !hasLoaded) {
-            loadAllCharts();
-            hasLoaded = true;
-            observer.unobserve(reportTrigger);
-          }
-        });
-      },
-      { threshold: 0.1 },
-    );
-
-    observer.observe(reportTrigger);
-
-    reportTrigger.addEventListener("click", () => {
-      if (!hasLoaded) {
-        loadAllCharts();
-        hasLoaded = true;
-        observer.unobserve(reportTrigger);
-      }
-    });
-  }
+  // Load all charts on page load
+  loadAllCharts();
 })();
