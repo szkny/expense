@@ -8,6 +8,10 @@ import plotly.io as pio
 from plotly import express as px
 from plotly import graph_objects as go
 
+# NOTE: サーバー起動の初回アクセス時に、plotlyのテンプレート関連の処理でエラーが発生することがあるため
+#       デフォルトのテンプレートを明示的に指定しておく
+pio.templates.default = "plotly_white"
+
 log: logging.Logger = logging.getLogger("expense")
 
 
