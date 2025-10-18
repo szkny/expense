@@ -221,6 +221,10 @@ class ServerTools(Base):
                 "monthly_total": 0,
                 "prev_monthly_total": 0,
             }
+
+        # Plotly.js
+        plotlyjs = self.graph_generator.get_plotlyjs()
+
         log.info("end 'generate_commons' method")
         return {
             "icons": self.icons,
@@ -234,5 +238,6 @@ class ServerTools(Base):
             "screenshot_base64": img_base64,
             "disable_ocr": disable_ocr,
             "today": dt.datetime.today().date().isoformat(),
+            "plotlyjs": plotlyjs,
             **report_summary,
         }

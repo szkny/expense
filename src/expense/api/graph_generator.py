@@ -1,8 +1,10 @@
+import re
 import logging
+import pandas as pd
 import datetime as dt
 from typing import Any
+import plotly.io as pio
 
-import pandas as pd
 from plotly import express as px
 from plotly import graph_objects as go
 
@@ -21,6 +23,16 @@ class GraphGenerator:
         self.variable_types = variable_types
         self.exclude_types = exclude_types
         self.graph_color = graph_config.get("color", {})
+
+    def get_plotlyjs(self) -> str:
+        log.info("start 'get_plotlyjs' method")
+        dummy_fig = dict(data=[], layout={})
+        html = pio.to_html(dummy_fig, include_plotlyjs=True, full_html=False)
+        scripts = re.findall(
+            r'(<script type="text/javascript">.*?</script>)', html, re.DOTALL
+        )
+        log.info("end 'get_plotlyjs' method")
+        return scripts[0] + scripts[1] if len(scripts) >= 2 else ""
 
     def generate_monthly_df(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -333,7 +345,7 @@ class GraphGenerator:
         df_org: pd.DataFrame,
         theme: str = "light",
         min_yrange: int = 50000,
-        include_plotlyjs: bool = True,
+        include_plotlyjs: bool | str = True,
     ) -> str:
         """
         累積折れ線グラフを生成
@@ -462,7 +474,7 @@ class GraphGenerator:
         df: pd.DataFrame,
         df_records: pd.DataFrame,
         theme: str = "light",
-        include_plotlyjs: bool = True,
+        include_plotlyjs: bool | str = True,
     ) -> str:
         """
         円グラフを生成
@@ -605,7 +617,7 @@ class GraphGenerator:
         df: pd.DataFrame,
         theme: str = "light",
         max_monthes: int = 12,
-        include_plotlyjs: bool = True,
+        include_plotlyjs: bool | str = True,
     ) -> str:
         """
         月別の棒グラフを生成
@@ -663,7 +675,7 @@ class GraphGenerator:
         self,
         df: pd.DataFrame,
         theme: str = "light",
-        include_plotlyjs: bool = True,
+        include_plotlyjs: bool | str = True,
     ) -> str:
         """
         ポートフォリオの円グラフを生成
@@ -725,7 +737,7 @@ class GraphGenerator:
         self,
         df: pd.DataFrame,
         theme: str = "light",
-        include_plotlyjs: bool = True,
+        include_plotlyjs: bool | str = True,
     ) -> str:
         """
         銘柄別の含み益を表すウォーターフォールチャートを生成
