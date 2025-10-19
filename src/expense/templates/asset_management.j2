@@ -109,7 +109,7 @@
       <a href="{{ gspread_url }}" class="link-spread"> {{ icons.get("link", "🔗") }} スプレッドシートを開く </a>
       <div id="asset-record-container" class="collapsible-content">
         <div class="search-wrapper">
-          <input type="text" id="search-input" placeholder="{{ icons.get('search', '🔍') }} 資産をフィルタリング" onkeyup="filterTable()" />
+          <input type="text" id="search-input" placeholder="{{ icons.get('search', '🔍') }} 資産をフィルタリング" />
           <button id="clear-search" type="button">✕</button>
         </div>
         <div class="table-container">
@@ -166,6 +166,6 @@
     <div class="spinner"></div>
   </div>
 </body>
-<script src="/static/main.js?v={{ range(100000, 999999) | random }}"></script>
+<script type="module" src="/static/js/main.js?v={{ range(100000, 999999) | random }}"></script>
 
 </html>
