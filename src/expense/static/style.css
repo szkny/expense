@@ -71,6 +71,7 @@ hr {
 
 #hamburger-menu-btn {
   right: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 #hamburger-menu-btn.clicked {
@@ -84,7 +85,7 @@ hr {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   padding: 8px 8px 8px 8px;
   position: fixed;
-  top: 45px;
+  top: 50px;
   right: 12px;
   display: flex;
   flex-direction: column;
