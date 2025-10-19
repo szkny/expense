@@ -119,16 +119,7 @@ def asset_management(
             f"{'+' if summary['roi'] >= 0 else '-'}{abs(summary['roi']):,.2f}%"
         )
     items = df_items.to_dict(orient="records")
-    theme = request.cookies.get("theme", "light")
-    graph_html = server_tools.graph_generator.generate_asset_pie_chart(
-        df_items,
-        theme=theme,
-        include_plotlyjs=True,
-    )
-    graph_html += "<hr>" if graph_html else ""
-    graph_html += server_tools.graph_generator.generate_asset_waterfall_chart(
-        df_items, theme=theme, include_plotlyjs=False
-    )
+    plotlyjs = server_tools.graph_generator.get_plotlyjs()
     log.info("end 'asset_management' method")
     return server_tools.templates.TemplateResponse(
         "asset_management.j2",
@@ -142,7 +133,7 @@ def asset_management(
             "today": dt.datetime.today(),
             "asset_summary": summary,
             "asset_items": items,
-            "graph_html": graph_html,
+            "plotlyjs": plotlyjs,
         },
     )
 
@@ -228,6 +219,34 @@ def get_bar_chart(request: Request) -> HTMLResponse:
         df_graph, theme, include_plotlyjs=False
     )
     log.info("end 'get_bar_chart' method")
+    return HTMLResponse(content=graph_html)
+
+
+@app.get("/api/asset_pie_chart", response_class=HTMLResponse)
+def get_asset_pie_chart(request: Request) -> HTMLResponse:
+    log.info("start 'get_asset_pie_chart' method")
+    server_tools: ServerTools = ServerTools(app, gspread_handler)
+    theme = request.cookies.get("theme", "light")
+    df_items = asset_manager.get_table_data()
+    graph_html = server_tools.graph_generator.generate_asset_pie_chart(
+        df_items,
+        theme=theme,
+        include_plotlyjs=False,
+    )
+    log.info("end 'get_asset_pie_chart' method")
+    return HTMLResponse(content=graph_html)
+
+
+@app.get("/api/asset_waterfall_chart", response_class=HTMLResponse)
+def get_asset_waterfall_chart(request: Request) -> HTMLResponse:
+    log.info("start 'get_asset_waterfall_chart' method")
+    server_tools: ServerTools = ServerTools(app, gspread_handler)
+    theme = request.cookies.get("theme", "light")
+    df_items = asset_manager.get_table_data()
+    graph_html = server_tools.graph_generator.generate_asset_waterfall_chart(
+        df_items, theme=theme, include_plotlyjs=False
+    )
+    log.info("end 'get_asset_waterfall_chart' method")
     return HTMLResponse(content=graph_html)
 
 

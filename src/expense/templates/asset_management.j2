@@ -91,12 +91,13 @@
             <span class="asset-summary-display-sub"> {{asset_summary.usdjpy}} </span>
           </div>
         </div>
-        {% if graph_html %}
-          <div class="graph-container">
-            <hr>
-            {{ graph_html | safe }}
-          </div>
-        {% endif %}
+        <div class="graph-container">
+          {{ plotlyjs | safe }}
+          <hr>
+          <div id="asset-pie-chart-container" class="loading"><div class="spinner"></div></div>
+          <hr>
+          <div id="asset-waterfall-chart-container" class="loading"><div class="spinner"></div></div>
+        </div>
       </div>
     </div>
 
