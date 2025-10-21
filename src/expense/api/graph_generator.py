@@ -843,14 +843,21 @@ class GraphGenerator:
                 hoverinfo="text",
             )
         )
-        fig.add_annotation(
-            x=df_graph.iloc[-1]["date"],
-            y=df_graph.iloc[-1]["valuation"],
-            text=f"¥{df_graph.iloc[-1]['valuation']:,.0f}",
-            showarrow=False,
-            font=dict(
-                size=12, color="#ffffff" if theme == "dark" else "#000000"
-            ),
+        fig.add_trace(
+            go.Scatter(
+                x=[df_graph.iloc[-1]["date"]],
+                y=[df_graph.iloc[-1]["valuation"]],
+                text=[f"¥{df_graph.iloc[-1]['valuation']:,.0f}"],
+                mode="text",
+                textposition="top left",
+                textfont=dict(
+                    size=14,
+                    weight="bold",
+                    color="#ffffff" if theme == "dark" else "#000000",
+                ),
+                showlegend=False,
+                hoverinfo="skip",
+            )
         )
         self._update_layout(fig, theme)
         fig.update_layout(
