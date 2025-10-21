@@ -803,6 +803,8 @@ class GraphGenerator:
         """
         log.info("start 'generate_asset_monthly_history_chart' method")
         df_graph = df.copy()
+        opr = ["+" if r["profit"] >= 0 else "-" for _, r in df_graph.iterrows()]
+        roi = [r["roi"] for _, r in df_graph.iterrows()]
         fig = go.Figure()
         fig.add_trace(
             go.Scatter(
@@ -812,10 +814,15 @@ class GraphGenerator:
                 mode="none",
                 name="投資額",
                 fillcolor=(
-                    "rgba(80, 120, 210, 0.6)"
+                    "rgba(120, 160, 255, 0.5)"
                     if theme == "dark"
-                    else "rgba(100, 140, 230, 0.6)"
+                    else "rgba(50, 80, 200, 0.5)"
                 ),
+                hovertext=[
+                    f"{x.strftime('%Y年%-m月%-d日')}<br>投資額 ¥{y:,.0f}"
+                    for x, y in zip(df_graph["date"], df_graph["invest_amount"])
+                ],
+                hoverinfo="text",
             )
         )
         fig.add_trace(
@@ -827,6 +834,13 @@ class GraphGenerator:
                 line=dict(
                     width=2, color="#dd4433" if theme == "dark" else "#ff5544"
                 ),
+                hovertext=[
+                    f"評価額 ¥{y:,.0f}<br>  (含み益 {o}¥{abs(p):,.0f}   損益率 {o}{abs(r):.2f}%)"
+                    for y, p, o, r in zip(
+                        df_graph["valuation"], df_graph["profit"], opr, roi
+                    )
+                ],
+                hoverinfo="text",
             )
         )
         fig.add_annotation(
@@ -841,6 +855,14 @@ class GraphGenerator:
         self._update_layout(fig, theme)
         fig.update_layout(
             title="資産推移",
+            hovermode="x unified",
+            xaxis=dict(
+                showspikes=True,
+                spikemode="across",
+                spikecolor="#ffffff" if theme == "dark" else "#000000",
+                spikethickness=1,
+                spikedash="dot",
+            ),
         )
         graph_html = fig.to_html(
             full_html=False,

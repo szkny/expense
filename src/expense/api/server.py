@@ -129,7 +129,6 @@ def asset_management(
     log.info("start 'asset_management' method")
     server_tools: ServerTools = ServerTools(app, gspread_handler)
     df_summary, df_items, df_records = get_cached_asset_table(asset_manager)
-    summary = df_summary.to_dict()
     summary = df_summary.to_dict(orient="records")
     if len(summary):
         summary = summary[0]
@@ -289,7 +288,14 @@ def get_asset_monthly_history_chart(request: Request) -> HTMLResponse:
     df_summary, df_items, df_records = get_cached_asset_table(asset_manager)
     _df_add = pd.DataFrame()
     _df_add.loc[0, "date"] = dt.date.today()
+    _df_add.loc[0, "invest_amount"] = df_records["invest_amount"].iloc[-1]
     _df_add.loc[0, "valuation"] = df_items["valuation"].sum()
+    _df_add.loc[0, "profit"] = (
+        _df_add.loc[0, "valuation"] - _df_add.loc[0, "invest_amount"]
+    )
+    _df_add.loc[0, "roi"] = (
+        _df_add.loc[0, "profit"] / _df_add.loc[0, "invest_amount"] * 100
+    )
     df_records = pd.concat([df_records, _df_add])
     df_records.index = pd.Index(range(len(df_records)))
     graph_html = (

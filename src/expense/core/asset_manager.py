@@ -158,7 +158,6 @@ class AssetManager(Base):
             df.columns = pd.Index(df.iloc[0], name=None)
             df = df.drop(0).replace("", pd.NA).replace("#N/A", "0").dropna()
             df = df.map(lambda s: re.sub("[$¥%,]", "", s))
-            # df = df.astype(float)
             df.columns = pd.Index(
                 [
                     "date",
