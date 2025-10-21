@@ -11,9 +11,11 @@ export function initMenu() {
     menuBtn.textContent = "☰";
   };
 
-  document.querySelectorAll("#theme-toggle, #asset-management-btn, #home-btn").forEach(btn => {
-    btn.addEventListener("click", closeMenu);
-  });
+  document
+    .querySelectorAll("#theme-toggle, #asset-management-btn, #home-btn")
+    .forEach((btn) => {
+      btn.addEventListener("click", closeMenu);
+    });
 
   menuBtn.addEventListener("click", () => {
     menu.classList.toggle("show");
@@ -36,8 +38,8 @@ export function initClosableMessages() {
   const msg2 = document.getElementById("failed-msg");
 
   closeBtn.addEventListener("click", () => {
-    if(msg1) msg1.style.display = "none";
-    if(msg2) msg2.style.display = "none";
+    if (msg1) msg1.style.display = "none";
+    if (msg2) msg2.style.display = "none";
   });
 }
 
@@ -51,11 +53,11 @@ export function initExpenseForm() {
   typeSelect.addEventListener("change", function() {
     const isShortcut = this.value.includes("/");
     if (amountInput) {
-        amountInput.style.display = isShortcut ? "none" : "block";
-        amountInput.required = !isShortcut;
+      amountInput.style.display = isShortcut ? "none" : "block";
+      amountInput.required = !isShortcut;
     }
     if (memoInput) {
-        memoInput.style.display = isShortcut ? "none" : "block";
+      memoInput.style.display = isShortcut ? "none" : "block";
     }
   });
 }
@@ -114,19 +116,45 @@ export function initScreenshotZoom() {
 }
 
 export function initCollapsibleSections() {
+  const triggers = document.querySelectorAll(".collapsible-trigger");
+
+  triggers.forEach((trigger) => {
+    const key = trigger.dataset.key;
+    if (!key) return;
+
+    const isCollapsed = localStorage.getItem(`${key}Collapsed`) === "true";
+    const openClass = `${key}-open`;
+    const collapsedClass = `${key}-collapsed`;
+
+    if (isCollapsed) {
+      document.documentElement.classList.add(collapsedClass);
+      document.documentElement.classList.remove(openClass);
+    } else {
+      document.documentElement.classList.add(openClass);
+      document.documentElement.classList.remove(collapsedClass);
+    }
+  });
+
   const onOpenCallbacks = {
-    report: () => requestAnimationFrame(() => Plotly.Plots.resize(document.querySelectorAll(".plotly-graph-div"))),
-    "asset-report": () => requestAnimationFrame(() => Plotly.Plots.resize(document.querySelectorAll(".plotly-graph-div"))),
+    report: () =>
+      requestAnimationFrame(() =>
+        Plotly.Plots.resize(document.querySelectorAll(".plotly-graph-div")),
+      ),
+    "asset-report": () =>
+      requestAnimationFrame(() =>
+        Plotly.Plots.resize(document.querySelectorAll(".plotly-graph-div")),
+      ),
   };
 
-  document.querySelectorAll(".collapsible-trigger").forEach((trigger) => {
+  triggers.forEach((trigger) => {
     trigger.addEventListener("click", () => {
       const key = trigger.dataset.key;
       if (!key) return;
 
       const openClass = `${key}-open`;
       const collapsedClass = `${key}-collapsed`;
-      const isCollapsed = document.documentElement.classList.contains(collapsedClass);
+      const isCollapsed =
+        document.documentElement.classList.contains(collapsedClass);
 
       if (isCollapsed) {
         document.documentElement.classList.remove(collapsedClass);
@@ -152,21 +180,25 @@ export function initRecordEditor() {
   const closeBtn = document.getElementById("confirmation-close-btn");
 
   const fields = {
-      delete: ["date", "type", "amount", "memo"],
-      target: ["date", "type", "amount", "memo"],
-      new: ["date", "type", "amount", "memo"],
+    delete: ["date", "type", "amount", "memo"],
+    target: ["date", "type", "amount", "memo"],
+    new: ["date", "type", "amount", "memo"],
   };
   const elements = {};
   for (const group in fields) {
-      elements[group] = {};
-      for (const field of fields[group]) {
-          elements[group][field] = document.getElementById(`${group === 'new' ? 'new-expense' : group + '-record'}-${field}`);
-      }
+    elements[group] = {};
+    for (const field of fields[group]) {
+      elements[group][field] = document.getElementById(
+        `${group === "new" ? "new-expense" : group + "-record"}-${field}`,
+      );
+    }
   }
 
   function showOverlay(row) {
-    const [date, type, amount, memo] = Array.from(row.children).map(cell => cell.textContent);
-    
+    const [date, type, amount, memo] = Array.from(row.children).map(
+      (cell) => cell.textContent,
+    );
+
     elements.delete.date.value = date;
     elements.delete.type.value = type;
     elements.delete.amount.value = amount;
@@ -189,16 +221,26 @@ export function initRecordEditor() {
   const longPressTime = 500;
   document.querySelectorAll("tbody tr").forEach((row) => {
     row.addEventListener("contextmenu", (e) => e.preventDefault());
-    row.addEventListener("mousedown", () => { pressTimer = setTimeout(() => showOverlay(row), longPressTime); });
+    row.addEventListener("mousedown", () => {
+      pressTimer = setTimeout(() => showOverlay(row), longPressTime);
+    });
     row.addEventListener("mouseup", () => clearTimeout(pressTimer));
     row.addEventListener("mouseleave", () => clearTimeout(pressTimer));
-    row.addEventListener("touchstart", () => { pressTimer = setTimeout(() => showOverlay(row), longPressTime); }, { passive: true });
+    row.addEventListener(
+      "touchstart",
+      () => {
+        pressTimer = setTimeout(() => showOverlay(row), longPressTime);
+      },
+      { passive: true },
+    );
     row.addEventListener("touchend", () => clearTimeout(pressTimer));
     row.addEventListener("touchmove", () => clearTimeout(pressTimer));
   });
 
   if (closeBtn) {
-    closeBtn.addEventListener("click", () => { overlay.style.display = "none"; });
+    closeBtn.addEventListener("click", () => {
+      overlay.style.display = "none";
+    });
   }
 
   overlay.addEventListener("click", function(e) {

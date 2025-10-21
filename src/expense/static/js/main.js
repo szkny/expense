@@ -1,6 +1,6 @@
 // src/expense/static/js/main.js
-import { initializeCharts } from './chart.js';
-import { initializeTableFilter } from './table.js';
+import { initializeCharts } from "./chart.js";
+import { initializeTableFilter } from "./table.js";
 import {
   initMenu,
   initClosableMessages,
@@ -11,9 +11,10 @@ import {
   initCollapsibleSections,
   initRecordEditor,
   initPwaInstall,
-} from './ui.js';
+} from "./ui.js";
 
 function onDOMContentLoaded() {
+  initCollapsibleSections();
   initializeCharts();
   initializeTableFilter();
   initMenu();
@@ -22,13 +23,12 @@ function onDOMContentLoaded() {
   initFormLoaders();
   initThemeToggle();
   initScreenshotZoom();
-  initCollapsibleSections();
   initRecordEditor();
   initPwaInstall();
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', onDOMContentLoaded);
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", onDOMContentLoaded);
 } else {
   onDOMContentLoaded();
 }

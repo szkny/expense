@@ -25,7 +25,8 @@ gspread_handler: GspreadHandler = GspreadHandler(
     f"CF ({get_fiscal_year()}年度)"
 )
 asset_manager: AssetManager = AssetManager()
-_df_cache: dict = {}
+_df_cache_record: dict = {}
+_df_cache_asset_table: dict = {}
 
 
 def get_cached_records(server_tools: ServerTools) -> pd.DataFrame:
@@ -33,20 +34,51 @@ def get_cached_records(server_tools: ServerTools) -> pd.DataFrame:
     try:
         now = dt.datetime.now()
         cache_life_time = (
-            now - _df_cache.get("timestamp", now)
+            now - _df_cache_record.get("timestamp", now)
         ).total_seconds()
         log.debug(f"lapsed time of latest cache: {cache_life_time: ,.1f} s")
-        if _df_cache and cache_life_time < 30:
+        if _df_cache_record and cache_life_time < 30:
             log.debug("returning cache DataFrame (< 30s)")
-            return pd.DataFrame(_df_cache.get("df_records"))
+            return pd.DataFrame(_df_cache_record.get("df_records"))
 
         log.debug("generate new DataFrame")
         df_records = get_dataframes(server_tools)
-        _df_cache["df_records"] = df_records
-        _df_cache["timestamp"] = now
+        _df_cache_record["df_records"] = df_records
+        _df_cache_record["timestamp"] = now
         return df_records
     finally:
         log.info("end 'get_cached_records' method")
+
+
+def get_cached_asset_table(
+    asset_manager: AssetManager,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    log.info("start 'get_cached_asset_table' method")
+    try:
+        now = dt.datetime.now()
+        cache_life_time = (
+            now - _df_cache_asset_table.get("timestamp", now)
+        ).total_seconds()
+        log.debug(f"lapsed time of latest cache: {cache_life_time: ,.1f} s")
+        if _df_cache_asset_table and cache_life_time < 30:
+            log.debug("returning cache DataFrame (< 30s)")
+            return (
+                pd.DataFrame(_df_cache_asset_table.get("df_summary")),
+                pd.DataFrame(_df_cache_asset_table.get("df_items")),
+                pd.DataFrame(_df_cache_asset_table.get("df_records")),
+            )
+
+        log.debug("generate new DataFrame")
+        df_summary = asset_manager.get_header_data()
+        df_items = asset_manager.get_table_data()
+        df_records = asset_manager.get_monthly_history_data()
+        _df_cache_asset_table["df_summary"] = df_summary
+        _df_cache_asset_table["df_items"] = df_items
+        _df_cache_asset_table["df_records"] = df_records
+        _df_cache_asset_table["timestamp"] = now
+        return (df_summary, df_items, df_records)
+    finally:
+        log.info("end 'get_cached_asset_table' method")
 
 
 @app.get("/manifest.json")
@@ -96,8 +128,7 @@ def asset_management(
     """
     log.info("start 'asset_management' method")
     server_tools: ServerTools = ServerTools(app, gspread_handler)
-    df_summary = asset_manager.get_header_data()
-    df_items = asset_manager.get_table_data()
+    df_summary, df_items, df_records = get_cached_asset_table(asset_manager)
     summary = df_summary.to_dict()
     summary = df_summary.to_dict(orient="records")
     if len(summary):
@@ -227,7 +258,7 @@ def get_asset_pie_chart(request: Request) -> HTMLResponse:
     log.info("start 'get_asset_pie_chart' method")
     server_tools: ServerTools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
-    df_items = asset_manager.get_table_data()
+    df_summary, df_items, df_records = get_cached_asset_table(asset_manager)
     graph_html = server_tools.graph_generator.generate_asset_pie_chart(
         df_items,
         theme=theme,
@@ -242,11 +273,31 @@ def get_asset_waterfall_chart(request: Request) -> HTMLResponse:
     log.info("start 'get_asset_waterfall_chart' method")
     server_tools: ServerTools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
-    df_items = asset_manager.get_table_data()
+    df_summary, df_items, df_records = get_cached_asset_table(asset_manager)
     graph_html = server_tools.graph_generator.generate_asset_waterfall_chart(
         df_items, theme=theme, include_plotlyjs=False
     )
     log.info("end 'get_asset_waterfall_chart' method")
+    return HTMLResponse(content=graph_html)
+
+
+@app.get("/api/asset_monthly_history_chart", response_class=HTMLResponse)
+def get_asset_monthly_history_chart(request: Request) -> HTMLResponse:
+    log.info("start 'get_asset_monthly_history_chart' method")
+    server_tools: ServerTools = ServerTools(app, gspread_handler)
+    theme = request.cookies.get("theme", "light")
+    df_summary, df_items, df_records = get_cached_asset_table(asset_manager)
+    _df_add = pd.DataFrame()
+    _df_add.loc[0, "date"] = dt.date.today()
+    _df_add.loc[0, "valuation"] = df_items["valuation"].sum()
+    df_records = pd.concat([df_records, _df_add])
+    df_records.index = pd.Index(range(len(df_records)))
+    graph_html = (
+        server_tools.graph_generator.generate_asset_monthly_history_chart(
+            df_records, theme=theme, include_plotlyjs=False
+        )
+    )
+    log.info("end 'get_asset_monthly_history_chart' method")
     return HTMLResponse(content=graph_html)
 
 

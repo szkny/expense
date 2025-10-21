@@ -143,3 +143,45 @@ class AssetManager(Base):
             )
         finally:
             log.info("end 'get_header_data' method")
+
+    @retry(stop=stop_after_attempt(3))
+    def get_monthly_history_data(
+        self, cell_range: str = "G18:K500", sheet_name: str = "資産推移 月次"
+    ) -> pd.DataFrame:
+        log.info("start 'get_monthly_history_data' method")
+        try:
+            sheet = self.workbook.worksheet(sheet_name)
+            cells = sheet.range(cell_range)
+            item_list = [c.value for c in cells]
+            df = pd.DataFrame(item_list)
+            df = pd.DataFrame(df.to_numpy().reshape(len(item_list) // 5, 5))
+            df.columns = pd.Index(df.iloc[0], name=None)
+            df = df.drop(0).replace("", pd.NA).replace("#N/A", "0").dropna()
+            df = df.map(lambda s: re.sub("[$¥%,]", "", s))
+            # df = df.astype(float)
+            df.columns = pd.Index(
+                [
+                    "date",
+                    "invest_amount",
+                    "valuation",
+                    "profit",
+                    "roi",
+                ]
+            )
+            df["date"] = pd.to_datetime(df["date"])
+            df.iloc[:, 1:] = df.iloc[:, 1:].astype(float)
+            # log.debug(f"df:\n{df}")
+            return df
+        except Exception:
+            log.exception("Error occurred.")
+            return pd.DataFrame(
+                columns=[
+                    "date",
+                    "invest_amount",
+                    "valuation",
+                    "profit",
+                    "roi",
+                ]
+            )
+        finally:
+            log.info("end 'get_monthly_history_data' method")

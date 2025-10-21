@@ -13,6 +13,11 @@ const allChartConfigs = {
       endpoint: "/api/asset_waterfall_chart",
       hasDropdown: false,
     },
+    {
+      id: "asset-monthly-history",
+      endpoint: "/api/asset_monthly_history_chart",
+      hasDropdown: false,
+    },
   ],
 };
 

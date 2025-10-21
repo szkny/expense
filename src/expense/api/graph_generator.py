@@ -791,3 +791,64 @@ class GraphGenerator:
         )
         log.info("end 'generate_asset_waterfall_chart' method")
         return graph_html
+
+    def generate_asset_monthly_history_chart(
+        self,
+        df: pd.DataFrame,
+        theme: str = "light",
+        include_plotlyjs: bool | str = True,
+    ) -> str:
+        """
+        月単位の資産推移チャートを生成
+        """
+        log.info("start 'generate_asset_monthly_history_chart' method")
+        df_graph = df.copy()
+        fig = go.Figure()
+        fig.add_trace(
+            go.Scatter(
+                x=df_graph["date"],
+                y=df_graph["invest_amount"],
+                fill="tozeroy",
+                mode="none",
+                name="投資額",
+                fillcolor=(
+                    "rgba(80, 120, 210, 0.6)"
+                    if theme == "dark"
+                    else "rgba(100, 140, 230, 0.6)"
+                ),
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=df_graph["date"],
+                y=df_graph["valuation"],
+                mode="lines",
+                name="評価額",
+                line=dict(
+                    width=2, color="#dd4433" if theme == "dark" else "#ff5544"
+                ),
+            )
+        )
+        fig.add_annotation(
+            x=df_graph.iloc[-1]["date"],
+            y=df_graph.iloc[-1]["valuation"],
+            text=f"¥{df_graph.iloc[-1]['valuation']:,.0f}",
+            showarrow=False,
+            font=dict(
+                size=12, color="#ffffff" if theme == "dark" else "#000000"
+            ),
+        )
+        self._update_layout(fig, theme)
+        fig.update_layout(
+            title="資産推移",
+        )
+        graph_html = fig.to_html(
+            full_html=False,
+            include_plotlyjs=include_plotlyjs,
+            config=dict(
+                responsive=True,
+                displayModeBar=False,
+            ),
+        )
+        log.info("end 'generate_asset_monthly_history_chart' method")
+        return graph_html
