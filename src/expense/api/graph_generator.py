@@ -338,12 +338,13 @@ class GraphGenerator:
                 text=label,
                 mode="text",
                 textposition="top center",
+                name="値ラベル",
                 textfont=dict(
                     size=fontsize,
                     weight="bold",
                     color="#ffffff" if theme == "dark" else "#000000",
                 ),
-                showlegend=False,
+                showlegend=True,
                 hoverinfo="skip",
             )
         )
@@ -835,7 +836,7 @@ class GraphGenerator:
                     width=2, color="#dd4433" if theme == "dark" else "#ff5544"
                 ),
                 hovertext=[
-                    f"評価額 ¥{y:,.0f}<br>  (含み益 {o}¥{abs(p):,.0f}   損益率 {o}{abs(r):.2f}%)"
+                    f"評価額 ¥{y:,.0f}<br>  (含み益 {o}¥{abs(p):,.0f} ／ 損益率 {o}{abs(r):.2f}%)"
                     for y, p, o, r in zip(
                         df_graph["valuation"], df_graph["profit"], opr, roi
                     )
@@ -849,13 +850,14 @@ class GraphGenerator:
                 y=[df_graph.iloc[-1]["valuation"]],
                 text=[f"¥{df_graph.iloc[-1]['valuation']:,.0f}"],
                 mode="text",
+                name="値ラベル",
                 textposition="top left",
                 textfont=dict(
                     size=14,
                     weight="bold",
                     color="#ffffff" if theme == "dark" else "#000000",
                 ),
-                showlegend=False,
+                showlegend=True,
                 hoverinfo="skip",
             )
         )
