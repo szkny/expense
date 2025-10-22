@@ -32,7 +32,7 @@
 - [x] data migration from spreadsheet records
 - [x] make selected target month on pie chart switchable
 - [x] desynchronize of loading graph html
-- [ ] add past trend chart to asset management page
+- [x] add past trend chart to asset management page
 - [ ] annual fiscal report
 - [ ] monthly summary report of total expenses including fixed expenses
 - [ ] add a feature of setting target budget of expenses
