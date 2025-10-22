@@ -1,10 +1,12 @@
 import re
 import logging
+import numpy as np
 import pandas as pd
 import datetime as dt
 from typing import Any
-import plotly.io as pio
+from scipy.optimize import curve_fit
 
+import plotly.io as pio
 from plotly import express as px
 from plotly import graph_objects as go
 
@@ -26,6 +28,9 @@ class GraphGenerator:
         # NOTE: サーバー起動の初回アクセス時に、plotlyのテンプレート関連の処理でエラーが発生することがあるため
         #       デフォルトのテンプレートを明示的に指定しておく
         pio.templates.default = "plotly_white"
+
+    def _exponential_func(self, x, a, b):
+        return a * np.exp(b * x)
 
     def get_plotlyjs(self) -> str:
         log.info("start 'get_plotlyjs' method")
@@ -945,25 +950,6 @@ class GraphGenerator:
         fig.add_trace(
             go.Scatter(
                 x=df_graph["date"],
-                y=df_graph["invest_amount"],
-                fill="tozeroy",
-                mode="none",
-                name="投資額",
-                fillcolor=(
-                    "rgba(120, 160, 255, 0.5)"
-                    if theme == "dark"
-                    else "rgba(50, 80, 200, 0.5)"
-                ),
-                hovertext=[
-                    f"{x.strftime('%Y年%-m月%-d日')}<br>投資額 ¥{y:,.0f}"
-                    for x, y in zip(df_graph["date"], df_graph["invest_amount"])
-                ],
-                hoverinfo="text",
-            )
-        )
-        fig.add_trace(
-            go.Scatter(
-                x=df_graph["date"],
                 y=df_graph["valuation"],
                 mode="lines",
                 name="評価額",
@@ -971,14 +957,90 @@ class GraphGenerator:
                     width=2, color="#dd4433" if theme == "dark" else "#ff5544"
                 ),
                 hovertext=[
-                    f"評価額 ¥{y:,.0f}<br>  (含み益 {o}¥{abs(p):,.0f} ／ 損益率 {o}{abs(r):.2f}%)"
-                    for y, p, o, r in zip(
-                        df_graph["valuation"], df_graph["profit"], opr, roi
+                    (
+                        f"{x.strftime('%Y年%-m月%-d日')}<br>"
+                        f"<b>評価額 ¥{y:,.0f}</b>"
+                        f"<br>  (含み益 {o}¥{abs(p):,.0f} ／ 損益率 {o}{abs(r):.2f}%)"
+                    )
+                    for x, y, p, o, r in zip(
+                        df_graph["date"],
+                        df_graph["valuation"],
+                        df_graph["profit"],
+                        opr,
+                        roi,
                     )
                 ],
                 hoverinfo="text",
             )
         )
+        fig.add_trace(
+            go.Scatter(
+                x=df_graph["date"],
+                y=df_graph["invest_amount"],
+                fill="tozeroy",
+                mode="none",
+                name="投資額",
+                fillcolor=(
+                    "rgba(120, 160, 255, 0.3)"
+                    if theme == "dark"
+                    else "rgba(50, 80, 200, 0.3)"
+                ),
+                hovertext=[
+                    f"投資額 ¥{y:,.0f}" for y in df_graph["invest_amount"]
+                ],
+                hoverinfo="text",
+            )
+        )
+
+        # Add exponential fitting line
+        if len(df_graph) > 1:
+            t = dt.time()
+            x_data = np.array(
+                [
+                    dt.datetime.combine(d, t).timestamp()
+                    for d in df_graph["date"]
+                ]
+            )
+            y_data = df_graph["valuation"].values
+            x_data_normalized = (x_data - x_data[0]) / (3600 * 24 * 30)
+            try:
+                params, covariance = curve_fit(
+                    self._exponential_func,
+                    x_data_normalized,
+                    y_data,
+                    p0=[y_data[-1] - y_data[0], 0.01],
+                    bounds=([-np.inf, -np.inf], [np.inf, np.inf]),
+                    maxfev=5000,
+                )
+                x_fit = np.linspace(
+                    x_data_normalized.min(), x_data_normalized.max(), 100
+                )
+                y_fit = self._exponential_func(x_fit, *params)
+                dates_fit = [
+                    pd.to_datetime(ts * (3600 * 24 * 30) + x_data[0], unit="s")
+                    for ts in x_fit
+                ]
+                fig.add_trace(
+                    go.Scatter(
+                        x=dates_fit,
+                        y=y_fit,
+                        mode="lines",
+                        name="指数近似",
+                        line=dict(
+                            width=1.5,
+                            dash="dot",
+                            color="#d1d5db" if theme == "dark" else "#374151",
+                        ),
+                        hovertext=[
+                            f"近似式 <i>y</i> = ¥{params[0]:,.0f} <i>e</i> <sup>{params[1]:.4f} <i>x</i></sup>"
+                        ]
+                        * len(y_fit),
+                        hoverinfo="text",
+                    )
+                )
+            except RuntimeError as e:
+                log.warning(f"Could not fit exponential function: {e}")
+
         fig.add_trace(
             go.Scatter(
                 x=[df_graph.iloc[-1]["date"]],
@@ -996,6 +1058,7 @@ class GraphGenerator:
                 hoverinfo="skip",
             )
         )
+
         self._update_layout(
             fig,
             theme,
