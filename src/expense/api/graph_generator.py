@@ -365,7 +365,124 @@ class GraphGenerator:
             hovertemplate="¥%{y:,.0f}",
         )
 
-    def _update_layout(self, fig: go.Figure, theme: str) -> None:
+    def _get_yaxis_range(
+        self, fig: go.Figure, ymax_override: float | None
+    ) -> tuple[float, float] | None:
+        """Get y-axis range from override or figure layout."""
+        if ymax_override is not None:
+            ymax = ymax_override
+            ymin = 0.0
+            if (
+                fig.layout.yaxis
+                and fig.layout.yaxis.range
+                and fig.layout.yaxis.range[0] is not None
+            ):
+                ymin = fig.layout.yaxis.range[0]
+            return ymin, ymax
+        elif (
+            fig.layout.yaxis
+            and fig.layout.yaxis.range
+            and fig.layout.yaxis.range[1] is not None
+        ):
+            return fig.layout.yaxis.range
+        return None
+
+    def _calculate_tick_step(
+        self, ymin: float, ymax: float, num_ticks: int = 5
+    ) -> float:
+        """Calculate a 'nice' tick step for the y-axis."""
+        import math
+
+        if ymax <= ymin:
+            return 0
+
+        tick_step = (ymax - ymin) / num_ticks
+        if tick_step <= 0:
+            return 0
+
+        power = 10 ** math.floor(math.log10(tick_step))
+
+        if tick_step / power < 1.5:
+            return power
+        elif tick_step / power < 3:
+            return 2 * power
+        elif tick_step / power < 7:
+            return 5 * power
+        else:
+            return 10 * power
+
+    def _format_tick_label(self, value: float, unit: float, suffix: str) -> str:
+        """Formats a single tick label with the appropriate unit and prefix."""
+        if abs(value) < 1:
+            return "¥0"
+
+        val_in_unit = value / unit
+        if val_in_unit == int(val_in_unit):
+            return f"¥{int(val_in_unit):,}{suffix}"
+        else:
+            return f"¥{val_in_unit:,.1f}{suffix}"
+
+    def _format_yaxis_ticks(
+        self, fig: go.Figure, ymax_override: float | None = None
+    ) -> dict:
+        """
+        Format y-axis ticks to use '万' or '億' units.
+        """
+        try:
+            range_val = self._get_yaxis_range(fig, ymax_override)
+            if not range_val:
+                return {}
+            ymin, ymax = range_val
+
+            if ymax < 10000:
+                return {}
+
+            unit, suffix = (
+                (100_000_000, "億") if ymax >= 100_000_000 else (10_000, "万")
+            )
+
+            tick_step = self._calculate_tick_step(ymin, ymax)
+            if tick_step <= 0:
+                return {}
+
+            import math
+
+            start = math.floor(ymin / tick_step) * tick_step
+
+            tickvals = []
+            val = start
+            while val <= ymax * 1.01:
+                tickvals.append(val)
+                val += tick_step
+
+            if not tickvals:
+                return {}
+
+            ticktext = [
+                self._format_tick_label(v, unit, suffix) for v in tickvals
+            ]
+
+            return {
+                "tickvals": tickvals,
+                "ticktext": ticktext,
+                "tickprefix": None,
+                "tickformat": None,
+            }
+
+        except Exception as e:
+            log.warning(f"Failed to apply custom y-axis formatting: {e}")
+            return {}
+
+    def _update_layout(
+        self, fig: go.Figure, theme: str, ymax_for_format: float | None = None
+    ) -> None:
+        yaxis_settings = {
+            "tickprefix": "¥",
+            "tickformat": ",",
+            "autorange": True,
+            "fixedrange": False,
+        }
+        yaxis_settings.update(self._format_yaxis_ticks(fig, ymax_for_format))
         fig.update_layout(
             height=500,
             xaxis_title="",
@@ -373,12 +490,7 @@ class GraphGenerator:
             title_y=0.98,
             legend_title="",
             xaxis=dict(fixedrange=True),
-            yaxis=dict(
-                tickprefix="¥",
-                tickformat=",",
-                autorange=True,
-                fixedrange=False,
-            ),
+            yaxis=yaxis_settings,
             dragmode=False,
             legend=dict(orientation="h"),
             margin=dict(l=10, r=10, t=50, b=0),
@@ -609,6 +721,11 @@ class GraphGenerator:
         cutoff_date = cutoff_date.strftime("%Y-%m-01")
         df_graph = df_graph.query("month >= @pd.Timestamp(@cutoff_date)")
         df_graph["month"] = df_graph["month"].dt.strftime("%Y-%m")
+
+        ymax = 0
+        if not df_graph.empty:
+            ymax = df_graph.groupby("month")["expense_amount"].sum().max()
+
         fig = px.bar(
             df_graph,
             x="month",
@@ -630,7 +747,7 @@ class GraphGenerator:
             textposition="inside",
             textangle=0,
         )
-        self._update_layout(fig, theme)
+        self._update_layout(fig, theme, ymax_for_format=ymax)
         self._add_bar_chart_labels(fig, df_graph, "month", theme, fontsize=12)
         graph_html = fig.to_html(
             full_html=False,
@@ -729,6 +846,14 @@ class GraphGenerator:
             y[-1] / invest_amount_total * 100 if invest_amount_total > 0 else 0
         )
         roi = [r["roi"] for _, r in df_graph.iterrows()] + [roi_total]
+
+        profits = df_graph["profit"]
+        cum_profits = profits.cumsum()
+        total_profit = profits.sum()
+        ymax = max(
+            0, cum_profits.max() if not cum_profits.empty else 0, total_profit
+        )
+
         fig = go.Figure(
             go.Waterfall(
                 orientation="v",
@@ -780,7 +905,7 @@ class GraphGenerator:
                 ),
             )
         fig.update_xaxes(showline=False, showticklabels=False, showgrid=False)
-        self._update_layout(fig, theme)
+        self._update_layout(fig, theme, ymax_for_format=ymax)
         fig.update_layout(title="含み益 内訳", waterfallgap=0.4, height=300)
         graph_html = fig.to_html(
             full_html=False,
@@ -806,6 +931,11 @@ class GraphGenerator:
         df_graph = df.copy()
         opr = ["+" if r["profit"] >= 0 else "-" for _, r in df_graph.iterrows()]
         roi = [r["roi"] for _, r in df_graph.iterrows()]
+
+        ymax = 0
+        if not df_graph.empty:
+            ymax = df_graph["valuation"].max()
+
         fig = go.Figure()
         fig.add_trace(
             go.Scatter(
@@ -861,7 +991,7 @@ class GraphGenerator:
                 hoverinfo="skip",
             )
         )
-        self._update_layout(fig, theme)
+        self._update_layout(fig, theme, ymax_for_format=ymax)
         fig.update_layout(
             title="資産推移",
             hovermode="x unified",
