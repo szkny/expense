@@ -474,13 +474,18 @@ class GraphGenerator:
             return {}
 
     def _update_layout(
-        self, fig: go.Figure, theme: str, ymax_for_format: float | None = None
+        self,
+        fig: go.Figure,
+        theme: str,
+        ymax_for_format: float | None = None,
+        yaxis_type: str = "linear",
     ) -> None:
         yaxis_settings = {
-            "tickprefix": "¥",
-            "tickformat": ",",
             "autorange": True,
             "fixedrange": False,
+            "tickprefix": "¥",
+            "tickformat": ",",
+            "type": yaxis_type,
         }
         yaxis_settings.update(self._format_yaxis_ticks(fig, ymax_for_format))
         fig.update_layout(
@@ -991,7 +996,42 @@ class GraphGenerator:
                 hoverinfo="skip",
             )
         )
-        self._update_layout(fig, theme, ymax_for_format=ymax)
+        self._update_layout(
+            fig,
+            theme,
+            ymax_for_format=ymax,
+            yaxis_type="linear",
+        )
+
+        updatemenu = dict(
+            type="buttons",
+            direction="right",
+            active=0,
+            x=1.00,
+            xanchor="right",
+            y=1.15,
+            yanchor="top",
+            buttons=list(
+                [
+                    dict(
+                        label="Linear",
+                        method="relayout",
+                        args=[{"yaxis.type": "linear"}],
+                    ),
+                    dict(
+                        label="Log",
+                        method="relayout",
+                        args=[{"yaxis.type": "log"}],
+                    ),
+                ]
+            ),
+        )
+        if theme == "dark":
+            updatemenu.update(
+                bgcolor="#8791a1",
+                font=dict(color="#000000"),
+            )
+
         fig.update_layout(
             title="資産推移",
             hovermode="x unified",
@@ -1002,6 +1042,7 @@ class GraphGenerator:
                 spikethickness=1,
                 spikedash="dot",
             ),
+            updatemenus=[updatemenu],
         )
         graph_html = fig.to_html(
             full_html=False,
