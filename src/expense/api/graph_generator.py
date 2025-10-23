@@ -29,9 +29,6 @@ class GraphGenerator:
         #       デフォルトのテンプレートを明示的に指定しておく
         pio.templates.default = "plotly_white"
 
-    def _exponential_func(self, x, a, b):
-        return a * np.exp(b * x)
-
     def get_plotlyjs(self) -> str:
         log.info("start 'get_plotlyjs' method")
         dummy_fig = dict(data=[], layout={})
@@ -928,6 +925,10 @@ class GraphGenerator:
         log.info("end 'generate_asset_waterfall_chart' method")
         return graph_html
 
+    def _fitting_func(self, x, a, b):
+        # 近似式 y = Σ_k^x a (1 + b) ^k
+        return a * ((1 + b) ** x - 1) / b
+
     def generate_asset_monthly_history_chart(
         self,
         df: pd.DataFrame,
@@ -1002,22 +1003,23 @@ class GraphGenerator:
                 ]
             )
             y_data = df_graph["valuation"].values
-            x_data_normalized = (x_data - x_data[0]) / (3600 * 24 * 30)
+            norm_factor = 3600 * 24 * 365
+            x_data_normalized = (x_data - x_data[0]) / norm_factor
             try:
                 params, covariance = curve_fit(
-                    self._exponential_func,
+                    self._fitting_func,
                     x_data_normalized,
                     y_data,
-                    p0=[y_data[-1] - y_data[0], 0.01],
-                    bounds=([-np.inf, -np.inf], [np.inf, np.inf]),
+                    p0=[y_data[-1] - y_data[0], 0.05],
+                    bounds=([0, 0], [np.inf, np.inf]),
                     maxfev=5000,
                 )
                 x_fit = np.linspace(
                     x_data_normalized.min(), x_data_normalized.max(), 100
                 )
-                y_fit = self._exponential_func(x_fit, *params)
+                y_fit = self._fitting_func(x_fit, *params)
                 dates_fit = [
-                    pd.to_datetime(ts * (3600 * 24 * 30) + x_data[0], unit="s")
+                    pd.to_datetime(ts * norm_factor + x_data[0], unit="s")
                     for ts in x_fit
                 ]
                 fig.add_trace(
@@ -1032,7 +1034,10 @@ class GraphGenerator:
                             color="#d1d5db" if theme == "dark" else "#374151",
                         ),
                         hovertext=[
-                            f"近似式 <i>y</i> = ¥{params[0]:,.0f} <i>e</i> <sup>{params[1]:.4f} <i>x</i></sup>"
+                            (
+                                f"近似式 <i>y</i> = <i>Σ<sub>k</sub><sup>x</sup></i> "
+                                f"¥{params[0]:,.0f} (1 + {params[1]:.4f}) <sup><i>k</i></sup>"
+                            )
                         ]
                         * len(y_fit),
                         hoverinfo="text",
