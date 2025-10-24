@@ -952,11 +952,7 @@ class GraphGenerator:
             go.Scatter(
                 x=df_graph["date"],
                 y=df_graph["valuation"],
-                mode="lines",
                 name="評価額",
-                line=dict(
-                    width=2, color="#dd4433" if theme == "dark" else "#ff5544"
-                ),
                 hovertext=[
                     (
                         f"{x.strftime('%Y年%-m月%-d日')}<br>"
@@ -972,24 +968,31 @@ class GraphGenerator:
                     )
                 ],
                 hoverinfo="text",
+                mode="lines",
+                line=dict(
+                    width=1.5, color="#3355bb" if theme == "dark" else "#4466cc"
+                ),
+                fill="tozeroy",
+                fillcolor=(
+                    "rgba(120, 160, 255, 0.6)"
+                    if theme == "dark"
+                    else "rgba(50, 80, 200, 0.6)"
+                ),
             )
         )
         fig.add_trace(
             go.Scatter(
                 x=df_graph["date"],
                 y=df_graph["invest_amount"],
-                fill="tozeroy",
-                mode="none",
                 name="投資額",
-                fillcolor=(
-                    "rgba(120, 160, 255, 0.3)"
-                    if theme == "dark"
-                    else "rgba(50, 80, 200, 0.3)"
-                ),
                 hovertext=[
                     f"投資額 ¥{y:,.0f}" for y in df_graph["invest_amount"]
                 ],
                 hoverinfo="text",
+                mode="lines",
+                line=dict(
+                    width=3, color="#bb4433" if theme == "dark" else "#dd6644"
+                ),
             )
         )
 
