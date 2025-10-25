@@ -543,10 +543,13 @@ class GspreadHandler(Base):
                 )
                 # 最後にマッチした部分を探す
                 new_value: str = ""
+                _target_memo = target_memo.replace("(", "\\(").replace(
+                    ")", "\\)"
+                )
                 s = str(cell.value)
                 if matches := list(
                     re.finditer(
-                        f"({target_type}:|,) *{target_memo.replace('(', '\\(').replace(')', '\\)')}",
+                        f"({target_type}:|,) *{_target_memo}",
                         s,
                     )
                 ):
