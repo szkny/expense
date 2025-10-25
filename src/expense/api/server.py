@@ -4,9 +4,11 @@ import json
 import logging
 import datetime as dt
 import pandas as pd
+from typing import Callable
 
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import (
+    Response,
     HTMLResponse,
     FileResponse,
     RedirectResponse,
@@ -79,6 +81,21 @@ def get_cached_asset_table(
         return (df_summary, df_items, df_records)
     finally:
         log.info("end 'get_cached_asset_table' method")
+
+
+@app.middleware("http")
+async def no_cache_middleware(request: Request, call_next: Callable):
+    """
+    /static/のキャッシュを無効化
+    """
+    response: Response = await call_next(request)
+    if request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = (
+            "no-store, no-cache, must-revalidate, max-age=0"
+        )
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
 
 
 @app.get("/manifest.json")
