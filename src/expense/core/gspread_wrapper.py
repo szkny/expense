@@ -28,7 +28,6 @@ def get_fiscal_year() -> int:
 
 
 class GspreadHandler(Base):
-
     def __init__(self, book_name: str):
         super().__init__()
         log.info("start 'GspreadHandler' constructor")
@@ -221,10 +220,10 @@ class GspreadHandler(Base):
         log.info(f"todays_expenses: {todays_expenses}")
         sum_amount = 0
         if len(todays_expenses):
-            excluded_expenses = list(
+            excluded_expenses: list[dict] = list(
                 filter(
                     lambda item: item.get("expense_type")
-                    not in self.income_type + self.exclude_types,
+                    not in (self.income_types + self.exclude_types),
                     todays_expenses,
                 )
             )
@@ -729,13 +728,13 @@ class GspreadHandler(Base):
                 _df_add = pd.DataFrame(cells, columns=date_list).T
                 df = pd.concat([df, _df_add])
             if df.empty:
-                return df
+                return False
             df_memo = df.iloc[:, -4:]
-            df_memo = df_memo.apply(
+            df_memo_add = df_memo.apply(
                 lambda r: [s for s in r.to_list() if s], axis=1
             )
             df = pd.concat(
-                [df.iloc[:, : len(self.expense_types)], df_memo], axis=1
+                [df.iloc[:, : len(self.expense_types)], df_memo_add], axis=1
             )
             df.columns = pd.Index(self.expense_types + ["memo"])
             log.debug(f"df:\n{df}")
@@ -764,7 +763,8 @@ class GspreadHandler(Base):
             df_records = pd.DataFrame()
             counter = 0
             for _, r in df.iterrows():
-                date = pd.Timestamp(r.name).strftime("%Y-%m-%dT%H:%M:%S.%f")
+                d: str = str(r.name)
+                date = pd.Timestamp(d).strftime("%Y-%m-%dT%H:%M:%S.%f")
                 for t in self.expense_types:
                     amount_formula = str(r[t])
                     if not re.match(r"^=?0", amount_formula):
@@ -867,3 +867,4 @@ class GspreadHandler(Base):
         )
         log.debug(f"Generated merged history file: {output_path}")
         log.info("end 'merge_expense_history_log' method")
+        return True

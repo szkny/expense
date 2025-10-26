@@ -16,7 +16,7 @@ class AssetManager(Base):
         self,
         book_name: str = "投資実績",
         sheet_name: str = "ポートフォリオ",
-    ):
+    ) -> None:
         super().__init__()
         credentials = service_account.Credentials.from_service_account_file(
             self.config_path / "credentials.json",
@@ -44,7 +44,7 @@ class AssetManager(Base):
             )
             if df.empty:
                 return None
-            price = df["close"].iloc[-1]
+            price: float | None = df["close"].iloc[-1]
             price = float(price) if price else None
             log.debug(f"live price: {price}")
             return price

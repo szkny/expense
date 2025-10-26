@@ -71,8 +71,7 @@ def similarity(a: str, b: str) -> float:
 
 
 class Ocr(TermuxAPI):
-
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.ocr_config: dict[str, Any] = self.config.get("ocr", {})
 

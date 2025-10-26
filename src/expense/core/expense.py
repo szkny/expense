@@ -32,7 +32,7 @@ def get_fiscal_year() -> int:
 
 
 class Expense(Base):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.termux_api: TermuxAPI = TermuxAPI()
 
@@ -139,7 +139,7 @@ class Expense(Base):
                 expense_type = self.termux_api.select_expense_type(
                     item_list=item_list,
                 )
-                icons: list[str] = [
+                icons = [
                     icon_config.get("favorite", ""),
                     icon_config.get("frequent", ""),
                     icon_config.get("recent", ""),
@@ -396,7 +396,9 @@ class Expense(Base):
         if len(idx):
             target_idx = idx[-1]
             log.debug(f"Target index: {target_idx}")
-            target_row = ", ".join(df.loc[target_idx, columns].map(str))
+            target_row = ", ".join(
+                df.loc[target_idx, columns].squeeze().map(str)
+            )
             df = df.drop(target_idx)
             df.loc[:, columns].to_csv(
                 self.expense_history, index=False, header=False
@@ -469,7 +471,9 @@ class Expense(Base):
         if len(idx):
             target_idx = idx[-1]
             log.debug(f"Target index: {target_idx}")
-            target_row = ", ".join(df.loc[target_idx, columns].map(str))
+            target_row = ", ".join(
+                df.loc[target_idx, columns].squeeze().map(str)
+            )
             log.debug(f"Target expense: {target_row}")
             tar_dt = pd.Timestamp(df.loc[target_idx, "datetime"])
             new_dt = pd.Timestamp(new_expense_date)
@@ -484,7 +488,9 @@ class Expense(Base):
             df.loc[:, columns].to_csv(
                 self.expense_history, index=False, header=False
             )
-            edited_row = ", ".join(df.loc[target_idx, columns].map(str))
+            edited_row = ", ".join(
+                df.loc[target_idx, columns].squeeze().map(str)
+            )
             log.debug(f"Edited expense: {edited_row}")
         else:
             log.debug(

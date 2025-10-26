@@ -1,4 +1,5 @@
 import re
+import math
 import logging
 import numpy as np
 import pandas as pd
@@ -31,12 +32,14 @@ class GraphGenerator:
 
     def get_plotlyjs(self) -> str:
         log.info("start 'get_plotlyjs' method")
-        dummy_fig = dict(data=[], layout={})
-        html = pio.to_html(dummy_fig, include_plotlyjs=True, full_html=False)
+        dummy_fig: dict = dict(data=[], layout={})
+        html: str = pio.to_html(
+            dummy_fig, include_plotlyjs=True, full_html=False
+        )
         scripts = re.findall(
             r'(<script type="text/javascript">.*?</script>)', html, re.DOTALL
         )
-        script_html = scripts[0] + scripts[1] if len(scripts) >= 2 else ""
+        script_html: str = scripts[0] + scripts[1] if len(scripts) >= 2 else ""
         log.info("end 'get_plotlyjs' method")
         return script_html
 
@@ -108,8 +111,8 @@ class GraphGenerator:
 
         # Use groupby().apply() to build the truncated summary string for each group.
         # This is significantly faster than iterating over the main dataframe.
-        def create_summary_string(group: pd.core.groupby.DataFrameGroupBy) -> str:
-            memos = []
+        def create_summary_string(group: pd.DataFrame) -> str:
+            memos: list[str] = []
             char_count = 0
             for memo in group["display_memo"]:
                 # Length check includes the separator ",<br>"
@@ -386,24 +389,20 @@ class GraphGenerator:
             and fig.layout.yaxis.range
             and fig.layout.yaxis.range[1] is not None
         ):
-            return fig.layout.yaxis.range
+            yrange: tuple[float, float] = fig.layout.yaxis.range
+            return yrange
         return None
 
     def _calculate_tick_step(
         self, ymin: float, ymax: float, num_ticks: int = 5
-    ) -> float:
+    ) -> int:
         """Calculate a 'nice' tick step for the y-axis."""
-        import math
-
         if ymax <= ymin:
             return 0
-
         tick_step = (ymax - ymin) / num_ticks
         if tick_step <= 0:
             return 0
-
-        power = 10 ** math.floor(math.log10(tick_step))
-
+        power: int = 10 ** math.floor(math.log10(tick_step))
         if tick_step / power < 1.5:
             return power
         elif tick_step / power < 3:
@@ -587,7 +586,7 @@ class GraphGenerator:
             yaxis=dict(fixedrange=True),
         )
 
-        graph_html = fig.to_html(
+        graph_html: str = fig.to_html(
             full_html=False,
             include_plotlyjs=include_plotlyjs,
             config=dict(
@@ -690,7 +689,7 @@ class GraphGenerator:
             xaxis=dict(visible=False),
             yaxis=dict(visible=False),
         )
-        graph_html = fig.to_html(
+        graph_html: str = fig.to_html(
             full_html=False,
             include_plotlyjs=include_plotlyjs,
             config=dict(
@@ -718,15 +717,17 @@ class GraphGenerator:
         df_graph = df.copy()
         df_graph.query("expense_type in @self.variable_types", inplace=True)
         for i, r in df_graph.iterrows():
-            df_graph.loc[i, "label"] = (
+            df_graph.at[i, "label"] = (
                 f"{r['expense_type']}<br>¥{r['expense_amount']:,.0f}"
             )
         df_graph["month"] = pd.to_datetime(df_graph["month"])
         cutoff_date = dt.datetime.today() - dt.timedelta(
             days=30 * (max_monthes - 1)
         )
-        cutoff_date = cutoff_date.strftime("%Y-%m-01")
-        df_graph = df_graph.query("month >= @pd.Timestamp(@cutoff_date)")
+        cutoff_date_str: str = cutoff_date.strftime("%Y-%m-01")
+        df_graph = df_graph.query(
+            f"month >= @pd.Timestamp('{cutoff_date_str}')"
+        )
         df_graph["month"] = df_graph["month"].dt.strftime("%Y-%m")
 
         ymax = 0
@@ -756,7 +757,7 @@ class GraphGenerator:
         )
         self._update_layout(fig, theme, ymax_for_format=ymax)
         self._add_bar_chart_labels(fig, df_graph, "month", theme, fontsize=12)
-        graph_html = fig.to_html(
+        graph_html: str = fig.to_html(
             full_html=False,
             include_plotlyjs=include_plotlyjs,
             config=dict(
@@ -820,7 +821,7 @@ class GraphGenerator:
             ),
         )
         self._update_layout(fig, theme)
-        graph_html = fig.to_html(
+        graph_html: str = fig.to_html(
             full_html=False,
             include_plotlyjs=include_plotlyjs,
             config=dict(
@@ -914,7 +915,7 @@ class GraphGenerator:
         fig.update_xaxes(showline=False, showticklabels=False, showgrid=False)
         self._update_layout(fig, theme, ymax_for_format=ymax)
         fig.update_layout(title="含み益 内訳", waterfallgap=0.4, height=300)
-        graph_html = fig.to_html(
+        graph_html: str = fig.to_html(
             full_html=False,
             include_plotlyjs=include_plotlyjs,
             config=dict(
@@ -1115,7 +1116,7 @@ class GraphGenerator:
             ),
             updatemenus=[updatemenu],
         )
-        graph_html = fig.to_html(
+        graph_html: str = fig.to_html(
             full_html=False,
             include_plotlyjs=include_plotlyjs,
             config=dict(

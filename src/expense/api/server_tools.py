@@ -22,7 +22,7 @@ log: logging.Logger = logging.getLogger("expense")
 
 
 class ServerTools(Base):
-    def __init__(self, app: FastAPI, gspread_handler: GspreadHandler):
+    def __init__(self, app: FastAPI, gspread_handler: GspreadHandler) -> None:
         super().__init__()
         expense_config: dict[str, Any] = self.config.get("expense", {})
         expense_types_all: dict[str, list] = expense_config.get(
@@ -38,7 +38,7 @@ class ServerTools(Base):
         webui_config: dict[str, Any] = self.config.get("web_ui", {})
         self.icons: dict[str, str] = webui_config.get("icons", {})
         self.icons = self.icons | expense_config.get("icons", {})
-        graph_config: dict[str, str] = webui_config.get("graph", {})
+        graph_config: dict[str, dict[str, str]] = webui_config.get("graph", {})
 
         self.expense_handler = Expense()
         self.gspread_handler: GspreadHandler = gspread_handler
@@ -130,11 +130,11 @@ class ServerTools(Base):
             dt.date(t.year, t.month, 1) - dt.timedelta(days=1)
         ).isoformat()
 
-        def calc_total(start: str, end: str = None) -> int:
+        def calc_total(start: str, end: str | None = None) -> int:
             operator = ">=" if end else "=="
             condition1 = f"date {operator} @pd.Timestamp('{start}')"
             condition2 = f" and date <= @pd.Timestamp('{end}')" if end else ""
-            return (
+            return int(
                 df.query(condition1 + condition2).loc[:, "expense_amount"].sum()
             )
 
@@ -211,7 +211,7 @@ class ServerTools(Base):
             )
             df_records.loc[:, "date"] = pd.to_datetime(
                 df_records.loc[:, "date"].map(
-                    lambda s: re.sub(r"[^\d\-]+", "", s)
+                    lambda s: re.sub(r"[^\d\-]+", "", str(s))
                 )
             )
             report_summary = self.generate_report_summary(df_records)

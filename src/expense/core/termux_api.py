@@ -9,8 +9,7 @@ log: logging.Logger = logging.getLogger("expense")
 
 
 class TermuxAPI(Base):
-
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         termux_api_config = self.config.get("termux_api", {})
         self.toast_enabled = termux_api_config.get("toast", {})
