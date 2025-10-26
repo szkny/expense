@@ -37,7 +37,7 @@
           <div class="asset-summary-details">
             <span> 前日比 </span>
             <span
-              {% if "¥ 0" in asset_summary.change %}
+              {% if "¥0" in asset_summary.change %}
                 class=""
               {% elif "+¥" in asset_summary.change %}
                 class="asset-color-up asset-up"
@@ -51,7 +51,7 @@
             <span> 含み益 </span>
             <div class="asset-summary-display-sub">
               <span
-                {% if "¥ 0" in asset_summary.profit %}
+                {% if "¥0" in asset_summary.profit %}
                   class=""
                 {% elif "+¥" in asset_summary.profit %}
                   class="asset-color-up"
@@ -64,7 +64,7 @@
           <div class="asset-summary-details">
             <span> 内 ETF 含み益 </span>
             <span
-              {% if "¥ 0" in asset_summary.profit_etf %}
+              {% if "¥0" in asset_summary.profit_etf %}
                 class=""
               {% elif "+¥" in asset_summary.profit_etf %}
                 class="asset-color-up"
@@ -76,7 +76,7 @@
           <div class="asset-summary-details">
             <span> 損益率 </span>
             <span
-              {% if "¥ 0" in asset_summary.roi %}
+              {% if "¥0" in asset_summary.roi %}
                 class=""
               {% elif "+" in asset_summary.roi %}
                 class="asset-color-up"
