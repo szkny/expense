@@ -19,7 +19,7 @@ class GraphGenerator:
         expense_types: list[str],
         variable_types: list[str],
         exclude_types: list[str],
-        graph_config: dict[str, Any],
+        graph_config: dict[str, dict[str, str]],
     ):
         self.expense_types = expense_types
         self.variable_types = variable_types
@@ -254,7 +254,7 @@ class GraphGenerator:
         df_graph: pd.DataFrame,
         df_predict: pd.DataFrame,
         theme: str,
-    ) -> px.bar:
+    ) -> go.Figure:
         month_str = pd.Timestamp(month_start).strftime("%Y年%-m月")
         return px.bar(
             df_bar,
@@ -284,7 +284,7 @@ class GraphGenerator:
 
     def _create_line_figure(
         self, df_graph: pd.DataFrame, theme: str
-    ) -> px.line:
+    ) -> go.Figure:
         return px.line(
             df_graph,
             x="date",
@@ -297,7 +297,7 @@ class GraphGenerator:
 
     def _create_prediction_figure(
         self, df_predict: pd.DataFrame, theme: str
-    ) -> px.line:
+    ) -> go.Figure:
         return px.line(
             df_predict,
             x="date",
@@ -309,7 +309,7 @@ class GraphGenerator:
 
     def _add_bar_chart_labels(
         self,
-        fig: px.bar,
+        fig: go.Figure,
         df_bar: pd.DataFrame,
         key: str,
         theme: str,
@@ -352,7 +352,7 @@ class GraphGenerator:
         )
 
     def _update_traces(
-        self, fig_bar: px.bar, fig_line: px.line, fig_predict: px.line
+        self, fig_bar: go.Figure, fig_line: go.Figure, fig_predict: go.Figure
     ) -> None:
         fig_bar.update_traces(
             hovertemplate="%{x|%-m月%-d日} ¥%{y:,.0f}%{customdata[0]}",
@@ -426,7 +426,7 @@ class GraphGenerator:
 
     def _format_yaxis_ticks(
         self, fig: go.Figure, ymax_override: float | None = None
-    ) -> dict:
+    ) -> dict[str, Any]:
         """
         Format y-axis ticks to use '万' or '億' units.
         """
@@ -925,7 +925,7 @@ class GraphGenerator:
         log.info("end 'generate_asset_waterfall_chart' method")
         return graph_html
 
-    def _fitting_func(self, x, a, b):
+    def _fitting_func(self, x: np.ndarray, a: float, b: float) -> np.ndarray:
         # 近似式 y = Σ_k^x a (1 + b) ^k
         return a * ((1 + b) ** x - 1) / b
 
