@@ -108,7 +108,7 @@ class GraphGenerator:
 
         # Use groupby().apply() to build the truncated summary string for each group.
         # This is significantly faster than iterating over the main dataframe.
-        def create_summary_string(group):
+        def create_summary_string(group: pd.core.groupby.DataFrameGroupBy) -> str:
             memos = []
             char_count = 0
             for memo in group["display_memo"]:
