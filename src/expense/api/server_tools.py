@@ -6,6 +6,7 @@ import logging
 import pandas as pd
 import datetime as dt
 from typing import Any
+from markupsafe import Markup, escape
 
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
@@ -59,6 +60,20 @@ class ServerTools(Base):
             name="static",
         )
         self.templates = Jinja2Templates(directory="src/expense/templates")
+        self.templates.env.filters["info_to_html"] = self.info_to_html
+
+    def info_to_html(self, info: str) -> Markup:
+        """
+        「 ▶ 」を安全に改行＋▼ブロックに変換
+        info内のHTMLはすべてエスケープする（XSS対策）
+        """
+        # HTMLエスケープ
+        escaped = escape(info)
+        # 置換対象をマークアップ安全なタグで置換
+        html = escaped.replace(
+            " ▶ ", Markup("<br><div class='msg-arrow'>▼</div><br>")
+        )
+        return Markup(html)
 
     def generate_items(self) -> list[str]:
         """

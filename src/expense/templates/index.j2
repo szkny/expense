@@ -34,7 +34,7 @@
     >
       {{ msg }}
     {% if info %}
-      <p><strong> {{ info }} </strong></p>
+      <p><strong>{{ info | info_to_html }}</strong></p>
     {% endif %}
       <button id="msg-close-btn" type="button" class="btn-close"> ✕ </button>
     </div>

@@ -274,6 +274,11 @@ select:focus {
   color: #97a1b1;
 }
 
+.msg-arrow {
+  text-align: center;
+  margin: -20px;
+}
+
 /* スクリーンショット */
 #screenshot-name {
   font-size: 0.8rem;
