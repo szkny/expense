@@ -364,10 +364,14 @@ class GraphGenerator:
         fig_line.update_traces(
             line=dict(dash="solid", width=1.5),
             hovertemplate="¥%{y:,.0f}",
+            name="累積合計",
+            showlegend=True,
         )
         fig_predict.update_traces(
             line=dict(dash="dot", width=1.5),
             hovertemplate="¥%{y:,.0f}",
+            name="予測",
+            showlegend=True,
         )
 
     def _get_yaxis_range(
@@ -740,7 +744,7 @@ class GraphGenerator:
             y="expense_amount",
             color="expense_type",
             text="label",
-            title="変動費内訳（月別）",
+            title="支出内訳（月別）",
             hover_data=["expense_memo"],
             range_y=[0, None],
             category_orders={"expense_type": self.expense_types},
