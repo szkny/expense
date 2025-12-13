@@ -17,7 +17,7 @@ editable-install: build
 
 serve:
 	@echo "Starting the service..."
-	uvicorn src.expense.api.server:app --host 0.0.0.0 --port 8000 --reload
+	uvicorn src.expense.api.server:app --host 0.0.0.0 --port 8000 --log-config uvicorn_log.json --reload
 	@echo
 
 webui:
