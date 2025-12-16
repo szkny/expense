@@ -931,7 +931,13 @@ class GraphGenerator:
         return graph_html
 
     def _fitting_func(self, x: np.ndarray, a: float, b: float) -> np.ndarray:
-        # 近似式 y = Σ_k^x a (1 + b) ^k
+        """
+        指数近似のフィッティング関数
+          近似式 y = Σ_k^x a (1 + b) ^k
+        x: 月単位の時間軸
+        a: 毎月積立投資額
+        b: 月利
+        """
         return a * ((1 + b) ** x - 1) / b
 
     def generate_asset_monthly_history_chart(
@@ -1011,15 +1017,22 @@ class GraphGenerator:
                 ]
             )
             y_data = df_graph["valuation"].values
-            norm_factor = 3600 * 24 * 365
+            norm_factor = 3600 * 24 * 365 / 12
             x_data_normalized = (x_data - x_data[0]) / norm_factor
+            a0 = (
+                (df_graph["invest_amount"] - df_graph["invest_amount"].shift(1))
+                .dropna()
+                .iloc[:12]
+                .mean()
+            )
+            b0 = 0.05 / 12
             try:
                 params, covariance = curve_fit(
                     self._fitting_func,
                     x_data_normalized,
                     y_data,
-                    p0=[y_data[-1] - y_data[0], 0.05],
-                    bounds=([0, 0], [np.inf, np.inf]),
+                    p0=[a0, b0],
+                    bounds=([a0 * 0.75, 0], [np.inf, np.inf]),
                     maxfev=5000,
                 )
                 x_fit = np.linspace(
