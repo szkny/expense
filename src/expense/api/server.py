@@ -377,7 +377,7 @@ def register(
                 f"[{expense_date}] "
                 f"{expense_type}: "
                 f"¥{expense_amount_num:,}"
-                f"{', '+expense_memo if expense_memo else ''}"
+                f"{' -  '+expense_memo if expense_memo else ''}"
             )
             try:
                 server_tools.termux_api.notify(
@@ -433,7 +433,7 @@ def ocr_process(
                 f"[{expense_date}] "
                 f"{expense_type}: "
                 f"¥{expense_amount:,}"
-                f"{', '+expense_memo if expense_memo else ''}"
+                f"{' -  '+expense_memo if expense_memo else ''}"
             )
             try:
                 server_tools.termux_api.notify(msg, info)
@@ -473,7 +473,7 @@ def ocr_process(
                     f"[{expense_date}] "
                     f"{expense_type}: "
                     f"¥{expense_amount:,}"
-                    f"{', '+expense_memo if expense_memo else ''}"
+                    f"{' -  '+expense_memo if expense_memo else ''}"
                 )
                 try:
                     server_tools.termux_api.notify(
@@ -540,7 +540,7 @@ def delete_process(
             f"[{expense_date}] "
             f"{expense_type}: "
             f"¥{expense_amount:,}"
-            f"{', '+expense_memo if expense_memo else ''}"
+            f"{' -  '+expense_memo if expense_memo else ''}"
         )
         try:
             server_tools.termux_api.notify(msg, info)
@@ -633,12 +633,12 @@ def edit_process(
                 f"[{target_date}] "
                 f"{target_type}: "
                 f"¥{target_amount:,}"
-                f"{', '+target_memo if target_memo else ''}"
+                f"{' -  '+target_memo if target_memo else ''}"
                 " ▶ "
                 f"[{new_expense_date}] "
                 f"{new_expense_type}: "
                 f"¥{new_expense_amount:,}"
-                f"{', '+new_expense_memo if new_expense_memo else ''}"
+                f"{' -  '+new_expense_memo if new_expense_memo else ''}"
             )
             try:
                 server_tools.termux_api.notify(msg, info)
