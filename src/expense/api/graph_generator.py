@@ -620,6 +620,8 @@ class GraphGenerator:
 
         df_pie = df.copy()
         date_index = pd.to_datetime(df_records["date"])
+        _, t_month_end = self._get_month_boundaries(dt.datetime.today())
+        date_index = date_index[date_index <= t_month_end]
         unique_months = sorted(
             date_index.dt.to_period("M").unique(),
             reverse=True,
