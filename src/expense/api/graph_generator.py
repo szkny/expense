@@ -724,7 +724,7 @@ class GraphGenerator:
             df_graph.at[i, "label"] = (
                 f"{r['expense_type']}<br>¥{r['expense_amount']:,.0f}"
             )
-        df_graph["month"] = pd.to_datetime(df_graph["month"])
+        df_graph["month"] = pd.to_datetime(df_graph["month"], format="%Y-%m")
         cutoff_date = dt.datetime.today() - dt.timedelta(
             days=30 * (max_monthes - 1)
         )
