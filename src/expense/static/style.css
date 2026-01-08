@@ -46,7 +46,7 @@ hr {
 /* ハンバーガーメニュー */
 .small-btn {
   position: fixed;
-  top: 12px;
+  bottom: 12px;
   right: 12px;
   background: #fff;
   color: #111;
@@ -91,7 +91,7 @@ hr {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   padding: 8px 8px 8px 8px;
   position: fixed;
-  top: 50px;
+  bottom: 50px;
   right: 12px;
   display: flex;
   flex-direction: column;
@@ -646,7 +646,7 @@ tr:nth-child(even) {
 }
 
 .dark .small-btn {
-  background: #1f2937;
+  background: #212736;
   color: #f3f4f6;
 }
 
@@ -659,7 +659,7 @@ tr:nth-child(even) {
 }
 
 .dark #menu-container {
-  background: #1f2937;
+  background: #212736;
   border: 1px solid #374151;
 }
 
