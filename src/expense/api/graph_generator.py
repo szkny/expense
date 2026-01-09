@@ -920,7 +920,7 @@ class GraphGenerator:
             )
         fig.update_xaxes(showline=False, showticklabels=False, showgrid=False)
         self._update_layout(fig, theme, ymax_for_format=ymax)
-        fig.update_layout(title="含み益 内訳", waterfallgap=0.4, height=300)
+        fig.update_layout(title="含み益 内訳", waterfallgap=0.4, height=400)
         graph_html: str = fig.to_html(
             full_html=False,
             include_plotlyjs=include_plotlyjs,
