@@ -48,7 +48,8 @@ hr {
   position: fixed;
   bottom: 12px;
   right: 12px;
-  background: #fff;
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
   color: #111;
   border: none;
   border-radius: 20px;
@@ -81,13 +82,15 @@ hr {
 
 #hamburger-menu-btn.clicked {
   transform: rotate(180deg);
-  background: none;
+  background-color: none;
+  backdrop-filter: none;
   box-shadow: none;
   border: none;
 }
 
 #menu-container {
-  background: #fff;
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   padding: 8px 8px 8px 8px;
   position: fixed;
@@ -646,7 +649,7 @@ tr:nth-child(even) {
 }
 
 .dark .small-btn {
-  background: #212736;
+  background-color: rgba(32, 40, 60, 0.1);
   color: #f3f4f6;
 }
 
@@ -655,11 +658,13 @@ tr:nth-child(even) {
 }
 
 .dark #hamburger-menu-btn.clicked {
+  background-color: none;
+  backdrop-filter: none;
   border: none;
 }
 
 .dark #menu-container {
-  background: #212736;
+  background-color: rgba(32, 40, 60, 0.1);
   border: 1px solid #374151;
 }
 
