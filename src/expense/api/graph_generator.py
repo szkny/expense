@@ -1021,21 +1021,18 @@ class GraphGenerator:
             y_data = df_graph["valuation"].values
             norm_factor = 3600 * 24 * 365 / 12
             x_data_normalized = (x_data - x_data[0]) / norm_factor
-            a0 = (
-                (df_graph["invest_amount"] - df_graph["invest_amount"].shift(1))
-                .dropna()
-                .iloc[:12]
-                .mean()
-            )
+            a0 = df_graph["invest_amount"].iloc[-1] / len(df_graph)
             b0 = 0.05 / 12
+            sigma = np.ones_like(y_data, dtype=float)
+            sigma[-1] = 1e-6
             try:
                 params, covariance = curve_fit(
                     self._fitting_func,
                     x_data_normalized,
                     y_data,
                     p0=[a0, b0],
-                    bounds=([a0 * 0.75, 0], [np.inf, np.inf]),
-                    maxfev=5000,
+                    bounds=([a0 * 0.5, -np.inf], [np.inf, np.inf]),
+                    sigma=sigma,
                 )
                 x_fit = np.linspace(
                     x_data_normalized.min(), x_data_normalized.max(), 100
