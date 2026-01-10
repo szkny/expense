@@ -33,7 +33,7 @@ class ServerTools(Base):
         self.fixed_types: list[str] = expense_types_all.get("fixed", [])
         self.variable_types: list[str] = expense_types_all.get("variable", [])
         self.expense_types: list[str] = (
-            self.variable_types + self.fixed_types + self.income_types
+            self.income_types + self.fixed_types + self.variable_types
         )
         self.exclude_types: list[str] = expense_config.get("exclude_types", [])
         webui_config: dict[str, Any] = self.config.get("web_ui", {})
@@ -48,6 +48,7 @@ class ServerTools(Base):
 
         self.graph_generator = GraphGenerator(
             expense_types=self.expense_types,
+            fixed_types=self.fixed_types,
             variable_types=self.variable_types,
             exclude_types=self.exclude_types,
             graph_config=graph_config,

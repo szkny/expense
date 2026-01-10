@@ -202,7 +202,7 @@ def get_dataframes(server_tools: ServerTools) -> pd.DataFrame:
     df_records = pd.DataFrame(recent_expenses)
     if not df_records.empty:
         df_records = df_records.query(
-            "expense_type not in @server_tools.income_types and expense_type not in @server_tools.exclude_types"
+            "expense_type not in @server_tools.exclude_types"
         ).copy()
         df_records["date"] = pd.to_datetime(
             df_records["date"].map(lambda s: re.sub(r"[^\d\-]+", "", str(s))),

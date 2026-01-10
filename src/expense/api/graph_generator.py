@@ -18,11 +18,13 @@ class GraphGenerator:
     def __init__(
         self,
         expense_types: list[str],
+        fixed_types: list[str],
         variable_types: list[str],
         exclude_types: list[str],
         graph_config: dict[str, dict[str, str]],
     ):
         self.expense_types = expense_types
+        self.fixed_types = fixed_types
         self.variable_types = variable_types
         self.exclude_types = exclude_types
         self.graph_color = graph_config.get("color", {})
@@ -619,7 +621,16 @@ class GraphGenerator:
             return "", []
 
         df_pie = df.copy()
-        date_index = pd.to_datetime(df_records["date"])
+        _df_records = df_records.copy()
+        df_pie.query(
+            "expense_type in @self.fixed_types or expense_type in @self.variable_types",
+            inplace=True,
+        )
+        _df_records.query(
+            "expense_type in @self.fixed_types or expense_type in @self.variable_types",
+            inplace=True,
+        )
+        date_index = pd.to_datetime(_df_records["date"])
         _, t_month_end = self._get_month_boundaries(dt.datetime.today())
         date_index = date_index[date_index <= t_month_end]
         unique_months = sorted(
@@ -648,7 +659,7 @@ class GraphGenerator:
 
         month_start, month_end = self._get_month_boundaries(t)
         df_records_this_month = self._prepare_graph_dataframe(
-            df_records, month_start, month_end
+            _df_records, month_start, month_end
         )
         n_records = df_records_this_month.shape[0]
         total_amount = df_pie_this_month["expense_amount"].sum()
@@ -721,7 +732,10 @@ class GraphGenerator:
             log.info("DataFrame is empty, skipping graph generation.")
             return ""
         df_graph = df.copy()
-        df_graph.query("expense_type in @self.variable_types", inplace=True)
+        df_graph.query(
+            "expense_type in @self.fixed_types or expense_type in @self.variable_types",
+            inplace=True,
+        )
         for i, r in df_graph.iterrows():
             df_graph.at[i, "label"] = (
                 f"{r['expense_type']}<br>¥{r['expense_amount']:,.0f}"
