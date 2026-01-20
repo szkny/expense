@@ -213,7 +213,7 @@ def get_dataframes(server_tools: ServerTools) -> tuple[pd.DataFrame, pd.DataFram
             errors="coerce",
         )
         df_records.dropna(subset=["date"], inplace=True)
-    df_annual = gspread_handler.get_annual_fiscal_table()
+    df_annual = server_tools.gspread_handler.get_annual_fiscal_table()
     log.info("end 'get_dataframes' method")
     return df_records, df_annual
 

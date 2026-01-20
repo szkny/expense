@@ -686,20 +686,32 @@ class GspreadHandler(Base):
         cell_range: str = "A20:F32"
     ) -> pd.DataFrame:
         log.info("start 'get_annual_fiscal_table' method")
-        sheet = self.workbook.worksheet("Summary")
-        cells = sheet.get(cell_range)
-        df = pd.DataFrame(cells)
-        df.columns = df.iloc[0]
-        df.columns.name = None
-        df.set_index("日付", inplace=True)
-        df = df.iloc[1:, 1:]
-        df.index = pd.to_datetime(df.index)
-        df = df.map(
-            lambda v: int(re.sub(r"[^0-9\-]", "", v)) if type(v) is str else 0
-        )
-        log.debug(f"Annual fiscal table:\n{df}")
-        log.info("end 'get_annual_fiscal_table' method")
-        return df
+        try:
+            sheet = self.workbook.worksheet("Summary")
+            cells = sheet.get(cell_range)
+            df = pd.DataFrame(cells)
+            df.columns = df.iloc[0]
+            df.columns.name = None
+            df.set_index("日付", inplace=True)
+            df = df.iloc[1:, 1:]
+            df.index = pd.to_datetime(df.index)
+            df = df.map(
+                lambda v: int(re.sub(r"[^0-9\-]", "", v)) if type(v) is str else 0
+            )
+            log.debug(f"Annual fiscal table:\n{df}")
+            log.info("end 'get_annual_fiscal_table' method")
+            return df
+        except Exception:
+            log.exception("Error occurred.")
+            return pd.DataFrame(
+                columns=[
+                    "収入",
+                    "支出",
+                    "CF",
+                ]
+            )
+        finally:
+            log.info("end 'get_annual_fiscal_table' method")
 
     @retry(stop=stop_after_attempt(3))
     def get_all_expense_df(
