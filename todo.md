@@ -33,8 +33,8 @@
 - [x] make selected target month on pie chart switchable
 - [x] desynchronize of loading graph html
 - [x] add past trend chart to asset management page
-- [ ] annual fiscal report
-- [ ] monthly summary report of total expenses including fixed expenses
+- [x] annual fiscal report
+- [x] monthly summary report of total expenses including fixed expenses
 - [ ] add a feature of setting target budget of expenses
 - [ ] add a feature of target assets
 - [ ] manage monthly subscription
