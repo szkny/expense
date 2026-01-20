@@ -5,6 +5,11 @@ const allChartConfigs = {
     { id: "pie", endpoint: "/api/pie_chart", hasDropdown: true },
     { id: "daily", endpoint: "/api/daily_chart", hasDropdown: true },
     { id: "bar", endpoint: "/api/bar_chart", hasDropdown: false },
+    {
+      id: "annual-fiscal-report",
+      endpoint: "/api/annual_fiscal_report_chart",
+      hasDropdown: false,
+    },
   ],
   asset: [
     { id: "asset-pie", endpoint: "/api/asset_pie_chart", hasDropdown: false },

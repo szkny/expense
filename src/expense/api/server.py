@@ -31,7 +31,7 @@ _df_cache_record: dict = {}
 _df_cache_asset_table: dict = {}
 
 
-def get_cached_records(server_tools: ServerTools) -> pd.DataFrame:
+def get_cached_records(server_tools: ServerTools) -> tuple[pd.DataFrame, pd.DataFrame]:
     log.info("start 'get_cached_records' method")
     try:
         now = dt.datetime.now()
@@ -41,13 +41,17 @@ def get_cached_records(server_tools: ServerTools) -> pd.DataFrame:
         log.debug(f"lapsed time of latest cache: {cache_life_time: ,.1f} s")
         if _df_cache_record and cache_life_time < 30:
             log.debug("returning cache DataFrame (< 30s)")
-            return pd.DataFrame(_df_cache_record.get("df_records"))
+            return (
+                pd.DataFrame(_df_cache_record.get("df_records")),
+                pd.DataFrame(_df_cache_record.get("df_annual"))
+            )
 
         log.debug("generate new DataFrame")
-        df_records = get_dataframes(server_tools)
+        df_records, df_annual = get_dataframes(server_tools)
         _df_cache_record["df_records"] = df_records
+        _df_cache_record["df_annual"] = df_annual
         _df_cache_record["timestamp"] = now
-        return df_records
+        return df_records, df_annual
     finally:
         log.info("end 'get_cached_records' method")
 
@@ -185,7 +189,7 @@ def asset_management(
     )
 
 
-def get_dataframes(server_tools: ServerTools) -> pd.DataFrame:
+def get_dataframes(server_tools: ServerTools) -> tuple[pd.DataFrame, pd.DataFrame]:
     log.info("start 'get_dataframes' method")
     max_n_records = (
         server_tools.config.get("web_ui", {})
@@ -209,8 +213,9 @@ def get_dataframes(server_tools: ServerTools) -> pd.DataFrame:
             errors="coerce",
         )
         df_records.dropna(subset=["date"], inplace=True)
+    df_annual = gspread_handler.get_annual_fiscal_table()
     log.info("end 'get_dataframes' method")
-    return df_records
+    return df_records, df_annual
 
 
 @app.get("/api/pie_chart", response_class=JSONResponse)
@@ -218,7 +223,7 @@ def get_pie_chart(request: Request, month: str | None = None) -> JSONResponse:
     log.info("start 'get_pie_chart' method")
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
-    df_records = get_cached_records(server_tools)
+    df_records, _ = get_cached_records(server_tools)
     df_graph = server_tools.graph_generator.generate_monthly_df(df_records)
     graph_html, available_months = (
         server_tools.graph_generator.generate_pie_chart(
@@ -240,7 +245,7 @@ def get_daily_chart(request: Request, month: str | None = None) -> JSONResponse:
     log.info("start 'get_daily_chart' method")
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
-    df_records = get_cached_records(server_tools)
+    df_records, _ = get_cached_records(server_tools)
     graph_html, available_months = (
         server_tools.graph_generator.generate_daily_chart(
             df_records,
@@ -260,12 +265,27 @@ def get_bar_chart(request: Request) -> HTMLResponse:
     log.info("start 'get_bar_chart' method")
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
-    df_records = get_cached_records(server_tools)
+    df_records, _ = get_cached_records(server_tools)
     df_graph = server_tools.graph_generator.generate_monthly_df(df_records)
     graph_html = server_tools.graph_generator.generate_bar_chart(
         df_graph, theme, include_plotlyjs=False
     )
     log.info("end 'get_bar_chart' method")
+    return HTMLResponse(content=graph_html)
+
+
+@app.get("/api/annual_fiscal_report_chart", response_class=HTMLResponse)
+def get_annual_fiscal_report_chart(request: Request) -> HTMLResponse:
+    log.info("start 'get_annual_fiscal_report_chart' method")
+    server_tools = ServerTools(app, gspread_handler)
+    theme = request.cookies.get("theme", "light")
+    _, df_annual = get_cached_records(server_tools)
+    graph_html = (
+        server_tools.graph_generator.generate_annual_fiscal_report_chart(
+            df_annual, theme, include_plotlyjs=False
+        )
+    )
+    log.info("end 'get_annual_fiscal_report_chart' method")
     return HTMLResponse(content=graph_html)
 
 

@@ -681,6 +681,27 @@ class GspreadHandler(Base):
             log.info("end 'end_record' method")
 
     @retry(stop=stop_after_attempt(3))
+    def get_annual_fiscal_table(
+        self,
+        cell_range: str = "A20:F32"
+    ) -> pd.DataFrame:
+        log.info("start 'get_annual_fiscal_table' method")
+        sheet = self.workbook.worksheet("Summary")
+        cells = sheet.get(cell_range)
+        df = pd.DataFrame(cells)
+        df.columns = df.iloc[0]
+        df.columns.name = None
+        df.set_index("日付", inplace=True)
+        df = df.iloc[1:, 1:]
+        df.index = pd.to_datetime(df.index)
+        df = df.map(
+            lambda v: int(re.sub(r"[^0-9\-]", "", v)) if type(v) is str else 0
+        )
+        log.debug(f"Annual fiscal table:\n{df}")
+        log.info("end 'get_annual_fiscal_table' method")
+        return df
+
+    @retry(stop=stop_after_attempt(3))
     def get_all_expense_df(
         self, offset: int = 31, exclude_rows_offset: int = 10
     ) -> bool:

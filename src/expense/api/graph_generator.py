@@ -423,11 +423,12 @@ class GraphGenerator:
         if abs(value) < 1:
             return "¥0"
 
-        val_in_unit = value / unit
+        opr = "" if value >= 0 else "-"
+        val_in_unit = abs(value / unit)
         if val_in_unit == int(val_in_unit):
-            return f"¥{int(val_in_unit):,}{suffix}"
+            return f"{opr}¥{int(val_in_unit):,}{suffix}"
         else:
-            return f"¥{val_in_unit:,.1f}{suffix}"
+            return f"{opr}¥{val_in_unit:,.1f}{suffix}"
 
     def _format_yaxis_ticks(
         self, fig: go.Figure, ymax_override: float | None = None
@@ -786,6 +787,110 @@ class GraphGenerator:
             ),
         )
         log.info("end 'generate_bar_chart' method")
+        return graph_html
+
+    def generate_annual_fiscal_report_chart(
+        self,
+        df: pd.DataFrame,
+        theme: str = "light",
+        include_plotlyjs: bool | str = True,
+    ) -> str:
+        """
+        今年度の収支サマリのレポートグラフを生成
+        """
+        log.info("start 'generate_annual_fiscal_report_chart' method")
+        if df.empty:
+            log.info("DataFrame is empty, skipping graph generation.")
+            return ""
+        df_annual = df.copy()
+        df_graph = pd.DataFrame()
+        df_graph.at[0, "type"] = "収入"
+        df_graph.at[0, "amount"] = df_annual["収入"].astype(int).sum()
+        df_graph.at[1, "type"] = "支出"
+        df_graph.at[1, "amount"] = df_annual["支出"].astype(int).sum()
+        df_graph.at[2, "type"] = "CF"
+        df_graph.at[2, "amount"] = (
+            df_graph.loc[0, "amount"] + df_graph.loc[1, "amount"]
+        )
+        for i, r in df_graph.iterrows():
+            opr = "+" if r["amount"] >= 0 else "-"
+            df_graph.at[i, "label"] = (
+                f"{r['type']}<br>{opr}¥{abs(r['amount']):,.0f}"
+            )
+
+        fig = go.Figure(
+            go.Waterfall(
+                orientation="v",
+                x=df_graph["type"],
+                y=df_graph["amount"],
+                measure=["relative", "relative", "total"],
+                increasing=dict(
+                    marker=dict(
+                        color="#4466bb" if theme == "dark" else "#6699ee"
+                    )
+                ),
+                decreasing=dict(
+                    marker=dict(
+                        color="#bb3333" if theme == "dark" else "#ee5555"
+                    )
+                ),
+                totals=dict(
+                    marker=dict(
+                        color="#baa44b" if theme == "dark" else "#eecc55"
+                    )
+                ),
+                connector=dict(
+                    line=dict(
+                        color="#ffffff" if theme == "dark" else "#000000",
+                        width=0.2,
+                        dash="dot",
+                    )
+                ),
+                text=df_graph["label"],
+                textposition="none",
+                hoverinfo="text",
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=df_graph["type"],
+                y=(
+                    df_graph["amount"].cumsum() - df_graph["amount"] // 2
+                ).to_list()[:-1]
+                + [df_graph["amount"].iloc[-1] // 2],
+                text=df_graph["label"],
+                mode="text",
+                textposition="middle center",
+                textfont=dict(
+                    size=14,
+                    weight="bold",
+                    color="#ffffff" if theme == "dark" else "#000000",
+                ),
+                hoverinfo="skip",
+            )
+        )
+        ymin, ymax = (0, 0)
+        if not df_graph.empty:
+            ymax = df_graph["amount"].max() * 1.1
+            ymin = df_graph["amount"].min() * 1.1
+        fig.update_xaxes(showline=False, showticklabels=False, showgrid=False)
+        fig.update_yaxes(range=(ymin, ymax))
+        self._update_layout(fig, theme, ymax_for_format=ymax)
+        fig.update_layout(
+            title="今年度の収支サマリ",
+            waterfallgap=0.4,
+            height=400,
+            showlegend=False,
+        )
+        graph_html: str = fig.to_html(
+            full_html=False,
+            include_plotlyjs=include_plotlyjs,
+            config=dict(
+                responsive=True,
+                displayModeBar=False,
+            ),
+        )
+        log.info("end 'generate_annual_fiscal_report_chart' method")
         return graph_html
 
     def generate_asset_pie_chart(
