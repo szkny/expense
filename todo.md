@@ -35,6 +35,7 @@
 - [x] add past trend chart to asset management page
 - [x] annual fiscal report
 - [x] monthly summary report of total expenses including fixed expenses
+- [ ] fallback to yahoo_finance when error occurred in google_finance
 - [ ] add a feature of setting target budget of expenses
 - [ ] add a feature of target assets
 - [ ] manage monthly subscription
