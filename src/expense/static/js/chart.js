@@ -14,6 +14,11 @@ const allChartConfigs = {
   asset: [
     { id: "asset-pie", endpoint: "/api/asset_pie_chart", hasDropdown: false },
     {
+      id: "asset-heatmap",
+      endpoint: "/api/asset_heatmap_chart",
+      hasDropdown: false,
+    },
+    {
       id: "asset-waterfall",
       endpoint: "/api/asset_waterfall_chart",
       hasDropdown: false,

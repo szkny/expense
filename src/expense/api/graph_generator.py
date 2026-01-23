@@ -957,6 +957,56 @@ class GraphGenerator:
         log.info("end 'generate_asset_pie_chart' method")
         return graph_html
 
+    def generate_asset_heatmap_chart(
+        self,
+        df: pd.DataFrame,
+        theme: str = "light",
+        include_plotlyjs: bool | str = True,
+    ) -> str:
+        log.info("start 'generate_asset_heatmap_chart' method")
+        df_graph = df.copy()
+        df_graph["change_pct"] = pd.to_numeric(df_graph["change_pct"], errors='coerce')
+        df_graph["text"] = df_graph.apply(
+            lambda r: f"{r['ticker']}<br>{r['change_pct']:+.2f}%",
+            axis=1
+        )
+        fig = px.treemap(
+            df_graph,
+            path=["ticker"],
+            values="valuation",
+            color="change_pct",
+            color_continuous_scale=["#e74c3c", "#f0f0f0", "#2ecc71"],
+            color_continuous_midpoint=0,
+            custom_data=["text"]
+        )
+        fig.update_traces(
+            texttemplate="%{customdata[0]}",
+            textfont_color="black",
+            maxdepth=1,
+            pathbar_visible=False,
+            marker=dict(line=dict(width=0)),
+        )
+        self._update_layout(fig, theme)
+        fig.update_layout(
+            title="保有資産ヒートマップ",
+            coloraxis_showscale=True,
+            coloraxis_colorbar=dict(title="前日比(%)"),
+            coloraxis=dict(
+                cmin=-1.0,
+                cmax=1.0
+            )
+        )
+        graph_html: str = fig.to_html(
+            full_html=False,
+            include_plotlyjs=include_plotlyjs,
+            config=dict(
+                responsive=True,
+                displayModeBar=False,
+            ),
+        )
+        log.info("end 'generate_asset_heatmap_chart' method")
+        return graph_html
+
     def generate_asset_waterfall_chart(
         self,
         df: pd.DataFrame,
@@ -1089,7 +1139,7 @@ class GraphGenerator:
                     (
                         f"{x.strftime('%Y年%-m月%-d日')}<br>"
                         f"<b>評価額 ¥{y:,.0f}</b>"
-                        f"<br>  (含み益 {o}¥{abs(p):,.0f} ／ 損益率 {o}{abs(r):.2f}%)"
+                        f"<br>  (含み益 {o}¥{abs(p):,.0f} ／ 損益率 {r:+.2f}%)"
                     )
                     for x, y, p, o, r in zip(
                         df_graph["date"],
@@ -1176,6 +1226,7 @@ class GraphGenerator:
                             (
                                 f"近似式 <i>y</i> = <i>Σ<sub>k</sub><sup>x</sup></i> "
                                 f"¥{params[0]:,.0f} (1 + {params[1]:.4f}) <sup><i>k</i></sup>"
+                                f"<br>  (年換算利回り {params[1]*100*12:+.2f}%)"
                             )
                         ]
                         * len(y_fit),

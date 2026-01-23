@@ -72,17 +72,20 @@ def get_cached_asset_table(
                 pd.DataFrame(_df_cache_asset_table.get("df_summary")),
                 pd.DataFrame(_df_cache_asset_table.get("df_items")),
                 pd.DataFrame(_df_cache_asset_table.get("df_records")),
+                pd.DataFrame(_df_cache_asset_table.get("df_stock")),
             )
 
         log.debug("generate new DataFrame")
         df_summary = asset_manager.get_header_data()
         df_items = asset_manager.get_table_data()
         df_records = asset_manager.get_monthly_history_data()
+        df_stock = asset_manager.get_stock_info_data()
         _df_cache_asset_table["df_summary"] = df_summary
         _df_cache_asset_table["df_items"] = df_items
         _df_cache_asset_table["df_records"] = df_records
+        _df_cache_asset_table["df_stock"] = df_stock
         _df_cache_asset_table["timestamp"] = now
-        return (df_summary, df_items, df_records)
+        return (df_summary, df_items, df_records, df_stock)
     finally:
         log.info("end 'get_cached_asset_table' method")
 
@@ -149,7 +152,7 @@ def asset_management(
     """
     log.info("start 'asset_management' method")
     server_tools: ServerTools = ServerTools(app, gspread_handler)
-    df_summary, df_items, df_records = get_cached_asset_table(asset_manager)
+    df_summary, df_items, df_records, df_stock = get_cached_asset_table(asset_manager)
     summary = df_summary.to_dict(orient="records")
     if len(summary):
         summary = summary[0]
@@ -294,7 +297,7 @@ def get_asset_pie_chart(request: Request) -> HTMLResponse:
     log.info("start 'get_asset_pie_chart' method")
     server_tools: ServerTools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
-    df_summary, df_items, df_records = get_cached_asset_table(asset_manager)
+    df_summary, df_items, df_records, df_stock = get_cached_asset_table(asset_manager)
     graph_html = server_tools.graph_generator.generate_asset_pie_chart(
         df_items,
         theme=theme,
@@ -309,11 +312,26 @@ def get_asset_waterfall_chart(request: Request) -> HTMLResponse:
     log.info("start 'get_asset_waterfall_chart' method")
     server_tools: ServerTools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
-    df_summary, df_items, df_records = get_cached_asset_table(asset_manager)
+    df_summary, df_items, df_records, df_stock = get_cached_asset_table(asset_manager)
     graph_html = server_tools.graph_generator.generate_asset_waterfall_chart(
         df_items, theme=theme, include_plotlyjs=False
     )
     log.info("end 'get_asset_waterfall_chart' method")
+    return HTMLResponse(content=graph_html)
+
+
+@app.get("/api/asset_heatmap_chart", response_class=HTMLResponse)
+def get_asset_heatmap_chart(request: Request) -> HTMLResponse:
+    log.info("start 'get_asset_heatmap_chart' method")
+    server_tools: ServerTools = ServerTools(app, gspread_handler)
+    theme = request.cookies.get("theme", "light")
+    df_summary, df_items, df_records, df_stock = get_cached_asset_table(asset_manager)
+    graph_html = server_tools.graph_generator.generate_asset_heatmap_chart(
+        df_stock,
+        theme=theme,
+        include_plotlyjs=False,
+    )
+    log.info("end 'get_asset_heatmap_chart' method")
     return HTMLResponse(content=graph_html)
 
 
@@ -322,7 +340,7 @@ def get_asset_monthly_history_chart(request: Request) -> HTMLResponse:
     log.info("start 'get_asset_monthly_history_chart' method")
     server_tools: ServerTools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
-    df_summary, df_items, df_records = get_cached_asset_table(asset_manager)
+    df_summary, df_items, df_records, df_stock = get_cached_asset_table(asset_manager)
     _df_add = pd.DataFrame()
     _df_add.loc[0, "date"] = dt.date.today()
     _df_add.loc[0, "invest_amount"] = df_records["invest_amount"].iloc[-1]

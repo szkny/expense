@@ -33,6 +33,7 @@ class AssetManager(Base):
     def get_spreadsheet_url(self) -> str:
         return self.workbook.url + "/edit"
 
+    @retry(stop=stop_after_attempt(3))
     def get_live_price(self, ticker: str) -> float | None:
         log.info("start 'get_live_price' method")
         try:
@@ -143,6 +144,60 @@ class AssetManager(Base):
             )
         finally:
             log.info("end 'get_header_data' method")
+
+    @retry(stop=stop_after_attempt(3))
+    def get_stock_info_data(
+        self, cell_range: str = "A2:M15", sheet_name: str = "株価情報"
+    ) -> pd.DataFrame:
+        log.info("start 'get_stock_info_data' method")
+        try:
+            sheet = self.workbook.worksheet(sheet_name)
+            cells = sheet.range(cell_range)
+            item_list = [c.value for c in cells]
+            df = pd.DataFrame(item_list)
+            df = pd.DataFrame(df.to_numpy().reshape(len(item_list) // 13, 13))
+            df.columns = pd.Index(df.iloc[0], name=None)
+            cols = [c for c in df.columns if "チャート" not in c]
+            df = df[cols]
+            df.set_index("No", inplace=True)
+            df = df.map(lambda s: re.sub("[$¥%,+ー]", "", s))
+            df = df.iloc[1:]
+            df = df.replace("", pd.NA).replace("#N/A", pd.NA).dropna(how="all")
+            df.iloc[:, 1:] = df.iloc[:, 1:].astype("Float64")
+            df.columns = pd.Index(
+                [
+                    "ticker",
+                    "price",
+                    "change_pct",
+                    "change_pct_weekly",
+                    "change_pct_monthly",
+                    "drawdown",
+                    "change_yen",
+                    "valuation",
+                    "profit",
+                    "roi",
+                ]
+            )
+            # log.debug(f"df:\n{df}")
+            return df
+        except Exception:
+            log.exception("Error occurred.")
+            return pd.DataFrame(
+                columns=[
+                    "ticker",
+                    "price",
+                    "change_pct",
+                    "change_pct_weekly",
+                    "change_pct_monthly",
+                    "drawdown",
+                    "change_yen",
+                    "valuation",
+                    "profit",
+                    "roi",
+                ]
+            )
+        finally:
+            log.info("end 'get_stock_info_data' method")
 
     @retry(stop=stop_after_attempt(3))
     def get_monthly_history_data(
