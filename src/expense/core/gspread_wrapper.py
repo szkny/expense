@@ -683,11 +683,12 @@ class GspreadHandler(Base):
     @retry(stop=stop_after_attempt(3))
     def get_annual_fiscal_table(
         self,
-        cell_range: str = "A20:F32"
+        cell_range: str = "A20:F32",
+        sheet_name: str = "Summary"
     ) -> pd.DataFrame:
         log.info("start 'get_annual_fiscal_table' method")
         try:
-            sheet = self.workbook.worksheet("Summary")
+            sheet = self.workbook.worksheet(sheet_name)
             cells = sheet.get(cell_range)
             df = pd.DataFrame(cells)
             df.columns = df.iloc[0]
