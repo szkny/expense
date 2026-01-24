@@ -147,7 +147,7 @@ class AssetManager(Base):
 
     @retry(stop=stop_after_attempt(3))
     def get_stock_info_data(
-        self, cell_range: str = "A2:M15", sheet_name: str = "株価情報"
+        self, cell_range: str = "A2:N15", sheet_name: str = "株価情報"
     ) -> pd.DataFrame:
         log.info("start 'get_stock_info_data' method")
         try:
@@ -155,7 +155,7 @@ class AssetManager(Base):
             cells = sheet.range(cell_range)
             item_list = [c.value for c in cells]
             df = pd.DataFrame(item_list)
-            df = pd.DataFrame(df.to_numpy().reshape(len(item_list) // 13, 13))
+            df = pd.DataFrame(df.to_numpy().reshape(len(item_list) // 14, 14))
             df.columns = pd.Index(df.iloc[0], name=None)
             cols = [c for c in df.columns if "チャート" not in c]
             df = df[cols]
@@ -172,6 +172,7 @@ class AssetManager(Base):
                     "change_pct_weekly",
                     "change_pct_monthly",
                     "drawdown",
+                    "change_pct_yen",
                     "change_yen",
                     "valuation",
                     "profit",
@@ -190,6 +191,7 @@ class AssetManager(Base):
                     "change_pct_weekly",
                     "change_pct_monthly",
                     "drawdown",
+                    "change_pct_yen",
                     "change_yen",
                     "valuation",
                     "profit",

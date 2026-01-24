@@ -965,36 +965,51 @@ class GraphGenerator:
     ) -> str:
         log.info("start 'generate_asset_heatmap_chart' method")
         df_graph = df.copy()
-        df_graph["change_pct"] = pd.to_numeric(df_graph["change_pct"], errors='coerce')
-        df_graph["text"] = df_graph.apply(
+        df_graph["change_pct"] = pd.to_numeric(df_graph["change_pct_yen"], errors='coerce')
+        df_graph["label_text"] = df_graph.apply(
             lambda r: f"{r['ticker']}<br>{r['change_pct']:+.2f}%",
             axis=1
         )
+        df_graph["hover_text"] = df_graph.apply(
+            lambda r: f"{r['ticker']}<br>¥{r['valuation']:,.0f} (前日比 {r['change_pct']:+.2f}%)",
+            axis=1
+        )
+        df_graph["__root__"] = " "
         fig = px.treemap(
             df_graph,
-            path=["ticker"],
+            path=["__root__", "ticker"],
             values="valuation",
             color="change_pct",
             color_continuous_scale=["#e74c3c", "#f0f0f0", "#2ecc71"],
             color_continuous_midpoint=0,
-            custom_data=["text"]
+            custom_data=["label_text", "hover_text"],
         )
         fig.update_traces(
             texttemplate="%{customdata[0]}",
+            hovertemplate="%{customdata[1]}",
             textfont_color="black",
-            maxdepth=1,
+            maxdepth=2,
             pathbar_visible=False,
             marker=dict(line=dict(width=0)),
+            pathbar=dict(visible=False),
+            tiling=dict(pad=1),
         )
         self._update_layout(fig, theme)
         fig.update_layout(
             title="保有資産ヒートマップ",
             coloraxis_showscale=True,
-            coloraxis_colorbar=dict(title="前日比(%)"),
+            coloraxis_colorbar=dict(
+                title="前日比(%)",
+                x=0.5,
+                y=-0.1,
+                len=1.0,
+                thickness=10,
+                orientation="h"
+            ),
             coloraxis=dict(
                 cmin=-1.0,
                 cmax=1.0
-            )
+            ),
         )
         graph_html: str = fig.to_html(
             full_html=False,
