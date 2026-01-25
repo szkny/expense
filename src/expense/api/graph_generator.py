@@ -975,10 +975,10 @@ class GraphGenerator:
             lambda r: f"{r['ticker']}<br>¥{r['valuation']:,.0f} (前日比 {r['change_pct']:+.2f}%)",
             axis=1
         )
-        df_graph["__root__"] = " "
+        df_graph["total"] = f"資産総額 ¥{df_graph['valuation'].sum():,.0f}"
         fig = px.treemap(
             df_graph,
-            path=["__root__", "ticker"],
+            path=["total", "ticker"],
             values="valuation",
             color="change_pct",
             color_continuous_scale=["#e74c3c", "#f0f0f0", "#2ecc71"],
