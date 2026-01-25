@@ -975,7 +975,7 @@ class GraphGenerator:
             lambda r: f"{r['ticker']}<br>¥{r['valuation']:,.0f} (前日比 {r['change_pct']:+.2f}%)",
             axis=1
         )
-        df_graph["total"] = f"資産総額 ¥{df_graph['valuation'].sum():,.0f}"
+        df_graph["total"] = f"資産総額 ¥{int(df_graph['valuation'].sum()):,.0f}"
         colorscale_light = [
             [0.0, "#e74c3c"], [0.2, "#e74c3c"],
             [0.2, "#ef9a9a"], [0.4, "#ef9a9a"],
@@ -1015,7 +1015,7 @@ class GraphGenerator:
         )
         self._update_layout(fig, theme, uniformtext={})
         fig.update_layout(
-            title="保有資産ヒートマップ",
+            title="資産ヒートマップ",
             coloraxis_showscale=True,
             coloraxis_colorbar=dict(
                 title="前日比",
