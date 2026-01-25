@@ -487,6 +487,7 @@ class GraphGenerator:
         theme: str,
         ymax_for_format: float | None = None,
         yaxis_type: str = "linear",
+        uniformtext: dict = dict(minsize=10, mode="hide"),
     ) -> None:
         yaxis_settings = {
             "autorange": True,
@@ -510,7 +511,7 @@ class GraphGenerator:
             paper_bgcolor="#1f2937" if theme == "dark" else "#ffffff",
             plot_bgcolor="#1f2937" if theme == "dark" else "#ffffff",
             template="plotly_dark" if theme == "dark" else "plotly_white",
-            uniformtext=dict(minsize=10, mode="hide"),
+            uniformtext=uniformtext,
         )
 
     def generate_daily_chart(
@@ -994,7 +995,7 @@ class GraphGenerator:
             pathbar=dict(visible=False),
             tiling=dict(pad=1),
         )
-        self._update_layout(fig, theme)
+        self._update_layout(fig, theme, uniformtext={})
         fig.update_layout(
             title="保有資産ヒートマップ",
             coloraxis_showscale=True,
