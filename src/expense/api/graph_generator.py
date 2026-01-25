@@ -976,12 +976,19 @@ class GraphGenerator:
             axis=1
         )
         df_graph["total"] = f"資産総額 ¥{df_graph['valuation'].sum():,.0f}"
+        colorscale = [
+            [0.0, "#e74c3c"], [0.2, "#e74c3c"],
+            [0.2, "#ef9a9a"], [0.4, "#ef9a9a"],
+            [0.4, "#e0e0e0"], [0.6, "#e0e0e0"],
+            [0.6, "#a5d6a7"], [0.8, "#a5d6a7"],
+            [0.8, "#2ecc71"], [1.0, "#2ecc71"],
+        ]
         fig = px.treemap(
             df_graph,
             path=["total", "ticker"],
             values="valuation",
             color="change_pct",
-            color_continuous_scale=["#e74c3c", "#f0f0f0", "#2ecc71"],
+            color_continuous_scale=colorscale,
             color_continuous_midpoint=0,
             custom_data=["label_text", "hover_text"],
         )
@@ -1000,16 +1007,18 @@ class GraphGenerator:
             title="保有資産ヒートマップ",
             coloraxis_showscale=True,
             coloraxis_colorbar=dict(
-                title="前日比(%)",
+                title="前日比",
                 x=0.5,
                 y=-0.1,
                 len=1.0,
-                thickness=10,
-                orientation="h"
+                thickness=5,
+                orientation="h",
+                tickformat=".1f",
+                ticksuffix="%",
             ),
             coloraxis=dict(
-                cmin=-1.0,
-                cmax=1.0
+                cmin=-1.25,
+                cmax=1.25
             ),
         )
         graph_html: str = fig.to_html(
