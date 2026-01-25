@@ -976,26 +976,37 @@ class GraphGenerator:
             axis=1
         )
         df_graph["total"] = f"資産総額 ¥{df_graph['valuation'].sum():,.0f}"
-        colorscale = [
+        colorscale_light = [
             [0.0, "#e74c3c"], [0.2, "#e74c3c"],
             [0.2, "#ef9a9a"], [0.4, "#ef9a9a"],
             [0.4, "#e0e0e0"], [0.6, "#e0e0e0"],
             [0.6, "#a5d6a7"], [0.8, "#a5d6a7"],
             [0.8, "#2ecc71"], [1.0, "#2ecc71"],
         ]
+        colorscale_dark = [
+            [0.0, "#aa3322"], [0.2, "#aa3322"],
+            [0.2, "#662f3f"], [0.4, "#662f3f"],
+            [0.4, "#2f3342"], [0.6, "#2f3342"],
+            [0.6, "#22553f"], [0.8, "#22553f"],
+            [0.8, "#227755"], [1.0, "#227755"],
+        ]
         fig = px.treemap(
             df_graph,
             path=["total", "ticker"],
             values="valuation",
             color="change_pct",
-            color_continuous_scale=colorscale,
+            color_continuous_scale=colorscale_dark if theme == "dark" else colorscale_light,
             color_continuous_midpoint=0,
             custom_data=["label_text", "hover_text"],
         )
         fig.update_traces(
             texttemplate="%{customdata[0]}",
             hovertemplate="%{customdata[1]}",
-            textfont_color="black",
+            textfont=dict(
+                color="white" if theme == "dark" else "black",
+                size=16,
+            ),
+            textposition="middle center",
             maxdepth=2,
             pathbar_visible=False,
             marker=dict(line=dict(width=0)),
