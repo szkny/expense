@@ -35,9 +35,11 @@
 - [x] add past trend chart to asset management page
 - [x] annual fiscal report
 - [x] monthly summary report of total expenses including fixed expenses
+- [ ] add button of switch between usd/jpy to asset heatmap
+- [ ] add drawdown history chart
 - [ ] fallback to yahoo_finance when error occurred in google_finance
 - [ ] add a feature of setting target budget of expenses
-- [ ] add a feature of target assets
+- [ ] add a feature of navigating asset allocation
 - [ ] manage monthly subscription
 - [ ] assist user input of expense's memo using device GPS
 - [ ] add a feature of sorting cards in the Web UI
