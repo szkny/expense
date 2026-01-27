@@ -987,7 +987,7 @@ class GraphGenerator:
             [0.0, "#aa3342"], [0.2, "#aa3342"],
             [0.2, "#663342"], [0.4, "#663342"],
             [0.4, "#2f3342"], [0.6, "#2f3342"],
-            [0.6, "#2f5542"], [0.8, "#225542"],
+            [0.6, "#2f4f42"], [0.8, "#2f4f42"],
             [0.8, "#2f7742"], [1.0, "#2f7742"],
         ]
         fig = px.treemap(
@@ -1008,10 +1008,9 @@ class GraphGenerator:
             ),
             textposition="middle center",
             maxdepth=2,
-            pathbar_visible=False,
-            marker=dict(line=dict(width=0)),
             pathbar=dict(visible=False),
-            tiling=dict(pad=1),
+            marker=dict(line=dict(width=1)),
+            tiling=dict(pad=0),
         )
         self._update_layout(fig, theme, uniformtext={})
         fig.update_layout(
