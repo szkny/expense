@@ -76,7 +76,7 @@
           <div class="asset-summary-details">
             <span> 損益率 </span>
             <span
-              {% if "¥0" in asset_summary.roi %}
+              {% if "+0.00%" == asset_summary.roi %}
                 class=""
               {% elif "+" in asset_summary.roi %}
                 class="asset-color-up"
@@ -89,6 +89,18 @@
           <div class="asset-summary-content">
             <span> 為替レート : USD/JPY </span>
             <span class="asset-summary-display-sub"> {{asset_summary.usdjpy}} </span>
+          </div>
+          <div class="asset-summary-details">
+            <span> 前日比 </span>
+            <span
+              {% if "+0.00%" == asset_summary.change_usdjpy %}
+                class=""
+              {% elif "+" in asset_summary.change_usdjpy %}
+                class="asset-color-up"
+              {% else %}
+                class="asset-color-down"
+              {% endif %}
+            > {{asset_summary.change_usdjpy}} </span>
           </div>
         </div>
         <div class="graph-container">

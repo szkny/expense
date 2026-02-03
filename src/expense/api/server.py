@@ -103,7 +103,7 @@ def get_cached_asset_table(
                 ),
             ]
         )
-        df_stock.index = range(1, len(df_stock)+1)
+        df_stock.index = range(1, len(df_stock) + 1)
         _df_cache_asset_table["df_summary"] = df_summary
         _df_cache_asset_table["df_items"] = df_items
         _df_cache_asset_table["df_records"] = df_records
@@ -179,6 +179,11 @@ def asset_management(
     df_summary, df_items, df_records, df_stock = get_cached_asset_table(
         asset_manager
     )
+    df_usdjpy = df_stock.query("ticker == 'USDJPY'")
+    if df_usdjpy.empty:
+        usdjpy_chg = 0
+    else:
+        usdjpy_chg = df_usdjpy["change_pct"].iloc[0]
     summary = df_summary.to_dict(orient="records")
     if len(summary):
         summary = summary[0]
@@ -188,6 +193,9 @@ def asset_management(
             + f" ( {'+' if summary['change_pct'] >= 0 else '-'}{abs(summary['change_pct']):,.2f}% )"
         )
         summary["usdjpy"] = f"¥{summary['usdjpy']:,.2f}"
+        summary["change_usdjpy"] = (
+            f"{'+' if usdjpy_chg >= 0 else '-'}{abs(usdjpy_chg):,.2f}%"
+        )
         summary["profit"] = df_items["profit"].sum()
         summary["profit"] = (
             f"{'+' if summary['profit'] >= 0 else '-'}¥{abs(summary['profit']):,.0f}"
