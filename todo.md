@@ -35,7 +35,8 @@
 - [x] add past trend chart to asset management page
 - [x] annual fiscal report
 - [x] monthly summary report of total expenses including fixed expenses
-- [ ] add button of switch between usd/jpy to asset heatmap
+- [ ] button of reloading individual charts
+- [ ] button of switching between usd/jpy in asset heatmap
 - [ ] add drawdown history chart
 - [ ] fallback to yahoo_finance when error occurred in google_finance
 - [ ] add a feature of setting target budget of expenses
