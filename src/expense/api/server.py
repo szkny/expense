@@ -192,6 +192,7 @@ def asset_management(
             f" {'+' if summary['change_jpy'] >= 0 else '-'}¥{abs(summary['change_jpy']):,.0f}"
             + f" ( {'+' if summary['change_pct'] >= 0 else '-'}{abs(summary['change_pct']):,.2f}% )"
         )
+        summary["drawdown"] = f"{summary['drawdown']:,.2f}%"
         summary["usdjpy"] = f"¥{summary['usdjpy']:,.2f}"
         summary["change_usdjpy"] = (
             f"{'+' if usdjpy_chg >= 0 else '-'}{abs(usdjpy_chg):,.2f}%"

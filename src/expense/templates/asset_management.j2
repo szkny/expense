@@ -46,6 +46,16 @@
               {% endif %}
             > {{asset_summary.change}} </span>
           </div>
+          <div class="asset-summary-details">
+            <span> ドローダウン </span>
+            <span
+              {% if "-" in asset_summary.drawdown %}
+                class="asset-color-down"
+              {% else %}
+                class="asset-color-up asset-all-time-high"
+              {% endif %}
+            > {{asset_summary.drawdown}} </span>
+          </div>
           <br>
           <div class="asset-summary-content">
             <span> 含み益 </span>

@@ -730,6 +730,10 @@ tr:nth-child(even) {
   content: "📉";
 }
 
+.asset-all-time-high:after {
+  content: "🚀";
+}
+
 .asset-summary-list {
   font-size: 0.95rem;
   margin-left: 10px;
