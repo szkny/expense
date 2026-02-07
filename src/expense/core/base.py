@@ -5,7 +5,7 @@ import pathlib
 import logging
 from typing import Any
 from importlib import resources
-from platformdirs import user_cache_dir, user_config_dir
+from platformdirs import user_data_dir, user_cache_dir, user_config_dir
 
 HOME: pathlib.Path = pathlib.Path(os.getenv("HOME") or "~")
 
@@ -14,16 +14,21 @@ class Base:
     def __init__(self) -> None:
         self.app_name: str = "expense"
         self.log: logging.Logger = logging.getLogger(self.app_name)
+        self.data_path: pathlib.Path = pathlib.Path(
+            user_data_dir(self.app_name)
+        )
         self.cache_path: pathlib.Path = pathlib.Path(
             user_cache_dir(self.app_name)
         )
         self.config_path: pathlib.Path = pathlib.Path(
             user_config_dir(self.app_name)
         )
+        self.data_path.mkdir(parents=True, exist_ok=True)
         self.cache_path.mkdir(parents=True, exist_ok=True)
         self.config_path.mkdir(parents=True, exist_ok=True)
+        self.log.debug(f"data_path: {self.data_path}")
         self.expense_history: pathlib.Path = (
-            self.cache_path / f"{self.app_name}_history.log"
+            self.data_path / f"{self.app_name}_history.log"
         )
         self.generate_config()
         self.load_config()

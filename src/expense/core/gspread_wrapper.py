@@ -682,9 +682,7 @@ class GspreadHandler(Base):
 
     @retry(stop=stop_after_attempt(3))
     def get_annual_fiscal_table(
-        self,
-        cell_range: str = "A20:F32",
-        sheet_name: str = "Summary"
+        self, cell_range: str = "A20:F32", sheet_name: str = "Summary"
     ) -> pd.DataFrame:
         log.info("start 'get_annual_fiscal_table' method")
         try:
@@ -697,7 +695,9 @@ class GspreadHandler(Base):
             df = df.iloc[1:, 1:]
             df.index = pd.to_datetime(df.index)
             df = df.map(
-                lambda v: int(re.sub(r"[^0-9\-]", "", v)) if type(v) is str else 0
+                lambda v: (
+                    int(re.sub(r"[^0-9\-]", "", v)) if type(v) is str else 0
+                )
             )
             log.debug(f"Annual fiscal table:\n{df}")
             log.info("end 'get_annual_fiscal_table' method")
@@ -774,7 +774,7 @@ class GspreadHandler(Base):
             log.debug(f"df:\n{df}")
             df_records = self.convert_expense_sheet_to_history_records(df)
             log.debug(f"df_records:\n{df_records}")
-            output_path = self.cache_path / "expense_history_downloaded.log"
+            output_path = self.data_path / "expense_history_downloaded.log"
             df_records.to_csv(
                 output_path,
                 index=False,
@@ -850,7 +850,7 @@ class GspreadHandler(Base):
 
     def merge_expense_history_log(self) -> bool:
         log.info("start 'merge_expense_history_log' method")
-        csv_files = glob((self.cache_path / "expense_history*.log").as_posix())
+        csv_files = glob((self.data_path / "expense_history*.log").as_posix())
         dfs = []
         for f in csv_files:
             df = pd.read_csv(f, header=None)
@@ -893,7 +893,7 @@ class GspreadHandler(Base):
 
         # 保存
         log.debug(f"merged DataFrame:\n{df_merged}")
-        output_path = self.cache_path / "merged_expense_history.log"
+        output_path = self.data_path / "merged_expense_history.log"
         df_merged.to_csv(
             output_path,
             index=False,
