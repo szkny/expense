@@ -81,6 +81,8 @@ class Expense(Base):
                     return
                 ocr = Ocr()
                 ocr_data = ocr.main()
+                if not ocr_data:
+                    raise ValueError("OCR data is empty.")
                 expense_type = ocr_data["expense_type"]
                 expense_amount = int(ocr_data["expense_amount"])
                 expense_memo = ocr_data.get("expense_memo", "")

@@ -87,17 +87,19 @@ class Ocr(TermuxAPI):
         expense_date = expense_data.get("date", "")
         self.toast("支出項目解析中..")
         try:
+            env = os.environ.copy()
+            env["LOG_LEVEL"] = "ERROR"
             res = self.exec_command(
                 [
                     "expense_type_classifier",
                     "--json",
                     f'{{"amount": {expense_amount}, "memo": "{expense_memo}"}}',
                 ],
-                env=dict(LOG_LEVEL="ERROR"),
+                env=env,
             )
         except json.decoder.JSONDecodeError:
             log.exception("JSON decode error")
-            res = {}
+            return {}
         expense_type = res.get("predicted_type", "")
         log.info("end 'main' method")
         return {
