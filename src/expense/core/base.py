@@ -26,7 +26,6 @@ class Base:
         self.data_path.mkdir(parents=True, exist_ok=True)
         self.cache_path.mkdir(parents=True, exist_ok=True)
         self.config_path.mkdir(parents=True, exist_ok=True)
-        self.log.debug(f"data_path: {self.data_path}")
         self.expense_history: pathlib.Path = (
             self.data_path / f"{self.app_name}_history.log"
         )
