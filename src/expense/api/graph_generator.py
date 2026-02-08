@@ -966,36 +966,49 @@ class GraphGenerator:
     ) -> str:
         log.info("start 'generate_asset_heatmap_chart' method")
         df_graph = df.copy()
-        df_graph["change_pct"] = pd.to_numeric(df_graph["change_pct_yen"], errors='coerce')
+        df_graph["change_pct"] = pd.to_numeric(
+            df_graph["change_pct_yen"], errors="coerce"
+        )
         df_graph["label_text"] = df_graph.apply(
-            lambda r: f"{r['ticker']}<br>{r['change_pct']:+.2f}%",
-            axis=1
+            lambda r: f"{r['ticker']}<br>{r['change_pct']:+.2f}%", axis=1
         )
         df_graph["hover_text"] = df_graph.apply(
             lambda r: f"{r['ticker']}<br>¥{r['valuation']:,.0f} (前日比 {r['change_pct']:+.2f}%)",
-            axis=1
+            axis=1,
         )
-        df_graph["total"] = f"資産総額 ¥{int(df_graph['valuation'].sum()):,.0f}"
+        df_graph["total"] = f"¥{int(df_graph['valuation'].sum()):,.0f}"
         colorscale_light = [
-            [0.0, "#e74c3c"], [0.2, "#e74c3c"],
-            [0.2, "#ef9a9a"], [0.4, "#ef9a9a"],
-            [0.4, "#e0e0e0"], [0.6, "#e0e0e0"],
-            [0.6, "#a5d6a7"], [0.8, "#a5d6a7"],
-            [0.8, "#2ecc71"], [1.0, "#2ecc71"],
+            [0.0, "#e74c3c"],
+            [0.2, "#e74c3c"],
+            [0.2, "#ef9a9a"],
+            [0.4, "#ef9a9a"],
+            [0.4, "#e0e0e0"],
+            [0.6, "#e0e0e0"],
+            [0.6, "#a5d6a7"],
+            [0.8, "#a5d6a7"],
+            [0.8, "#2ecc71"],
+            [1.0, "#2ecc71"],
         ]
         colorscale_dark = [
-            [0.0, "#aa3342"], [0.2, "#aa3342"],
-            [0.2, "#663342"], [0.4, "#663342"],
-            [0.4, "#2f3342"], [0.6, "#2f3342"],
-            [0.6, "#2f4f42"], [0.8, "#2f4f42"],
-            [0.8, "#2f7742"], [1.0, "#2f7742"],
+            [0.0, "#aa3342"],
+            [0.2, "#aa3342"],
+            [0.2, "#663342"],
+            [0.4, "#663342"],
+            [0.4, "#2f3342"],
+            [0.6, "#2f3342"],
+            [0.6, "#2f4f42"],
+            [0.8, "#2f4f42"],
+            [0.8, "#2f7742"],
+            [1.0, "#2f7742"],
         ]
         fig = px.treemap(
             df_graph,
             path=["total", "ticker"],
             values="valuation",
             color="change_pct",
-            color_continuous_scale=colorscale_dark if theme == "dark" else colorscale_light,
+            color_continuous_scale=(
+                colorscale_dark if theme == "dark" else colorscale_light
+            ),
             color_continuous_midpoint=0,
             custom_data=["label_text", "hover_text"],
         )
@@ -1004,7 +1017,7 @@ class GraphGenerator:
             hovertemplate="%{customdata[1]}",
             textfont=dict(
                 color="white" if theme == "dark" else "black",
-                size=16,
+                size=18,
             ),
             textposition="middle center",
             maxdepth=2,
@@ -1026,10 +1039,7 @@ class GraphGenerator:
                 tickformat=".1f",
                 ticksuffix="%",
             ),
-            coloraxis=dict(
-                cmin=-1.25,
-                cmax=1.25
-            ),
+            coloraxis=dict(cmin=-1.25, cmax=1.25),
         )
         graph_html: str = fig.to_html(
             full_html=False,
