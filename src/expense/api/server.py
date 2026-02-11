@@ -371,6 +371,8 @@ def get_asset_heatmap_chart(request: Request) -> HTMLResponse:
     )
     graph_html = server_tools.graph_generator.generate_asset_heatmap_chart(
         df_stock,
+        total_value=int(df_items["valuation"].sum()),
+        total_change_pct=df_summary["change_pct"].iloc[0],
         theme=theme,
         include_plotlyjs=False,
     )

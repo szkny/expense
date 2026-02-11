@@ -969,6 +969,8 @@ class GraphGenerator:
     def generate_asset_heatmap_chart(
         self,
         df: pd.DataFrame,
+        total_value: int | None = None,
+        total_change_pct: float | None = None,
         theme: str = "light",
         include_plotlyjs: bool | str = True,
     ) -> str:
@@ -984,7 +986,23 @@ class GraphGenerator:
             lambda r: f"{r['ticker']}<br>¥{r['valuation']:,.0f} (前日比 {r['change_pct']:+.2f}%)",
             axis=1,
         )
-        df_graph["total"] = f"¥{int(df_graph['valuation'].sum()):,.0f}"
+        if not total_value:
+            total_value = int(df_graph["valuation"].sum())
+        root_label = f"合計資産<br>{total_change_pct:+,.2f}%"
+        df_graph["total"] = root_label
+        df_root = pd.DataFrame(
+            {
+                "ticker": [root_label],
+                "total": [""],
+                "valuation": [0],
+                "change_pct": [total_change_pct],
+                "label_text": [""],
+                "hover_text": [
+                    f"合計資産<br>¥{total_value:,.0f} (前日比 {total_change_pct:+,.2f}%)"
+                ],
+            }
+        )
+        df_graph = pd.concat([df_root, df_graph], ignore_index=True)
         colorscale_light = [
             [0.0, "#e74c3c"],
             [0.2, "#e74c3c"],
@@ -1004,50 +1022,55 @@ class GraphGenerator:
             [0.4, "#663342"],
             [0.4, "#2f3342"],
             [0.6, "#2f3342"],
-            [0.6, "#2f4f42"],
-            [0.8, "#2f4f42"],
+            [0.6, "#2f5042"],
+            [0.8, "#2f5042"],
             [0.8, "#2f7742"],
             [1.0, "#2f7742"],
         ]
-        fig = px.treemap(
-            df_graph,
-            path=["total", "ticker"],
-            values="valuation",
-            color="change_pct",
-            color_continuous_scale=(
-                colorscale_dark if theme == "dark" else colorscale_light
-            ),
-            color_continuous_midpoint=0,
-            custom_data=["label_text", "hover_text"],
-        )
-        fig.update_traces(
-            texttemplate="%{customdata[0]}",
-            hovertemplate="%{customdata[1]}",
-            textfont=dict(
-                color="white" if theme == "dark" else "black",
-                size=18,
-            ),
-            textposition="middle center",
-            maxdepth=2,
-            pathbar=dict(visible=False),
-            marker=dict(line=dict(width=1)),
-            tiling=dict(pad=0),
+        fig = go.Figure(
+            go.Treemap(
+                labels=df_graph["ticker"],
+                parents=df_graph["total"],
+                values=df_graph["valuation"],
+                marker=dict(
+                    colors=df_graph["change_pct"],
+                    coloraxis="coloraxis",
+                    line=dict(width=1),
+                ),
+                customdata=df_graph[["label_text", "hover_text"]].values,
+                texttemplate="%{customdata[0]}",
+                hovertemplate="%{customdata[1]}<extra></extra>",
+                textfont=dict(
+                    color="white" if theme == "dark" else "black",
+                    size=18,
+                ),
+                textposition="middle center",
+                maxdepth=2,
+                tiling=dict(pad=0),
+                pathbar=dict(visible=False),
+            )
         )
         self._update_layout(fig, theme, uniformtext={})
         fig.update_layout(
             title="資産ヒートマップ",
-            coloraxis_showscale=True,
-            coloraxis_colorbar=dict(
-                title="前日比",
-                x=0.5,
-                y=-0.1,
-                len=1.0,
-                thickness=5,
-                orientation="h",
-                tickformat=".1f",
-                ticksuffix="%",
+            coloraxis=dict(
+                colorscale=(
+                    colorscale_dark if theme == "dark" else colorscale_light
+                ),
+                cmin=-1.25,
+                cmax=1.25,
+                cmid=0,
+                colorbar=dict(
+                    title="前日比",
+                    x=0.5,
+                    y=-0.1,
+                    len=1.0,
+                    thickness=5,
+                    orientation="h",
+                    tickformat=".1f",
+                    ticksuffix="%",
+                ),
             ),
-            coloraxis=dict(cmin=-1.25, cmax=1.25),
         )
         graph_html: str = fig.to_html(
             full_html=False,
