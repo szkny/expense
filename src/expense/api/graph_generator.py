@@ -778,7 +778,15 @@ class GraphGenerator:
             textangle=0,
         )
         self._update_layout(fig, theme, ymax_for_format=ymax)
-        self._add_bar_chart_labels(fig, df_graph, "month", theme, fontsize=12)
+        self._add_bar_chart_labels(
+            fig,
+            df_graph,
+            "month",
+            theme,
+            fontsize=12,
+            label_threshold=10_000,
+            label_offset=20_000,
+        )
         graph_html: str = fig.to_html(
             full_html=False,
             include_plotlyjs=include_plotlyjs,
