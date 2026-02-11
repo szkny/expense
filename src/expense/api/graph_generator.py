@@ -1160,7 +1160,7 @@ class GraphGenerator:
                 text=f"{x[i]}<br>{opr[i]}¥{abs(v):,.0f}",
                 showarrow=False,
                 font=dict(
-                    size=8, color="#ffffff" if theme == "dark" else "#000000"
+                    size=10, color="#ffffff" if theme == "dark" else "#000000"
                 ),
             )
         fig.update_xaxes(showline=False, showticklabels=False, showgrid=False)
