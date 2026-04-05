@@ -106,9 +106,8 @@ function createDropdown(config, months) {
 
 function initTradingViewChart() {
   const symbolSelect = document.getElementById("symbol-select");
-  const chartContainer = document.getElementById(
-    "asset-tradingview-chart-container",
-  );
+  const chartContainerId = "asset-tradingview-chart-container";
+  const chartContainer = document.getElementById(chartContainerId);
   if (!symbolSelect || !chartContainer) return;
 
   const theme = document.documentElement.classList.contains("dark")
@@ -121,16 +120,28 @@ function initTradingViewChart() {
     if (symbol === "USDJPY") {
       tvSymbol = "FX:USDJPY";
     }
-    chartContainer.innerHTML = `
-      <iframe
-        src="https://s.tradingview.com/widgetembed/?symbol=${tvSymbol}&interval=D&theme=${theme}"
-        width="100%"
-        height="500"
-        frameborder="0"
-        allowtransparency="true"
-        scrolling="no">
-      </iframe>
-    `;
+
+    // Clear previous widget
+    chartContainer.innerHTML = "";
+
+    new TradingView.widget({
+      container_id: chartContainerId,
+      autosize: true,
+      symbol: tvSymbol,
+      interval: "D",
+      timezone: "Asia/Tokyo",
+      theme: theme,
+      style: "1", // Candlesticks
+      backgroundColor: theme === "dark" ? "#1f2937" : "#ffffff",
+      enable_publishing: false,
+      hide_top_toolbar: false,
+      save_image: false,
+      studies: ["RSI@tv-basicstudies", "MASimple@tv-basicstudies"],
+      studies_overrides: {
+        "moving average.length": 200,
+        "moving average.source": "close",
+      },
+    });
   };
 
   if (symbolSelect.value) {
