@@ -104,6 +104,44 @@ function createDropdown(config, months) {
   controlsContainer.appendChild(select);
 }
 
+function initTradingViewChart() {
+  const symbolSelect = document.getElementById("symbol-select");
+  const chartContainer = document.getElementById(
+    "asset-tradingview-chart-container",
+  );
+  if (!symbolSelect || !chartContainer) return;
+
+  const theme = document.documentElement.classList.contains("dark")
+    ? "dark"
+    : "light";
+
+  const loadChart = (symbol) => {
+    if (!symbol) return;
+    let tvSymbol = symbol;
+    if (symbol === "USDJPY") {
+      tvSymbol = "FX:USDJPY";
+    }
+    chartContainer.innerHTML = `
+      <iframe
+        src="https://s.tradingview.com/widgetembed/?symbol=${tvSymbol}&interval=D&theme=${theme}"
+        width="100%"
+        height="500"
+        frameborder="0"
+        allowtransparency="true"
+        scrolling="no">
+      </iframe>
+    `;
+  };
+
+  if (symbolSelect.value) {
+    loadChart(symbolSelect.value);
+  }
+
+  symbolSelect.addEventListener("change", (e) => {
+    loadChart(e.target.value);
+  });
+}
+
 export function initializeCharts() {
   const reportContainer = document.getElementById("report-container");
   const assetReportContainer = document.getElementById(
@@ -119,6 +157,7 @@ export function initializeCharts() {
   if (assetReportContainer) {
     const initAssetChart = () => {
       allChartConfigs.asset.forEach((config) => fetchAndRenderChart(config));
+      initTradingViewChart();
     };
 
     const trigger = document.querySelector("[data-key='asset-report']");

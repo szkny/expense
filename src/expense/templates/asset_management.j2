@@ -123,6 +123,13 @@
           <div id="asset-waterfall-chart-container" class="loading"><div class="spinner"></div></div>
           <hr>
           <div id="asset-monthly-history-chart-container" class="loading"><div class="spinner"></div></div>
+          <hr>
+          <select id="symbol-select" class="symbol-selector">
+            {% for s in asset_tickers %}
+              <option value="{{ s }}">{{ s }}</option>
+            {% endfor %}
+          </select>
+          <div id="asset-tradingview-chart-container"></div>
         </div>
       </div>
     </div>

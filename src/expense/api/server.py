@@ -208,6 +208,9 @@ def asset_management(
             f"{'+' if summary['roi'] >= 0 else '-'}{abs(summary['roi']):,.2f}%"
         )
     items = df_items.to_dict(orient="records")
+    asset_tickers = [
+        t for t in df_stock["ticker"].dropna().unique().tolist() if t != "JPY"
+    ]
     plotlyjs = server_tools.graph_generator.get_plotlyjs()
     log.info("end 'asset_management' method")
     return server_tools.templates.TemplateResponse(
@@ -222,6 +225,7 @@ def asset_management(
             "today": dt.datetime.today(),
             "asset_summary": summary,
             "asset_items": items,
+            "asset_tickers": asset_tickers,
             "plotlyjs": plotlyjs,
         },
     )

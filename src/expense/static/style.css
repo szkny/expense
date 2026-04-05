@@ -419,6 +419,10 @@ img.screenshot {
   min-height: 100px;
 }
 
+.symbol-selector {
+  margin-top: 20px;
+}
+
 /* テーブル */
 .table-container {
   overflow-x: auto;
