@@ -134,7 +134,7 @@ function initTradingViewChart() {
       style: "1", // Candlesticks
       backgroundColor: theme === "dark" ? "#1f2937" : "#ffffff",
       enable_publishing: false,
-      hide_top_toolbar: false,
+      hide_top_toolbar: true,
       save_image: false,
       studies: ["RSI@tv-basicstudies", "MASimple@tv-basicstudies"],
       studies_overrides: {
