@@ -211,6 +211,8 @@ def asset_management(
     asset_tickers = [
         t for t in df_stock["ticker"].dropna().unique().tolist() if t != "JPY"
     ]
+    asset_tickers.append("VIX")
+    asset_tickers.append("High Yield Spread")
     plotlyjs = server_tools.graph_generator.get_plotlyjs()
     log.info("end 'asset_management' method")
     return server_tools.templates.TemplateResponse(

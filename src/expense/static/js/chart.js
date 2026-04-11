@@ -119,10 +119,14 @@ function initTradingViewChart() {
     let tvSymbol = symbol;
     if (symbol === "USDJPY") {
       tvSymbol = "FX:USDJPY";
+    } else if (symbol === "High Yield Spread") {
+      tvSymbol = "FRED:BAMLH0A0HYM2";
     }
 
     // Clear previous widget
     chartContainer.innerHTML = "";
+
+    const isIndicator = ["VIX", "FRED: BAMLH0A0HYM2"].includes(tvSymbol);
 
     new TradingView.widget({
       container_id: chartContainerId,
@@ -136,11 +140,15 @@ function initTradingViewChart() {
       enable_publishing: false,
       hide_top_toolbar: true,
       save_image: false,
-      studies: ["RSI@tv-basicstudies", "MASimple@tv-basicstudies"],
-      studies_overrides: {
-        "moving average.length": 200,
-        "moving average.source": "close",
-      },
+      studies: isIndicator
+        ? []
+        : ["RSI@tv-basicstudies", "MASimple@tv-basicstudies"],
+      studies_overrides: isIndicator
+        ? {}
+        : {
+            "moving average.length": 200,
+            "moving average.source": "close",
+          },
     });
   };
 
