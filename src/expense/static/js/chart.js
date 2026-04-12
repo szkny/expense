@@ -126,7 +126,7 @@ function initTradingViewChart() {
     // Clear previous widget
     chartContainer.innerHTML = "";
 
-    const isIndicator = ["VIX", "FRED: BAMLH0A0HYM2"].includes(tvSymbol);
+    const isIndicator = ["VIX", "FRED:BAMLH0A0HYM2"].includes(tvSymbol);
 
     new TradingView.widget({
       container_id: chartContainerId,
