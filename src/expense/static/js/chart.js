@@ -135,10 +135,10 @@ function initTradingViewChart() {
       interval: "D",
       timezone: "Asia/Tokyo",
       theme: theme,
-      style: "1", // Candlesticks
+      style: isIndicator ? "2" : "1",
       backgroundColor: theme === "dark" ? "#1f2937" : "#ffffff",
       enable_publishing: false,
-      hide_top_toolbar: true,
+      hide_top_toolbar: false,
       save_image: false,
       studies: isIndicator
         ? []
