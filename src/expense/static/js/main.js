@@ -11,6 +11,7 @@ import {
   initCollapsibleSections,
   initRecordEditor,
   initPwaInstall,
+  initAssetMasking,
 } from "./ui.js";
 
 function onDOMContentLoaded() {
@@ -25,6 +26,7 @@ function onDOMContentLoaded() {
   initScreenshotZoom();
   initRecordEditor();
   initPwaInstall();
+  initAssetMasking();
 }
 
 if (document.readyState === "loading") {

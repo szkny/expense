@@ -272,3 +272,21 @@ export function initPwaInstall() {
     deferredPrompt = null;
   });
 }
+
+export function initAssetMasking() {
+  const amountEl = document.getElementById("total-asset-amount");
+  if (!amountEl) return;
+
+  const originalValue = amountEl.dataset.originalValue;
+  // 数字のみを1文字ずつspanで囲み、伏せ字にする
+  const maskedValue = originalValue.replace(/\d/g, '<span class="digit-span">*</span>');
+  // 元の値も、文字幅を揃えるために同じ構造にする（数字をspanで囲む）
+  const formattedOriginal = originalValue.replace(/\d/g, (d) => `<span class="digit-span">${d}</span>`);
+
+  let isMasked = false;
+
+  amountEl.addEventListener("click", () => {
+    isMasked = !isMasked;
+    amountEl.innerHTML = isMasked ? maskedValue : formattedOriginal;
+  });
+}

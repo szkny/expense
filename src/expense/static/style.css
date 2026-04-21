@@ -749,17 +749,26 @@ tr:nth-child(even) {
 }
 
 .asset-summary-display {
+  font-variant-numeric: tabular-nums;
   font-size: 2.5rem;
+  font-weight: bold;
+  text-align: right;
+  margin-right: 10px;
+  cursor: pointer;
+}
+
+.asset-summary-display-sub {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.5rem;
   font-weight: bold;
   text-align: right;
   margin-right: 10px;
 }
 
-.asset-summary-display-sub {
-  font-size: 1.5rem;
-  font-weight: bold;
-  text-align: right;
-  margin-right: 10px;
+.digit-span {
+  display: inline-block;
+  width: 1ch;
+  text-align: center;
 }
 
 .asset-summary-details {

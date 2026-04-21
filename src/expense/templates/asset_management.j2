@@ -33,7 +33,7 @@
             <span> 資産総額 </span>
             <span class="asset-summary-details"> {{today.year}}年{{today.month}}月{{today.day}}日 {{"{:02d}".format(today.hour)}}:{{"{:02d}".format(today.minute)}}時点 </span>
           </div>
-          <div class="asset-summary-display"> {{asset_summary.total}} </div>
+          <div id="total-asset-amount" class="asset-summary-display" data-original-value="{{asset_summary.total}}"> {{asset_summary.total}} </div>
           <div class="asset-summary-details">
             <span> 前日比 </span>
             <span
