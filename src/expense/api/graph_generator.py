@@ -1256,16 +1256,16 @@ class GraphGenerator:
 
         # Add exponential fitting line
         if len(df_graph) > 1:
-            t = dt.time()
+            base_date = pd.to_datetime(df_graph["date"].iloc[0])
             x_data = np.array(
                 [
-                    dt.datetime.combine(d, t).timestamp()
+                    (pd.to_datetime(d) - base_date).total_seconds()
                     for d in df_graph["date"]
                 ]
             )
             y_data = df_graph["valuation"].values
             norm_factor = 3600 * 24 * 365 / 12
-            x_data_normalized = (x_data - x_data[0]) / norm_factor
+            x_data_normalized = x_data / norm_factor
             a0 = df_graph["invest_amount"].iloc[-1] / len(df_graph)
             b0 = 0.05 / 12
             sigma = np.ones_like(y_data, dtype=float)
@@ -1279,14 +1279,24 @@ class GraphGenerator:
                     bounds=([a0 * 0.5, -np.inf], [np.inf, np.inf]),
                     sigma=sigma,
                 )
-                x_fit = np.linspace(
-                    x_data_normalized.min(), x_data_normalized.max(), 100
+                x_fit = np.concatenate(
+                    [
+                        x_data_normalized,
+                        np.linspace(
+                            x_data_normalized.max(),
+                            x_data_normalized.max() * 1.1,
+                            100,
+                        )[1:],
+                    ]
                 )
                 y_fit = self._fitting_func(x_fit, *params)
                 dates_fit = [
-                    pd.to_datetime(ts * norm_factor + x_data[0], unit="s")
+                    base_date + pd.Timedelta(seconds=round(ts * norm_factor))
                     for ts in x_fit
                 ]
+
+                if y_fit.max() > ymax:
+                    ymax = y_fit.max()
                 fig.add_trace(
                     go.Scatter(
                         x=dates_fit,
@@ -1303,9 +1313,10 @@ class GraphGenerator:
                                 f"近似式 <i>y</i> = <i>Σ<sub>k</sub><sup>x</sup></i> "
                                 f"¥{params[0]:,.0f} (1 + {params[1]:.4f}) <sup><i>k</i></sup>"
                                 f"<br>  (年換算利回り {params[1]*100*12:+.2f}%)"
+                                f"<br>  ({x.strftime('%Y年%-m月%-d日')} ¥{y:,.0f})"
                             )
-                        ]
-                        * len(y_fit),
+                            for x, y in zip(dates_fit, y_fit)
+                        ],
                         hoverinfo="text",
                     )
                 )
