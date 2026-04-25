@@ -57,16 +57,22 @@
           />
           <select id="expense-type" name="expense_type">
             {% for item in items %}
-            <option value="{{ item }}">
-              {{ item }}
-            </option>
+              {% if item.startswith("[HEAD] ") %}
+                <option disabled>── {{ item.replace("[HEAD] ", "") }} ──</option>
+              {% else %}
+                <option value="{{ item }}">
+                  {{ item }}
+                </option>
+              {% endif %}
             {% endfor %}
           </select>
           <input type="number" id="expense-amount" name="expense_amount" value=""
-            placeholder="{{ icons.get('input_amount', '💴') }} 金額を入力" {% if items | length and "/" in items[0] %} style="display: none;" {% else %} required
+            placeholder="{{ icons.get('input_amount', '💴') }} 金額を入力"
+            {% if items | length > 1 and "/" in items[1] %} style="display: none;"
+            {% else %} required
             {% endif %} />
           <input type="text" id="expense-memo" name="expense_memo" value="" placeholder="{{ icons.get('input_memo', '✏️') }} メモを入力"
-            {% if items | length and "/" in items[0] %} style="display: none;" {% endif %} />
+            {% if items | length > 1 and "/" in items[1] %} style="display: none;" {% endif %} />
           <button type="submit" class="btn">＋ 登録</button>
         </div>
       </form>
@@ -120,7 +126,7 @@
               />
               <select id="new-expense-type" name="new_expense_type">
                 {% for item in items %}
-                {% if "/" not in item %}
+                {% if "/" not in item and not item.startswith("[HEAD] ") %}
                 <option value="{{ item }}">
                   {{ item }}
                 </option>

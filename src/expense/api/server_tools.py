@@ -119,13 +119,23 @@ class ServerTools(Base):
                 "items": recent_expenses[: int(num_items.get("recent", 5))],
             },
         ]
+        instant_items = []
         for item_data in item_list:
             icon: str = item_data.get("icon", "")
             for i in item_data.get("items", []):
                 item_str = f'{icon} {i["expense_type"]}/{i["expense_memo"]}/¥{i["expense_amount"]}'
                 item_str = item_str.replace("//", "/")
-                items.append(item_str)
-        items += self.expense_types
+                instant_items.append(item_str)
+
+        items = []
+        if instant_items:
+            items.append("[HEAD] インスタント登録")
+            items.extend(instant_items)
+
+        if self.expense_types:
+            items.append("[HEAD] カテゴリ")
+            items.extend(self.expense_types)
+
         log.info("end 'generate_items' method")
         return items
 
