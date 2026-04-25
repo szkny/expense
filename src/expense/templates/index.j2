@@ -73,6 +73,11 @@
             {% endif %} />
           <input type="text" id="expense-memo" name="expense_memo" value="" placeholder="{{ icons.get('input_memo', '✏️') }} メモを入力"
             {% if items | length > 1 and "/" in items[1] %} style="display: none;" {% endif %} />
+          <datalist id="memo-list">
+            {% for memo in records | map(attribute='expense_memo') | unique | reject('equalto', '') %}
+            <option value="{{ memo }}"></option>
+            {% endfor %}
+          </datalist>
           <button type="submit" class="btn">＋ 登録</button>
         </div>
       </form>

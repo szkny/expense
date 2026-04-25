@@ -12,6 +12,7 @@ import {
   initRecordEditor,
   initPwaInstall,
   initAssetMasking,
+  initMemoAutocomplete,
 } from "./ui.js";
 
 function onDOMContentLoaded() {
@@ -27,6 +28,7 @@ function onDOMContentLoaded() {
   initRecordEditor();
   initPwaInstall();
   initAssetMasking();
+  initMemoAutocomplete();
 }
 
 if (document.readyState === "loading") {

@@ -250,6 +250,24 @@ export function initRecordEditor() {
   });
 }
 
+export function initMemoAutocomplete() {
+  const memoInputs = [
+    document.getElementById("expense-memo"),
+    document.getElementById("new-expense-memo"),
+  ];
+
+  memoInputs.forEach((input) => {
+    if (!input) return;
+    input.addEventListener("input", function() {
+      if (this.value.length >= 2) {
+        this.setAttribute("list", "memo-list");
+      } else {
+        this.removeAttribute("list");
+      }
+    });
+  });
+}
+
 export function initPwaInstall() {
   const installBtn = document.getElementById("install-btn");
   if (!installBtn) return;
@@ -279,9 +297,15 @@ export function initAssetMasking() {
 
   const originalValue = amountEl.dataset.originalValue;
   // 数字のみを1文字ずつspanで囲み、伏せ字にする
-  const maskedValue = originalValue.replace(/\d/g, '<span class="digit-span">*</span>');
+  const maskedValue = originalValue.replace(
+    /\d/g,
+    '<span class="digit-span">*</span>',
+  );
   // 元の値も、文字幅を揃えるために同じ構造にする（数字をspanで囲む）
-  const formattedOriginal = originalValue.replace(/\d/g, (d) => `<span class="digit-span">${d}</span>`);
+  const formattedOriginal = originalValue.replace(
+    /\d/g,
+    (d) => `<span class="digit-span">${d}</span>`,
+  );
 
   let isMasked = false;
 
