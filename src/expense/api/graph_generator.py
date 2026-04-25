@@ -1269,14 +1269,14 @@ class GraphGenerator:
             a0 = df_graph["invest_amount"].iloc[-1] / len(df_graph)
             b0 = 0.05 / 12
             sigma = np.ones_like(y_data, dtype=float)
-            sigma[-1] = 1e-6
+            sigma[-1] = 1e-1
             try:
                 params, covariance = curve_fit(
                     self._fitting_func,
                     x_data_normalized,
                     y_data,
                     p0=[a0, b0],
-                    bounds=([a0 * 0.5, -np.inf], [np.inf, np.inf]),
+                    bounds=([0, -np.inf], [np.inf, np.inf]),
                     sigma=sigma,
                 )
                 x_fit = np.concatenate(
