@@ -258,12 +258,33 @@ export function initMemoAutocomplete() {
 
   memoInputs.forEach((input) => {
     if (!input) return;
-    input.addEventListener("input", function() {
-      if (this.value.length >= 2) {
-        this.setAttribute("list", "memo-list");
+
+    let isComposing = false;
+
+    const updateList = (el) => {
+      if (isComposing) return;
+      if (el.value.length >= 2) {
+        if (el.getAttribute("list") !== "memo-list") {
+          el.setAttribute("list", "memo-list");
+        }
       } else {
-        this.removeAttribute("list");
+        if (el.hasAttribute("list")) {
+          el.removeAttribute("list");
+        }
       }
+    };
+
+    input.addEventListener("compositionstart", () => {
+      isComposing = true;
+    });
+
+    input.addEventListener("compositionend", function() {
+      isComposing = false;
+      updateList(this);
+    });
+
+    input.addEventListener("input", function() {
+      updateList(this);
     });
   });
 }
