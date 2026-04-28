@@ -1177,7 +1177,7 @@ class GraphGenerator:
         log.info("end 'generate_asset_waterfall_chart' method")
         return graph_html
 
-    def _fitting_func(self, x: np.ndarray, a: float, b: float) -> np.ndarray:
+    def _fitting_func_strict(self, x: np.ndarray, a: float, b: float) -> np.ndarray:
         """
         指数近似のフィッティング関数
           近似式 y = Σ_k^x a (1 + b) ^k
@@ -1186,6 +1186,16 @@ class GraphGenerator:
         b: 月利
         """
         return a * ((1 + b) ** x - 1) / b
+
+    def _fitting_func_exp(self, x: np.ndarray, a: float, b: float) -> np.ndarray:
+        """
+        指数近似のフィッティング関数
+          近似式 y = a (b) ^x
+        x: 月単位の時間軸
+        a: 係数1
+        b: 係数2
+        """
+        return a * (b ** x)
 
     def generate_asset_monthly_history_chart(
         self,
@@ -1272,7 +1282,7 @@ class GraphGenerator:
             sigma[-1] = 1e-1
             try:
                 params, covariance = curve_fit(
-                    self._fitting_func,
+                    self._fitting_func_exp,
                     x_data_normalized,
                     y_data,
                     p0=[a0, b0],
@@ -1289,7 +1299,7 @@ class GraphGenerator:
                         )[1:],
                     ]
                 )
-                y_fit = self._fitting_func(x_fit, *params)
+                y_fit = self._fitting_func_exp(x_fit, *params)
                 dates_fit = [
                     base_date + pd.Timedelta(seconds=round(ts * norm_factor))
                     for ts in x_fit
@@ -1310,9 +1320,10 @@ class GraphGenerator:
                         ),
                         hovertext=[
                             (
-                                f"近似式 <i>y</i> = <i>Σ<sub>k</sub><sup>x</sup></i> "
-                                f"¥{params[0]:,.0f} (1 + {params[1]:.4f}) <sup><i>k</i></sup>"
-                                f"<br>  (年換算利回り {params[1]*100*12:+.2f}%)"
+                                # f"近似式 <i>y</i> = <i>Σ<sub>k</sub><sup>x</sup></i> "
+                                # f"¥{params[0]:,.0f} (1 + {params[1]:.4f}) <sup><i>k</i></sup>"
+                                # f"<br>  (年換算利回り {params[1]*100*12:+.2f}%)"
+                                f"近似式 <i>y</i> = a b <sup><i>x</i></sup>"
                                 f"<br>  ({x.strftime('%Y年%-m月%-d日')} ¥{y:,.0f})"
                             )
                             for x, y in zip(dates_fit, y_fit)
