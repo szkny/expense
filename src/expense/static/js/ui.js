@@ -328,10 +328,12 @@ export function initAssetMasking() {
     (d) => `<span class="digit-span">${d}</span>`,
   );
 
-  let isMasked = false;
+  let isMasked = localStorage.getItem("isAssetMasked") === "true";
+  amountEl.innerHTML = isMasked ? maskedValue : formattedOriginal;
 
   amountEl.addEventListener("click", () => {
     isMasked = !isMasked;
     amountEl.innerHTML = isMasked ? maskedValue : formattedOriginal;
+    localStorage.setItem("isAssetMasked", isMasked);
   });
 }
