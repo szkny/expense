@@ -17,7 +17,7 @@ from ..core.expense import Expense, get_fiscal_year
 from ..core.gspread_wrapper import GspreadHandler
 from ..core.ocr import get_latest_screenshot
 from ..core.termux_api import TermuxAPI
-from .graph_generator import GraphGenerator
+from ..core.graph_generator import GraphGenerator
 
 log: logging.Logger = logging.getLogger("expense")
 

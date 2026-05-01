@@ -5,11 +5,12 @@ import numpy as np
 import pandas as pd
 import datetime as dt
 from typing import Any
-from scipy.optimize import curve_fit
 
 import plotly.io as pio
 from plotly import express as px
 from plotly import graph_objects as go
+
+from .fitting import FittingModel
 
 log: logging.Logger = logging.getLogger("expense")
 
@@ -1177,26 +1178,6 @@ class GraphGenerator:
         log.info("end 'generate_asset_waterfall_chart' method")
         return graph_html
 
-    def _fitting_func_strict(self, x: np.ndarray, a: float, b: float) -> np.ndarray:
-        """
-        指数近似のフィッティング関数
-          近似式 y = Σ_k^x a (1 + b) ^k
-        x: 月単位の時間軸
-        a: 毎月積立投資額
-        b: 月利
-        """
-        return a * ((1 + b) ** x - 1) / b
-
-    def _fitting_func_exp(self, x: np.ndarray, a: float, b: float) -> np.ndarray:
-        """
-        指数近似のフィッティング関数
-          近似式 y = a (b) ^x
-        x: 月単位の時間軸
-        a: 係数1
-        b: 係数2
-        """
-        return a * (b ** x)
-
     def generate_asset_monthly_history_chart(
         self,
         df: pd.DataFrame,
@@ -1276,19 +1257,11 @@ class GraphGenerator:
             y_data = df_graph["valuation"].values
             norm_factor = 3600 * 24 * 365 / 12
             x_data_normalized = x_data / norm_factor
-            a0 = df_graph["invest_amount"].iloc[-1] / len(df_graph)
-            b0 = 0.05 / 12
             sigma = np.ones_like(y_data, dtype=float)
             sigma[-1] = 1e-1
             try:
-                params, covariance = curve_fit(
-                    self._fitting_func_exp,
-                    x_data_normalized,
-                    y_data,
-                    p0=[a0, b0],
-                    bounds=([0, -np.inf], [np.inf, np.inf]),
-                    sigma=sigma,
-                )
+                model = FittingModel()
+                model.fit(x_data_normalized, y_data, sigma=sigma)
                 x_fit = np.concatenate(
                     [
                         x_data_normalized,
@@ -1299,7 +1272,7 @@ class GraphGenerator:
                         )[1:],
                     ]
                 )
-                y_fit = self._fitting_func_exp(x_fit, *params)
+                y_fit = model.predict(x_fit)
                 dates_fit = [
                     base_date + pd.Timedelta(seconds=round(ts * norm_factor))
                     for ts in x_fit
@@ -1307,6 +1280,7 @@ class GraphGenerator:
 
                 if y_fit.max() > ymax:
                     ymax = y_fit.max()
+                hovertext = str(model.get_hovertext())
                 fig.add_trace(
                     go.Scatter(
                         x=dates_fit,
@@ -1319,13 +1293,7 @@ class GraphGenerator:
                             color="#d1d5db" if theme == "dark" else "#374151",
                         ),
                         hovertext=[
-                            (
-                                # f"近似式 <i>y</i> = <i>Σ<sub>k</sub><sup>x</sup></i> "
-                                # f"¥{params[0]:,.0f} (1 + {params[1]:.4f}) <sup><i>k</i></sup>"
-                                # f"<br>  (年換算利回り {params[1]*100*12:+.2f}%)"
-                                f"近似式 <i>y</i> = a b <sup><i>x</i></sup>"
-                                f"<br>  ({x.strftime('%Y年%-m月%-d日')} ¥{y:,.0f})"
-                            )
+                            hovertext + f"<br>  ({x.strftime('%Y年%-m月%-d日')} ¥{y:,.0f})"
                             for x, y in zip(dates_fit, y_fit)
                         ],
                         hoverinfo="text",
