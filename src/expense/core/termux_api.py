@@ -47,6 +47,7 @@ class TermuxAPI(Base):
         try:
             data = json.loads(json_str)
         except json.JSONDecodeError as e:
+            log.error(f"Failed to parse JSON: {json_str}")
             raise e
         if data.get("code", 0) == -2:
             log.debug(f"data: {data}")
