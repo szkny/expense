@@ -25,6 +25,7 @@ class GraphGenerator(Base):
         exclude_types: list[str],
         graph_config: dict[str, dict[str, str]],
     ):
+        super().__init__()
         self.expense_types = expense_types
         self.fixed_types = fixed_types
         self.variable_types = variable_types
