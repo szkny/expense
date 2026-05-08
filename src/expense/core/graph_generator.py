@@ -10,12 +10,13 @@ import plotly.io as pio
 from plotly import express as px
 from plotly import graph_objects as go
 
+from ..core.base import Base
 from .fitting import FittingModel
 
 log: logging.Logger = logging.getLogger("expense")
 
 
-class GraphGenerator:
+class GraphGenerator(Base):
     def __init__(
         self,
         expense_types: list[str],
@@ -29,6 +30,8 @@ class GraphGenerator:
         self.variable_types = variable_types
         self.exclude_types = exclude_types
         self.graph_color = graph_config.get("color", {})
+        self.asset_management_config = self.config.get("asset_management", {})
+        self.fitting_duration_multiplier = self.asset_management_config.get("fitting_duration_multiplier", 1.0)
         # NOTE: サーバー起動の初回アクセス時に、plotlyのテンプレート関連の処理でエラーが発生することがあるため
         #       デフォルトのテンプレートを明示的に指定しておく
         pio.templates.default = "plotly_white"
@@ -1267,7 +1270,7 @@ class GraphGenerator:
                         x_data_normalized,
                         np.linspace(
                             x_data_normalized.max(),
-                            x_data_normalized.max() * 1.1,
+                            x_data_normalized.max() * self.fitting_duration_multiplier,
                             100,
                         )[1:],
                     ]

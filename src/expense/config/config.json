@@ -74,6 +74,9 @@
     },
     "filter_duplicated_items": true
   },
+  "asset_management": {
+    "fitting_duration_multiplier": 1.1
+  },
   "ocr": {
     "tesseract_config": "--psm 6 --oem 3",
     "regions": {
