@@ -32,7 +32,9 @@ class GraphGenerator(Base):
         self.exclude_types = exclude_types
         self.graph_color = graph_config.get("color", {})
         self.asset_management_config = self.config.get("asset_management", {})
-        self.fitting_duration_multiplier = self.asset_management_config.get("fitting_duration_multiplier", 1.0)
+        self.fitting_duration_multiplier = self.asset_management_config.get(
+            "fitting_duration_multiplier", 1.0
+        )
         # NOTE: サーバー起動の初回アクセス時に、plotlyのテンプレート関連の処理でエラーが発生することがあるため
         #       デフォルトのテンプレートを明示的に指定しておく
         pio.templates.default = "plotly_white"
@@ -755,7 +757,6 @@ class GraphGenerator(Base):
         df_graph = df_graph.query(
             f"month >= @pd.Timestamp('{cutoff_date_str}')"
         )
-        df_graph["month"] = df_graph["month"].dt.strftime("%Y-%m")
 
         ymax = 0
         if not df_graph.empty:
@@ -1271,7 +1272,8 @@ class GraphGenerator(Base):
                         x_data_normalized,
                         np.linspace(
                             x_data_normalized.max(),
-                            x_data_normalized.max() * self.fitting_duration_multiplier,
+                            x_data_normalized.max()
+                            * self.fitting_duration_multiplier,
                             100,
                         )[1:],
                     ]
@@ -1297,7 +1299,8 @@ class GraphGenerator(Base):
                             color="#d1d5db" if theme == "dark" else "#374151",
                         ),
                         hovertext=[
-                            hovertext + f"<br>  ({x.strftime('%Y年%-m月%-d日')} ¥{y:,.0f})"
+                            hovertext
+                            + f"<br>  ({x.strftime('%Y年%-m月%-d日')} ¥{y:,.0f})"
                             for x, y in zip(dates_fit, y_fit)
                         ],
                         hoverinfo="text",
