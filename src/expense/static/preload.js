@@ -11,6 +11,7 @@ if (localStorage.getItem("isAssetMasked") === "true")
     "record",
     "report",
     "asset-record",
+    "asset-chart",
     "asset-report",
   ];
   keys.forEach((key) => {

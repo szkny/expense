@@ -367,6 +367,7 @@ img.screenshot {
 .record-open #record-container,
 .report-open #report-container,
 .asset-record-open #asset-record-container,
+.asset-chart-open #asset-chart-container,
 .asset-report-open #asset-report-container {
   max-height: 10000px;
   opacity: 1;
@@ -378,6 +379,7 @@ img.screenshot {
 .record-collapsed #record-container,
 .report-collapsed #report-container,
 .asset-record-collapsed #asset-record-container,
+.asset-chart-collapsed #asset-chart-container,
 .asset-report-collapsed #asset-report-container {
   max-height: 0;
   overflow: hidden;

@@ -24,38 +24,38 @@
 
     <div class="card">
       <h3 class="collapsible-trigger" data-key="asset-report">
-        <span> {{ icons.get("asset_portfolio", "📊") }} ポートフォリオ </span>
+        <span> {{ icons.get("asset_summary", "📊") }} 資産サマリ </span>
         <span class="collapsible-toggle"></span>
       </h3>
-      <div id="asset-report-container" class="collapsible-content">
-        <div class="asset-summary-list">
-          <div class="asset-summary-content">
-            <span> 資産総額 </span>
-            <span class="asset-summary-details"> {{today.year}}年{{today.month}}月{{today.day}}日 {{"{:02d}".format(today.hour)}}:{{"{:02d}".format(today.minute)}}時点 </span>
-          </div>
-          <div id="total-asset-amount" class="asset-summary-display" data-original-value="{{asset_summary.total}}"> {{asset_summary.total}} </div>
-          <div class="asset-summary-details">
-            <span> 前日比 </span>
-            <span
-              {% if "¥0" in asset_summary.change %}
-                class=""
-              {% elif "+¥" in asset_summary.change %}
-                class="asset-color-up asset-up"
-              {% else %}
-                class="asset-color-down asset-down"
-              {% endif %}
-            > {{asset_summary.change}} </span>
-          </div>
-          <div class="asset-summary-details">
-            <span> ドローダウン </span>
-            <span
-              {% if "-" in asset_summary.drawdown %}
-                class="asset-color-down"
-              {% else %}
-                class="asset-color-up asset-all-time-high"
-              {% endif %}
-            > {{asset_summary.drawdown}} </span>
-          </div>
+      <div class="asset-summary-list">
+        <div class="asset-summary-content">
+          <span> 資産総額 </span>
+          <span class="asset-summary-details"> {{today.year}}年{{today.month}}月{{today.day}}日 {{"{:02d}".format(today.hour)}}:{{"{:02d}".format(today.minute)}}時点 </span>
+        </div>
+        <div id="total-asset-amount" class="asset-summary-display" data-original-value="{{asset_summary.total}}"> {{asset_summary.total}} </div>
+        <div class="asset-summary-details">
+          <span> 前日比 </span>
+          <span
+            {% if "¥0" in asset_summary.change %}
+              class=""
+            {% elif "+¥" in asset_summary.change %}
+              class="asset-color-up asset-up"
+            {% else %}
+              class="asset-color-down asset-down"
+            {% endif %}
+          > {{asset_summary.change}} </span>
+        </div>
+        <div class="asset-summary-details">
+          <span> ドローダウン </span>
+          <span
+            {% if "-" in asset_summary.drawdown %}
+              class="asset-color-down"
+            {% else %}
+              class="asset-color-up asset-all-time-high"
+            {% endif %}
+          > {{asset_summary.drawdown}} </span>
+        </div>
+        <div id="asset-report-container" class="collapsible-content">
           <br>
           <div class="asset-summary-content">
             <span> 含み益 </span>
@@ -113,27 +113,34 @@
             > {{asset_summary.change_usdjpy}} </span>
           </div>
         </div>
-        <div class="graph-container">
-          {{ plotlyjs | safe }}
-          <hr>
-          <div id="asset-pie-chart-container" class="loading"><div class="spinner"></div></div>
-          <hr>
-          <div id="asset-heatmap-chart-container" class="loading"><div class="spinner"></div></div>
-          <hr>
-          <div class="asset-chart-title">
-            銘柄別チャート
-          </div>
-          <select id="symbol-select" class="symbol-selector">
-            {% for s in asset_tickers %}
-              <option value="{{ s }}">{{ s }}</option>
-            {% endfor %}
-          </select>
-          <div id="asset-tradingview-chart-container"></div>
-          <hr>
-          <div id="asset-waterfall-chart-container" class="loading"><div class="spinner"></div></div>
-          <hr>
-          <div id="asset-monthly-history-chart-container" class="loading"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 class="collapsible-trigger" data-key="asset-chart">
+        <span> {{ icons.get("asset_chart", "📈") }} 資産チャート </span>
+        <span class="collapsible-toggle"></span>
+      </h3>
+      <div id="asset-chart-container" class="collapsible-content">
+        {{ plotlyjs | safe }}
+        <br>
+        <div id="asset-pie-chart-container" class="loading"><div class="spinner"></div></div>
+        <hr>
+        <div id="asset-heatmap-chart-container" class="loading"><div class="spinner"></div></div>
+        <hr>
+        <div class="asset-chart-title">
+          銘柄別チャート
         </div>
+        <select id="symbol-select" class="symbol-selector">
+          {% for s in asset_tickers %}
+            <option value="{{ s }}">{{ s }}</option>
+          {% endfor %}
+        </select>
+        <div id="asset-tradingview-chart-container"></div>
+        <hr>
+        <div id="asset-waterfall-chart-container" class="loading"><div class="spinner"></div></div>
+        <hr>
+        <div id="asset-monthly-history-chart-container" class="loading"><div class="spinner"></div></div>
       </div>
     </div>
 

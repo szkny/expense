@@ -933,7 +933,7 @@ class GraphGenerator(Base):
             names="ticker",
             values="valuation",
             color="ticker",
-            title="資産内訳",
+            title="ポートフォリオ",
             category_orders={"ticker": df_pie["ticker"].to_list()},
             color_discrete_map=graph_color,
             hole=0.5,
