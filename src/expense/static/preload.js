@@ -1,6 +1,9 @@
 if (localStorage.getItem("theme") === "dark")
   document.documentElement.classList.add("dark");
 
+if (localStorage.getItem("isAssetMasked") === "true")
+  document.documentElement.classList.add("asset-masked");
+
 (function () {
   const keys = [
     "register",

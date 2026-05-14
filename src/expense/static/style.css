@@ -756,6 +756,10 @@ tr:nth-child(even) {
   margin-right: 10px;
 }
 
+.asset-masked #total-asset-amount {
+  visibility: hidden;
+}
+
 .asset-summary-display-sub {
   font-variant-numeric: tabular-nums;
   font-size: 1.5rem;

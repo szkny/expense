@@ -331,6 +331,11 @@ export function initAssetMasking() {
   let isMasked = localStorage.getItem("isAssetMasked") === "true";
   amountEl.innerHTML = isMasked ? maskedValue : formattedOriginal;
 
+  // 初期ロード時のちらつき防止用クラスを削除
+  if (isMasked) {
+    document.documentElement.classList.remove("asset-masked");
+  }
+
   amountEl.addEventListener("click", () => {
     isMasked = !isMasked;
     amountEl.innerHTML = isMasked ? maskedValue : formattedOriginal;
