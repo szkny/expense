@@ -46,14 +46,14 @@
           > {{asset_summary.change}} </span>
         </div>
         <div class="asset-summary-details">
+          {% if "-" in asset_summary.drawdown %}
           <span> ドローダウン </span>
+          <span class="asset-color-down"> {{asset_summary.drawdown}} </span>
+          {% else %}
           <span
-            {% if "-" in asset_summary.drawdown %}
-              class="asset-color-down"
-            {% else %}
-              class="asset-color-up asset-all-time-high"
-            {% endif %}
-          > {{asset_summary.drawdown}} </span>
+            class="asset-color-up asset-all-time-high"
+          > 最高値更新 </span>
+          {% endif %}
         </div>
         <div id="asset-report-container" class="collapsible-content">
           <br>
