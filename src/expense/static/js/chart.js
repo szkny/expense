@@ -146,9 +146,9 @@ function initTradingViewChart() {
       studies_overrides: isIndicator
         ? {}
         : {
-            "moving average.length": 200,
-            "moving average.source": "close",
-          },
+          "moving average.length": 200,
+          "moving average.source": "close",
+        },
     });
   };
 
@@ -163,25 +163,23 @@ function initTradingViewChart() {
 
 export function initializeCharts() {
   const reportContainer = document.getElementById("report-container");
-  const assetReportContainer = document.getElementById(
-    "asset-report-container",
-  );
+  const assetChartContainer = document.getElementById("asset-chart-container");
 
-  if (!reportContainer && !assetReportContainer) return;
+  if (!reportContainer && !assetChartContainer) return;
 
   if (reportContainer) {
     allChartConfigs.report.forEach((config) => fetchAndRenderChart(config));
   }
 
-  if (assetReportContainer) {
+  if (assetChartContainer) {
     const initAssetChart = () => {
       allChartConfigs.asset.forEach((config) => fetchAndRenderChart(config));
       initTradingViewChart();
     };
 
-    const trigger = document.querySelector("[data-key='asset-report']");
+    const trigger = document.querySelector("[data-key='asset-chart']");
     const isCollapsed = document.documentElement.classList.contains(
-      "asset-report-collapsed",
+      "asset-chart-collapsed",
     );
 
     if (!isCollapsed) {
