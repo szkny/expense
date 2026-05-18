@@ -809,7 +809,7 @@ tr:nth-child(even) {
 }
 
 .simulation-input-group input {
-  width: 100px;
+  width: 80px;
   padding: 8px;
   margin-bottom: 0;
   font-size: 0.9rem;

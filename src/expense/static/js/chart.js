@@ -133,6 +133,13 @@ function initAssetSimulation() {
   if (!config) return;
 
   const updateSim = () => {
+    if (
+      yieldInput.value === "" ||
+      investmentInput.value === "" ||
+      yearsInput.value === ""
+    ) {
+      return;
+    }
     const params = {
       annual_yield: yieldInput.value,
       monthly_investment: investmentInput.value,
