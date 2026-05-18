@@ -1188,6 +1188,9 @@ class GraphGenerator(Base):
         df: pd.DataFrame,
         theme: str = "light",
         include_plotlyjs: bool | str = True,
+        simulation_annual_yield: float = 0.0,
+        simulation_monthly_investment: float = 0.0,
+        simulation_years: int = 0,
     ) -> str:
         """
         月単位の資産推移チャートを生成
@@ -1249,6 +1252,53 @@ class GraphGenerator(Base):
                 ),
             )
         )
+
+        # Add simulation line
+        if simulation_years > 0 and not df_graph.empty:
+            latest_row = df_graph.iloc[-1]
+            latest_date = pd.to_datetime(latest_row["date"])
+            latest_valuation = latest_row["valuation"]
+
+            monthly_yield = (1 + simulation_annual_yield / 100) ** (1 / 12) - 1
+            sim_dates = [latest_date]
+            sim_values = [latest_valuation]
+
+            current_valuation = latest_valuation
+            for i in range(1, simulation_years * 12 + 1):
+                # Next month start
+                next_date = latest_date + pd.DateOffset(months=i)
+                current_valuation = (
+                    current_valuation * (1 + monthly_yield)
+                    + simulation_monthly_investment
+                )
+                sim_dates.append(next_date)
+                sim_values.append(current_valuation)
+            sim_values = [
+                max(v, 0)
+                for v in sim_values
+            ]
+
+            if max(sim_values) > ymax:
+                ymax = max(sim_values)
+
+            fig.add_trace(
+                go.Scatter(
+                    x=sim_dates,
+                    y=sim_values,
+                    mode="lines",
+                    name="シミュレーション",
+                    line=dict(
+                        width=2,
+                        dash="dash",
+                        color="#10b981",
+                    ),
+                    hovertext=[
+                        f"シミュレーション<br>  ({x.strftime('%Y年%-m月%-d日')} ¥{y:,.0f})"
+                        for x, y in zip(sim_dates, sim_values)
+                    ],
+                    hoverinfo="text",
+                )
+            )
 
         # Add exponential fitting line
         if len(df_graph) > 1:

@@ -387,7 +387,12 @@ def get_asset_heatmap_chart(request: Request) -> HTMLResponse:
 
 
 @app.get("/api/asset_monthly_history_chart", response_class=HTMLResponse)
-def get_asset_monthly_history_chart(request: Request) -> HTMLResponse:
+def get_asset_monthly_history_chart(
+    request: Request,
+    annual_yield: float = 0.0,
+    monthly_investment: float = 0.0,
+    duration_years: int = 0,
+) -> HTMLResponse:
     log.info("start 'get_asset_monthly_history_chart' method")
     server_tools: ServerTools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
@@ -408,7 +413,12 @@ def get_asset_monthly_history_chart(request: Request) -> HTMLResponse:
     df_records.index = pd.Index(range(len(df_records)))
     graph_html = (
         server_tools.graph_generator.generate_asset_monthly_history_chart(
-            df_records, theme=theme, include_plotlyjs=False
+            df_records,
+            theme=theme,
+            include_plotlyjs=False,
+            simulation_annual_yield=annual_yield,
+            simulation_monthly_investment=monthly_investment,
+            simulation_years=duration_years,
         )
     )
     log.info("end 'get_asset_monthly_history_chart' method")

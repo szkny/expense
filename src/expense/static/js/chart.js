@@ -31,16 +31,27 @@ const allChartConfigs = {
   ],
 };
 
-async function fetchAndRenderChart(config, month = null) {
+async function fetchAndRenderChart(config, params = {}) {
   const container = document.getElementById(`${config.id}-chart-container`);
-  if (!container || (container.dataset.loaded && !month)) return;
+  if (
+    !container ||
+    (container.dataset.loaded && Object.keys(params).length === 0)
+  )
+    return;
 
   container.classList.add("loading");
   container.innerHTML = '<div class="spinner"></div>';
 
   let url = config.endpoint;
-  if (month) {
-    url += `?month=${month}`;
+  const urlParams = new URLSearchParams();
+  for (const key in params) {
+    if (params[key] !== null) {
+      urlParams.append(key, params[key]);
+    }
+  }
+  const queryString = urlParams.toString();
+  if (queryString) {
+    url += `?${queryString}`;
   }
 
   try {
@@ -51,7 +62,7 @@ async function fetchAndRenderChart(config, month = null) {
       const data = await response.json();
       if (data.html) {
         container.innerHTML = data.html;
-        if (!month) {
+        if (Object.keys(params).length === 0) {
           createDropdown(config, data.months);
         }
       } else {
@@ -97,11 +108,42 @@ function createDropdown(config, months) {
   });
 
   select.addEventListener("change", (e) => {
-    fetchAndRenderChart(config, e.target.value);
+    fetchAndRenderChart(config, { month: e.target.value });
   });
 
   controlsContainer.innerHTML = "";
   controlsContainer.appendChild(select);
+}
+
+function initAssetSimulation() {
+  const controls = document.getElementById(
+    "asset-monthly-history-chart-controls",
+  );
+  if (!controls) return;
+
+  const yieldInput = document.getElementById("sim-yield");
+  const investmentInput = document.getElementById("sim-investment");
+  const yearsInput = document.getElementById("sim-years");
+
+  if (!yieldInput || !investmentInput || !yearsInput) return;
+
+  const config = allChartConfigs.asset.find(
+    (c) => c.id === "asset-monthly-history",
+  );
+  if (!config) return;
+
+  const updateSim = () => {
+    const params = {
+      annual_yield: yieldInput.value,
+      monthly_investment: investmentInput.value,
+      duration_years: yearsInput.value,
+    };
+    fetchAndRenderChart(config, params);
+  };
+
+  [yieldInput, investmentInput, yearsInput].forEach((input) => {
+    input.addEventListener("change", updateSim);
+  });
 }
 
 function initTradingViewChart() {
@@ -175,6 +217,7 @@ export function initializeCharts() {
     const initAssetChart = () => {
       allChartConfigs.asset.forEach((config) => fetchAndRenderChart(config));
       initTradingViewChart();
+      initAssetSimulation();
     };
 
     const trigger = document.querySelector("[data-key='asset-chart']");
