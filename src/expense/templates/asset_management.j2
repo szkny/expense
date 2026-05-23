@@ -117,6 +117,11 @@
               {% endif %}
             > {{asset_summary.change_usdjpy}} </span>
           </div>
+          <div class="link-container">
+            <br>
+            <a href="https://www.google.com/finance/beta?gsas=1" class="link-text">
+                {{ icons.get("link", "🔗") }} Google Financeを開く </a>
+          </div>
         </div>
       </div>
     </div>
@@ -167,7 +172,6 @@
         <span> {{ icons.get("asset_list", "📝") }} 資産一覧 </span>
         <span class="collapsible-toggle"></span>
       </h3>
-      <a href="{{ gspread_url }}" class="link-spread"> {{ icons.get("link", "🔗") }} スプレッドシートを開く </a>
       <div id="asset-record-container" class="collapsible-content">
         <div class="search-wrapper">
           <input type="text" id="search-input" placeholder="{{ icons.get('search', '🔍') }} 資産をフィルタリング" />
@@ -218,6 +222,11 @@
               {% endfor %}
             </tbody>
           </table>
+        </div>
+        <div class="link-container">
+          <br>
+          <a href="{{ gspread_url }}" class="link-text">
+              {{ icons.get("link", "🔗") }} スプレッドシートを開く </a>
         </div>
       </div>
     </div>

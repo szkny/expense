@@ -550,10 +550,13 @@ tr:nth-child(even) {
 }
 
 /* リンク */
-.link-spread {
+.link-container {
+  text-align: right;
+}
+
+.link-text {
   color: #2563eb;
-  font-size: 0.95rem;
-  margin-left: 20px;
+  font-size: 0.85rem;
   text-decoration: none;
 }
 
@@ -678,7 +681,7 @@ tr:nth-child(even) {
   color: #61656b;
 }
 
-.dark .link-spread {
+.dark .link-text {
   color: #88aacc;
 }
 
