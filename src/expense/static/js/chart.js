@@ -245,7 +245,11 @@ export function initializeCharts() {
 
   if (assetChartContainer) {
     const initAssetChart = () => {
-      allChartConfigs.asset.forEach((config) => fetchAndRenderChart(config));
+      allChartConfigs.asset.forEach((config) => {
+        if (config.id !== "asset-monthly-history") {
+          fetchAndRenderChart(config);
+        }
+      });
       initTradingViewChart();
       initAssetSimulation();
     };
