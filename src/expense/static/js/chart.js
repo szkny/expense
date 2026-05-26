@@ -125,6 +125,21 @@ function initAssetSimulation() {
   const investmentInput = document.getElementById("sim-investment");
   const yearsInput = document.getElementById("sim-years");
 
+  const saved = localStorage.getItem("simParams");
+  if (saved) {
+    try {
+      const loadedParams = JSON.parse(saved);
+      if (loadedParams.annual_yield)
+        yieldInput.value = loadedParams.annual_yield;
+      if (loadedParams.monthly_investment)
+        investmentInput.value = loadedParams.monthly_investment;
+      if (loadedParams.duration_years)
+        yearsInput.value = loadedParams.duration_years;
+    } catch (e) {
+      console.error("Failed to parse simParams", e);
+    }
+  }
+
   if (!yieldInput || !investmentInput || !yearsInput) return;
 
   const config = allChartConfigs.asset.find(
@@ -146,7 +161,13 @@ function initAssetSimulation() {
       duration_years: yearsInput.value,
     };
     fetchAndRenderChart(config, params);
+    localStorage.setItem("simParams", JSON.stringify(params));
   };
+
+  // 初期ロード時、すべての値が揃っていればシミュレーションを実行
+  if (yieldInput.value && investmentInput.value && yearsInput.value) {
+    updateSim();
+  }
 
   [yieldInput, investmentInput, yearsInput].forEach((input) => {
     input.addEventListener("change", updateSim);
@@ -195,9 +216,9 @@ function initTradingViewChart() {
       studies_overrides: isIndicator
         ? {}
         : {
-          "moving average.length": 200,
-          "moving average.source": "close",
-        },
+            "moving average.length": 200,
+            "moving average.source": "close",
+          },
     });
   };
 
