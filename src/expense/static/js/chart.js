@@ -147,30 +147,32 @@ function initAssetSimulation() {
   );
   if (!config) return;
 
-  const updateSim = () => {
-    if (
-      yieldInput.value === "" ||
-      investmentInput.value === "" ||
-      yearsInput.value === ""
-    ) {
-      return;
-    }
+  const updateSim = (isInitial = false) => {
     const params = {
       annual_yield: yieldInput.value,
       monthly_investment: investmentInput.value,
       duration_years: yearsInput.value,
     };
-    fetchAndRenderChart(config, params);
     localStorage.setItem("simParams", JSON.stringify(params));
+    if (
+      yieldInput.value === "" ||
+      investmentInput.value === "" ||
+      yearsInput.value === ""
+    ) {
+      if (isInitial) {
+        // 初期ロード時で値が揃っていない場合は、通常のチャートを表示
+        fetchAndRenderChart(config);
+      }
+      return;
+    }
+    fetchAndRenderChart(config, params);
   };
 
-  // 初期ロード時、すべての値が揃っていればシミュレーションを実行
-  if (yieldInput.value && investmentInput.value && yearsInput.value) {
-    updateSim();
-  }
+  // 初期ロード実行（シミュレーションまたは通常チャート）
+  updateSim(true);
 
   [yieldInput, investmentInput, yearsInput].forEach((input) => {
-    input.addEventListener("change", updateSim);
+    input.addEventListener("change", () => updateSim(false));
   });
 }
 
