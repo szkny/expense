@@ -391,7 +391,7 @@ def get_asset_monthly_history_chart(
     request: Request,
     annual_yield: float = 0.0,
     monthly_investment: float = 0.0,
-    duration_years: int = 0,
+    duration_years: float = 0,
 ) -> HTMLResponse:
     log.info("start 'get_asset_monthly_history_chart' method")
     server_tools: ServerTools = ServerTools(app, gspread_handler)

@@ -1190,7 +1190,7 @@ class GraphGenerator(Base):
         include_plotlyjs: bool | str = True,
         simulation_annual_yield: float = 0.0,
         simulation_monthly_investment: float = 0.0,
-        simulation_years: int = 0,
+        simulation_years: float = 0,
     ) -> str:
         """
         月単位の資産推移チャートを生成
@@ -1264,7 +1264,7 @@ class GraphGenerator(Base):
             sim_values = [latest_valuation]
 
             current_valuation = latest_valuation
-            for i in range(1, simulation_years * 12 + 1):
+            for i in range(1, int(simulation_years * 12) + 1):
                 # Next month start
                 next_date = latest_date + pd.DateOffset(months=i)
                 current_valuation = (
