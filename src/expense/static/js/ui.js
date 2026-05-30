@@ -50,15 +50,54 @@ export function initExpenseForm() {
   const amountInput = document.getElementById("expense-amount");
   const memoInput = document.getElementById("expense-memo");
 
+  const handleShortcutExpansion = (val) => {
+    if (!val) return;
+    const isShortcut = val.includes("/");
+
+    if (isShortcut) {
+      // ショートカットの場合は「/」で分割して各フィールドにセット
+      // config.jsonで定義されたアイコンを除去
+      const favoriteIcon = typeSelect.dataset.favoriteIcon;
+      const frequentIcon = typeSelect.dataset.frequentIcon;
+      const recentIcon = typeSelect.dataset.recentIcon;
+      const icons = [favoriteIcon, frequentIcon, recentIcon].filter((i) => i);
+
+      let cleanVal = val;
+      for (const icon of icons) {
+        if (val.startsWith(icon)) {
+          cleanVal = val.slice(icon.length).trim();
+          break;
+        }
+      }
+
+      const parts = cleanVal.split("/");
+      if (parts.length >= 2) {
+        const category = parts[0].trim();
+        // セレクトボックスの値を、ショートカットではない純粋なカテゴリに変更する
+        // これにより、登録時に純粋なカテゴリ名が送信される
+        for (let i = 0; i < typeSelect.options.length; i++) {
+          if (typeSelect.options[i].value === category) {
+            typeSelect.selectedIndex = i;
+            break;
+          }
+        }
+
+        if (parts.length === 3) {
+          if (memoInput) memoInput.value = parts[1];
+          if (amountInput) amountInput.value = parts[2].replace(/[^\d]/g, "");
+        } else if (parts.length === 2) {
+          if (memoInput) memoInput.value = "";
+          if (amountInput) amountInput.value = parts[1].replace(/[^\d]/g, "");
+        }
+      }
+    }
+  };
+
+  // ロード時の初期値に対しても適用
+  handleShortcutExpansion(typeSelect.value);
+
   typeSelect.addEventListener("change", function() {
-    const isShortcut = this.value.includes("/");
-    if (amountInput) {
-      amountInput.style.display = isShortcut ? "none" : "block";
-      amountInput.required = !isShortcut;
-    }
-    if (memoInput) {
-      memoInput.style.display = isShortcut ? "none" : "block";
-    }
+    handleShortcutExpansion(this.value);
   });
 }
 

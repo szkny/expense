@@ -55,7 +55,12 @@
             max="{{ expense_date_range[1] }}"
             required
           />
-          <select id="expense-type" name="expense_type">
+          <select id="expense-type" name="expense_type"
+            data-favorite-icon="{{ icons.get('favorite', '') }}"
+            data-frequent-icon="{{ icons.get('frequent', '') }}"
+            data-recent-icon="{{ icons.get('recent', '') }}"
+            required
+          >
             {% for item in items %}
               {% if item.startswith("[HEAD] ") %}
                 <option disabled>── {{ item.replace("[HEAD] ", "") }} ──</option>
@@ -68,11 +73,11 @@
           </select>
           <input type="number" id="expense-amount" name="expense_amount" value=""
             placeholder="{{ icons.get('input_amount', '💴') }} 金額を入力"
-            {% if items | length > 1 and "/" in items[1] %} style="display: none;"
-            {% else %} required
-            {% endif %} />
-          <input type="text" id="expense-memo" name="expense_memo" value="" placeholder="{{ icons.get('input_memo', '✏️') }} メモを入力"
-            {% if items | length > 1 and "/" in items[1] %} style="display: none;" {% endif %} />
+            required
+          />
+          <input type="text" id="expense-memo" name="expense_memo" value=""
+            placeholder="{{ icons.get('input_memo', '✏️') }} メモを入力"
+          />
           <datalist id="memo-list">
             {% for memo in records | map(attribute='expense_memo') | unique | reject('equalto', '') %}
             <option value="{{ memo }}"></option>

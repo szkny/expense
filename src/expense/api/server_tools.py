@@ -128,6 +128,7 @@ class ServerTools(Base):
                 instant_items.append(item_str)
 
         items = []
+        items.append("")
         if instant_items:
             items.append("[HEAD] インスタント登録")
             items.extend(instant_items)
