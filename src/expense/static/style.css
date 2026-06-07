@@ -829,3 +829,247 @@ tr:nth-child(even) {
   height: 500px;
   width: 98%;
 }
+
+/* 独立後シミュレーター */
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Syne:wght@700;800&display=swap');
+
+.sim-container {
+  max-width: 900px;
+  margin: 0 auto;
+  color: #e2e8f0;
+  font-family: 'Inter', sans-serif;
+}
+
+.dark .sim-container {
+  color: #e2e8f0;
+}
+
+/* Light mode overrides */
+html:not(.dark) .sim-container {
+  color: #1e293b;
+}
+
+.sim-header {
+  margin-bottom: 28px;
+}
+
+.sim-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+  color: #2563eb;
+}
+
+.dark .sim-title {
+  color: #60a5fa;
+}
+
+.sim-subtitle {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.scenario-buttons {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.scenario-btn {
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+}
+
+html:not(.dark) .scenario-btn {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: #64748b;
+}
+
+.scenario-btn.active {
+  background: rgba(96, 165, 250, 0.1);
+  border-color: #60a5fa;
+  color: #60a5fa;
+}
+
+.custom-editing {
+  padding: 8px 14px;
+  font-size: 12px;
+  color: #475569;
+  display: flex;
+  align-items: center;
+}
+
+.sim-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.sim-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+html:not(.dark) .sim-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.sim-sec-label {
+  font-size: 11px;
+  color: #64748b;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 16px 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+html:not(.dark) .sim-sec-label {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.slider-group {
+  margin-bottom: 16px;
+}
+
+.slider-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.slider-label-box {
+  display: flex;
+  flex-direction: column;
+}
+
+.slider-label {
+  font-size: 12px;
+  color: #94a3b8;
+  letter-spacing: 0.05em;
+}
+
+html:not(.dark) .slider-label {
+  color: #64748b;
+}
+
+.slider-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e2e8f0;
+  font-family: 'DM Mono', monospace;
+}
+
+html:not(.dark) .slider-value {
+  color: #1e293b;
+}
+
+.sim-input-range {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  accent-color: #60a5fa;
+  cursor: pointer;
+}
+
+.investment-display {
+  background: rgba(96, 165, 250, 0.06);
+  border: 1px solid rgba(96, 165, 250, 0.15);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.investment-display-label {
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.investment-display-value {
+  font-family: 'DM Mono', monospace;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (min-width: 768px) {
+  .kpi-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.sim-kpi {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+html:not(.dark) .sim-kpi {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.kpi-label {
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.kpi-value {
+  font-family: 'DM Mono', monospace;
+  font-size: 22px;
+  font-weight: 500;
+  color: #60a5fa;
+}
+
+.kpi-subtext {
+  font-size: 11px;
+  color: #475569;
+  margin-top: 4px;
+}
+
+.advisory-card {
+  margin-top: 16px;
+  padding: 20px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 13px;
+  line-height: 1.8;
+  color: #94a3b8;
+}
+
+html:not(.dark) .advisory-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+}
+
+.footer-note {
+  margin-top: 16px;
+  font-size: 11px;
+  color: #334155;
+  text-align: center;
+}

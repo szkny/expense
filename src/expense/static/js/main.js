@@ -1,6 +1,7 @@
 // src/expense/static/js/main.js
 import { initializeCharts } from "./chart.js";
 import { initializeTableFilter } from "./table.js";
+import { initSimulator } from "./simulator.js";
 import {
   initMenu,
   initClosableMessages,
@@ -29,6 +30,7 @@ function onDOMContentLoaded() {
   initPwaInstall();
   initAssetMasking();
   initMemoAutocomplete();
+  initSimulator();
 }
 
 if (document.readyState === "loading") {

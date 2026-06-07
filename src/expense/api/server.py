@@ -233,6 +233,38 @@ def asset_management(
     )
 
 
+@app.get("/simulator", response_class=HTMLResponse)
+def simulator(
+    request: Request,
+    status: bool | None = None,
+    msg: str | None = None,
+    info: str | None = None,
+) -> HTMLResponse:
+    """
+    独立後シミュレーターページ
+    """
+    log.info("start 'simulator' method")
+    server_tools: ServerTools = ServerTools(app, gspread_handler)
+    commons = server_tools.generate_commons(request)
+    _, df_items, _, _ = get_cached_asset_table(asset_manager)
+
+    current_assets_val = df_items["valuation"].sum()
+    current_assets_man_yen = int(current_assets_val / 10000)
+
+    log.info("end 'simulator' method")
+    return server_tools.templates.TemplateResponse(
+        "simulator.j2",
+        {
+            "request": request,
+            "status": status,
+            "msg": msg,
+            "info": info,
+            "current_assets_man_yen": current_assets_man_yen,
+            **commons,
+        },
+    )
+
+
 def get_dataframes(
     server_tools: ServerTools,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:

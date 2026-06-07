@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Expense - Simulator</title>
+  <link rel="stylesheet" href="/static/style.css?v={{ range(100000, 999999) | random }}" />
+  <link rel="manifest" href="/static/manifest.json" />
+  <meta name="theme-color" content="#111827">
+  <script src="/static/preload.js?v={{ range(100000, 999999) | random }}"></script>
+</head>
+
+<body>
+  <button id="hamburger-menu-btn" class="small-btn"> ☰ </button>
+  <div id="menu-container">
+    <form method="get" action="/"><button type="submit" id="home-btn" class="small-btn"> {{ icons.get("home", "🏠") }} 家計簿　 </button></form>
+    <form method="get" action="/asset_management"><button type="submit" id="asset-management-btn" class="small-btn"> {{ icons.get("asset_management", "📈") }} 資産管理 </button></form>
+    <form method="get" action="/simulator"><button type="submit" id="simulator-btn" class="small-btn"> {{ icons.get("simulator", "🎯") }} シミュレーター </button></form>
+    <button id="theme-toggle" class="small-btn"> {% if theme == "dark" %} {{ icons.get("light_theme", "☀️") }} {% else %} {{ icons.get("dark_theme", "🌙") }} {% endif %} テーマ　 </button>
+  </div>
+
+  <div class="container">
+    <div class="sim-container" id="sim-app" data-current-assets="{{ current_assets_man_yen }}">
+      <!-- Header -->
+      <div class="sim-header">
+        <div class="sim-title">独立後シミュレーター</div>
+        <div class="sim-subtitle">40歳1億円 達成シナリオ分析 ／ 収入−生活費を全額投資</div>
+      </div>
+
+      <!-- Scenario buttons -->
+      <div class="scenario-buttons" id="scenario-buttons">
+        <button class="scenario-btn active" data-scenario="基本">基本</button>
+        <button class="scenario-btn" data-scenario="楽観">楽観</button>
+        <button class="scenario-btn" data-scenario="悲観">悲観</button>
+        <div id="custom-label" class="custom-editing" style="display: none;">カスタム編集中</div>
+      </div>
+
+      <div class="sim-grid">
+        <!-- Controls -->
+        <div class="sim-card">
+          <div style="font-size: 11px; color: #475569; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 20px;">パラメータ設定</div>
+
+          <div class="sim-sec-label" style="margin: 0 0 12px;">独立前</div>
+          <div class="slider-group">
+            <div class="slider-header">
+              <span class="slider-label">独立年齢</span>
+              <span class="slider-value" id="val-independenceAge">37歳</span>
+            </div>
+            <input type="range" id="input-independenceAge" class="sim-input-range" min="33" max="45" step="1" value="37">
+          </div>
+          <div class="slider-group">
+            <div class="slider-header">
+              <span class="slider-label">毎月積立額</span>
+              <span class="slider-value" id="val-salaryMonthlyInvestment">30万円</span>
+            </div>
+            <input type="range" id="input-salaryMonthlyInvestment" class="sim-input-range" min="0" max="100" step="1" value="30">
+          </div>
+
+          <div class="sim-sec-label">独立後</div>
+          <div class="slider-group">
+            <div class="slider-header">
+              <span class="slider-label">フリーランス収入</span>
+              <span class="slider-value" id="val-freelanceIncome">60万円/月</span>
+            </div>
+            <input type="range" id="input-freelanceIncome" class="sim-input-range" min="0" max="200" step="5" value="60">
+          </div>
+          <div class="slider-group">
+            <div class="slider-header">
+              <span class="slider-label">月間生活費</span>
+              <span class="slider-value" id="val-monthlyExpense">33万円/月</span>
+            </div>
+            <input type="range" id="input-monthlyExpense" class="sim-input-range" min="10" max="100" step="1" value="33">
+          </div>
+
+          <!-- 自動計算された投資額の表示 -->
+          <div class="investment-display">
+            <div class="investment-display-label">毎月の投資額（自動計算）</div>
+            <div class="investment-display-value" id="monthly-investment-result">+27万円/月</div>
+            <div class="investment-display-label" id="monthly-investment-calc" style="margin-top: 4px;">収入 60万 − 生活費 33万</div>
+          </div>
+
+          <div class="sim-sec-label">想定リターン</div>
+          <div class="slider-group">
+            <div class="slider-header">
+              <span class="slider-label">年率リターン</span>
+              <span class="slider-value" id="val-monthlyReturn">5%</span>
+            </div>
+            <input type="range" id="input-monthlyReturn" class="sim-input-range" min="0" max="15" step="0.5" value="5">
+          </div>
+        </div>
+
+        <!-- Right panel -->
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <!-- KPIs -->
+          <div class="kpi-grid">
+            <div class="sim-kpi">
+              <div class="kpi-label">独立時資産</div>
+              <div class="kpi-value" id="kpi-atIndependence">0.00億</div>
+              <div class="kpi-subtext" id="kpi-sub-atIndependence">37歳時点</div>
+            </div>
+
+            <div class="sim-kpi" id="kpi-box-atTarget">
+              <div class="kpi-label">40歳時資産</div>
+              <div class="kpi-value" id="kpi-atTarget">0.00億</div>
+              <div class="kpi-subtext" id="kpi-sub-atTarget">✗ 未達成</div>
+            </div>
+
+            <div class="sim-kpi">
+              <div class="kpi-label">独立後 月次投資</div>
+              <div class="kpi-value" id="kpi-monthlyInvestmentAfter">0万</div>
+              <div class="kpi-subtext">余剰を全額投資</div>
+            </div>
+
+            <div class="sim-kpi">
+              <div class="kpi-label">1億到達年齢</div>
+              <div class="kpi-value" id="kpi-reachAge">未達</div>
+              <div class="kpi-subtext">投資資産ベース</div>
+            </div>
+          </div>
+
+          <!-- Chart -->
+          <div class="sim-card" style="flex: 1; padding: 15px;">
+            <div style="font-size: 11px; color: #475569; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px;">資産推移</div>
+            <svg id="projection-chart" viewBox="0 0 500 300" style="width: 100%; height: auto; min-height: 300px;">
+              <defs>
+                <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.25" />
+                  <stop offset="100%" stop-color="#60a5fa" stop-opacity="0" />
+                </linearGradient>
+              </defs>
+              <g id="grid-lines"></g>
+              <line id="independence-line" x1="0" x2="0" y1="16" y2="172" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4,3" />
+              <text id="independence-label" x="0" y="26" fill="#f59e0b" font-size="9">独立</text>
+              <line id="target-100m-line" x1="52" x2="480" y1="0" y2="0" stroke="#4ade80" stroke-width="1" stroke-dasharray="4,3" />
+              <text id="target-100m-label" x="480" y="0" text-anchor="end" fill="#4ade80" font-size="9">1億</text>
+              <path id="area-path" fill="url(#areaGrad)" />
+              <path id="line-path" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <g id="age-labels"></g>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Advisory -->
+      <div class="advisory-card" id="advisory-card">
+        <div style="font-size: 11px; color: #475569; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px;">FP診断</div>
+        <div id="advisory-text">分析中...</div>
+      </div>
+
+      <div class="footer-note">
+        ※ 現在投資資産 <span id="footer-current-assets">0</span>万円をベースに試算。独立後は収入−生活費の余剰を全額投資と仮定。市場リターンは変動します。
+      </div>
+    </div>
+  </div>
+
+  <div id="loader" class="overlay" style="display: none;">
+    <div class="spinner"></div>
+  </div>
+
+  <script type="module" src="/static/js/main.js"></script>
+  <script type="module" src="/static/js/simulator.js"></script>
+</body>
+
+</html>
