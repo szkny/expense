@@ -15,10 +15,10 @@
   <button id="install-btn" class="btn install" style="display: none;"> {{ icons.get("pwa_install", "📲") }} インストール</button>
   <button id="hamburger-menu-btn" class="small-btn"> ☰ </button>
   <div id="menu-container">
-    <form method="get" action="/"><button type="submit" id="home-btn" class="small-btn"> {{ icons.get("home", "🏠") }} 家計簿　 </button></form>
-    <form method="get" action="/asset_management"><button type="submit" id="asset-management-btn" class="small-btn"> {{ icons.get("asset_management", "📈") }} 資産管理 </button></form>
+    <form method="get" action="/"><button type="submit" id="home-btn" class="small-btn"> {{ icons.get("home", "🏠") }} 家計簿　　　　 </button></form>
+    <form method="get" action="/asset_management"><button type="submit" id="asset-management-btn" class="small-btn"> {{ icons.get("asset_management", "📈") }} 資産管理　　　 </button></form>
     <form method="get" action="/simulator"><button type="submit" id="simulator-btn" class="small-btn"> {{ icons.get("simulator", "🎯") }} シミュレーター </button></form>
-    <button id="theme-toggle" class="small-btn"> {% if theme == "dark" %} {{ icons.get("light_theme", "☀️") }} {% else %} {{ icons.get("dark_theme", "🌙") }} {% endif %} テーマ　 </button>
+    <button id="theme-toggle" class="small-btn"> {% if theme == "dark" %} {{ icons.get("light_theme", "☀️") }} {% else %} {{ icons.get("dark_theme", "🌙") }} {% endif %} テーマ　　　　 </button>
   </div>
   <div class="container">
     <h1> {{ icons.get("title", "") }} Asset Management </h1>
