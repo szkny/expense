@@ -99,7 +99,7 @@ hr {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  z-index: 1000;
+  z-index: 3000;
   opacity: 0;
   transform-origin: top right;
   transition:
@@ -831,13 +831,13 @@ tr:nth-child(even) {
 }
 
 /* 独立後シミュレーター */
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Syne:wght@700;800&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Syne:wght@700;800&display=swap");
 
 .sim-container {
   max-width: 900px;
   margin: 0 auto;
   color: #e2e8f0;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
 }
 
 .dark .sim-container {
@@ -854,7 +854,7 @@ html:not(.dark) .sim-container {
 }
 
 .sim-title {
-  font-family: 'Syne', sans-serif;
+  font-family: "Syne", sans-serif;
   font-size: 26px;
   font-weight: 800;
   letter-spacing: -0.02em;
@@ -972,7 +972,7 @@ html:not(.dark) .slider-label {
   font-size: 14px;
   font-weight: 600;
   color: #e2e8f0;
-  font-family: 'DM Mono', monospace;
+  font-family: "DM Mono", monospace;
 }
 
 html:not(.dark) .slider-value {
@@ -1002,7 +1002,7 @@ html:not(.dark) .slider-value {
 }
 
 .investment-display-value {
-  font-family: 'DM Mono', monospace;
+  font-family: "DM Mono", monospace;
   font-size: 20px;
   font-weight: 500;
 }
@@ -1038,7 +1038,7 @@ html:not(.dark) .sim-kpi {
 }
 
 .kpi-value {
-  font-family: 'DM Mono', monospace;
+  font-family: "DM Mono", monospace;
   font-size: 22px;
   font-weight: 500;
   color: #60a5fa;
