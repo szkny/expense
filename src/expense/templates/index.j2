@@ -62,6 +62,9 @@
             data-recent-icon="{{ icons.get('recent', '') }}"
             required
           >
+            <option value="" disabled selected hidden>
+                {{ icons.get('input_type', '🏷️') }} タイプを選択
+            </option>
             {% for item in items %}
               {% if item.startswith("[HEAD] ") %}
                 <option disabled>── {{ item.replace("[HEAD] ", "") }} ──</option>
