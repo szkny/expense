@@ -134,7 +134,7 @@ class ServerTools(Base):
             items.extend(instant_items)
 
         if self.expense_types:
-            items.append("[HEAD] カテゴリ")
+            items.append("[HEAD] 支出タイプ")
             items.extend(self.expense_types)
 
         log.info("end 'generate_items' method")

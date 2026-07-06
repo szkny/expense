@@ -72,11 +72,11 @@ export function initExpenseForm() {
 
       const parts = cleanVal.split("/");
       if (parts.length >= 2) {
-        const category = parts[0].trim();
-        // セレクトボックスの値を、ショートカットではない純粋なカテゴリに変更する
-        // これにより、登録時に純粋なカテゴリ名が送信される
+        const type = parts[0].trim();
+        // セレクトボックスの値を、ショートカットではない純粋な支出タイプに変更する
+        // これにより、登録時に純粋なタイプ名が送信される
         for (let i = 0; i < typeSelect.options.length; i++) {
-          if (typeSelect.options[i].value === category) {
+          if (typeSelect.options[i].value === type) {
             typeSelect.selectedIndex = i;
             break;
           }
