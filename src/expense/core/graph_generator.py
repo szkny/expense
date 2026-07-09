@@ -1292,6 +1292,12 @@ class GraphGenerator(Base):
                         dash="dash",
                         color="#10b981",
                     ),
+                    fill="tozeroy",
+                    fillcolor=(
+                        "rgba(120, 255, 160, 0.1)"
+                        if theme == "dark"
+                        else "rgba(50, 200, 80, 0.01)"
+                    ),
                     hovertext=[
                         f"シミュレーション<br>  ({x.strftime('%Y年%-m月%-d日')} ¥{y:,.0f})"
                         for x, y in zip(sim_dates, sim_values)
