@@ -1273,14 +1273,16 @@ class GraphGenerator(Base):
                 )
                 sim_dates.append(next_date)
                 sim_values.append(current_valuation)
-            sim_values = [
-                max(v, 0)
-                for v in sim_values
-            ]
+            sim_values = [max(v, 0) for v in sim_values]
 
             if max(sim_values) > ymax:
                 ymax = max(sim_values)
 
+            fill_color = (
+                "rgba(120, 255, 160, 0.1)"
+                if theme == "dark"
+                else "rgba(50, 200, 80, 0.1)"
+            )
             fig.add_trace(
                 go.Scatter(
                     x=sim_dates,
@@ -1293,10 +1295,13 @@ class GraphGenerator(Base):
                         color="#10b981",
                     ),
                     fill="tozeroy",
-                    fillcolor=(
-                        "rgba(120, 255, 160, 0.1)"
-                        if theme == "dark"
-                        else "rgba(50, 200, 80, 0.01)"
+                    fillgradient=dict(
+                        type="vertical",
+                        colorscale=[
+                            (0, "rgba(0, 0, 0, 0.00)"),
+                            (0.5, fill_color),
+                            (1, fill_color),
+                        ],
                     ),
                     hovertext=[
                         f"シミュレーション<br>  ({x.strftime('%Y年%-m月%-d日')} ¥{y:,.0f})"
