@@ -50,6 +50,7 @@ class ServerTools(Base):
             expense_types=self.expense_types,
             fixed_types=self.fixed_types,
             variable_types=self.variable_types,
+            income_types=self.income_types,
             exclude_types=self.exclude_types,
             graph_config=graph_config,
         )

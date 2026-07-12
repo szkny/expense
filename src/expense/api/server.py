@@ -339,16 +339,16 @@ def get_daily_chart(request: Request, month: str | None = None) -> JSONResponse:
 
 
 @app.get("/api/bar_chart", response_class=HTMLResponse)
-def get_bar_chart(request: Request) -> HTMLResponse:
-    log.info("start 'get_bar_chart' method")
+def get_monthly_bar_chart(request: Request) -> HTMLResponse:
+    log.info("start 'get_monthly_bar_chart' method")
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
     df_records, _ = get_cached_records(server_tools)
     df_graph = server_tools.graph_generator.generate_monthly_df(df_records)
-    graph_html = server_tools.graph_generator.generate_bar_chart(
-        df_graph, theme, include_plotlyjs=False
+    graph_html = server_tools.graph_generator.generate_monthly_bar_chart(
+        df_graph, theme=theme, include_plotlyjs=False
     )
-    log.info("end 'get_bar_chart' method")
+    log.info("end 'get_monthly_bar_chart' method")
     return HTMLResponse(content=graph_html)
 
 

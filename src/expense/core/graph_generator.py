@@ -22,6 +22,7 @@ class GraphGenerator(Base):
         expense_types: list[str],
         fixed_types: list[str],
         variable_types: list[str],
+        income_types: list[str],
         exclude_types: list[str],
         graph_config: dict[str, dict[str, str]],
     ):
@@ -30,6 +31,7 @@ class GraphGenerator(Base):
         self.fixed_types = fixed_types
         self.variable_types = variable_types
         self.exclude_types = exclude_types
+        self.income_types = income_types
         self.graph_color = graph_config.get("color", {})
         self.asset_management_config = self.config.get("asset_management", {})
         self.fitting_duration_multiplier = self.asset_management_config.get(
@@ -277,6 +279,7 @@ class GraphGenerator(Base):
             hover_data=["expense_memo"],
             category_orders={"expense_type": self.expense_types},
             color_discrete_map=self.graph_color,
+            opacity=0.8,
             barmode="stack",
             range_x=[
                 pd.Timestamp(month_start) - pd.Timedelta(days=2),
@@ -503,7 +506,7 @@ class GraphGenerator(Base):
             "tickformat": ",",
             "type": yaxis_type,
         }
-        yaxis_settings.update(self._format_yaxis_ticks(fig, ymax_for_format))
+        yaxis_settings.update(**self._format_yaxis_ticks(fig, ymax_for_format))
         fig.update_layout(
             height=500,
             xaxis_title="",
@@ -681,6 +684,7 @@ class GraphGenerator(Base):
             custom_data=["expense_type", "expense_memo"],
             category_orders={"expense_type": self.expense_types},
             color_discrete_map=self.graph_color,
+            opacity=0.8,
             hole=0.4,
             template="plotly_dark" if theme == "dark" else "plotly_white",
         )
@@ -726,17 +730,17 @@ class GraphGenerator(Base):
         log.info("end 'generate_pie_chart' method")
         return graph_html, available_months
 
-    def generate_bar_chart(
+    def generate_monthly_bar_chart(
         self,
         df: pd.DataFrame,
         theme: str = "light",
-        max_monthes: int = 12,
+        max_monthes: int = 6,
         include_plotlyjs: bool | str = True,
     ) -> str:
         """
         月別の棒グラフを生成
         """
-        log.info("start 'generate_bar_chart' method")
+        log.info("start 'generate_monthly_bar_chart' method")
         if df.empty:
             log.info("DataFrame is empty, skipping graph generation.")
             return ""
@@ -750,17 +754,56 @@ class GraphGenerator(Base):
                 f"{r['expense_type']}<br>¥{r['expense_amount']:,.0f}"
             )
         df_graph["month"] = pd.to_datetime(df_graph["month"], format="%Y-%m")
-        cutoff_date = dt.datetime.today() - dt.timedelta(
-            days=30 * (max_monthes - 1)
+
+        # 収入を月ごとに集計
+        df_income = df.query("expense_type in @self.income_types").copy()
+        df_income["month"] = pd.to_datetime(df_income["month"], format="%Y-%m")
+        df_income = (
+            df_income.groupby("month", as_index=False)["expense_amount"]
+            .sum()
+            .rename(columns={"expense_amount": "income_amount"})
         )
-        cutoff_date_str: str = cutoff_date.strftime("%Y-%m-01")
-        df_graph = df_graph.query(
-            f"month >= @pd.Timestamp('{cutoff_date_str}')"
+        df_income["label"] = df_income["income_amount"].map(
+            lambda x: f"収入<br>¥{x:,.0f}"
+        )
+
+        # 支出を月ごとに集計
+        df_expense = (
+            df_graph.groupby("month", as_index=False)["expense_amount"]
+            .sum()
+            .rename(columns={"expense_amount": "expense_amount"})
+        )
+
+        # CF = 収入 - 支出
+        df_cf = (
+            df_income.merge(df_expense, on="month", how="left")
+            .fillna({"expense_amount": 0})
+            .sort_values("month")
+        )
+        df_cf["cf"] = df_cf["income_amount"] - df_cf["expense_amount"]
+        df_cf["cf_positive"] = df_cf["cf"].clip(lower=0)
+        df_cf["cf_negative"] = (-df_cf["cf"]).clip(lower=0)
+
+        df_cf["expense_base"] = df_cf["expense_amount"]
+        df_cf["income_base"] = df_cf["income_amount"]
+
+        df_cf["cf_positive_label"] = df_cf["cf_positive"].apply(
+            lambda x: f"CF<br>¥{x:,.0f}" if x > 0 else ""
+        )
+        df_cf["cf_negative_label"] = df_cf["cf_negative"].apply(
+            lambda x: f"CF<br>-¥{x:,.0f}" if x > 0 else ""
+        )
+        df_cf["cf_text"] = df_cf["cf"].apply(
+            lambda x: f"-¥{abs(x):,.0f}" if x < 0 else f"+¥{x:,.0f}"
         )
 
         ymax = 0
         if not df_graph.empty:
             ymax = df_graph.groupby("month")["expense_amount"].sum().max()
+        if not df_income.empty:
+            _ymax = df_income.groupby("month")["income_amount"].sum().max()
+            ymax = _ymax if _ymax > ymax else ymax
+        ymax *= 1.2
 
         fig = px.bar(
             df_graph,
@@ -768,11 +811,12 @@ class GraphGenerator(Base):
             y="expense_amount",
             color="expense_type",
             text="label",
-            title="支出内訳（月別）",
+            title="月別収支",
             hover_data=["expense_memo"],
             range_y=[0, None],
             category_orders={"expense_type": self.expense_types},
             color_discrete_map=self.graph_color,
+            opacity=0.5,
             # NOTE: テンプレートを明示的に指定しないと、稀に無限ループ→Invalid valueエラーが発生することがある
             template="plotly_dark" if theme == "dark" else "plotly_white",
         )
@@ -783,7 +827,63 @@ class GraphGenerator(Base):
             textposition="inside",
             textangle=0,
         )
-        self._update_layout(fig, theme, ymax_for_format=ymax)
+        # 支出を左側の棒にする
+        for trace in fig.data:
+            trace.offsetgroup = "expense"
+
+        # 収入を右側の棒として追加
+        fig.add_trace(
+            go.Bar(
+                x=df_income["month"],
+                y=df_income["income_amount"],
+                name="収入",
+                offsetgroup="income",
+                marker_color="#4466bb" if theme == "dark" else "#6699ee",
+                text=df_income["label"],
+                texttemplate="%{text}",
+                textposition="inside",
+                textangle=0,
+                hovertemplate="%{x|%-Y年%-m月}<br>収入: ¥%{y:,.0f}<extra></extra>",
+            )
+        )
+
+        # キャッシュフローを追加
+        # CF(プラス): 支出の上に積み上げ
+        fig.add_trace(
+            go.Bar(
+                x=df_cf["month"],
+                y=df_cf["cf_positive"],
+                base=df_cf["expense_base"],
+                offsetgroup="expense",
+                name="CF",
+                marker_color="#baa44b" if theme == "dark" else "#eecc55",
+                customdata=df_cf["cf_text"],
+                hovertemplate="%{x|%-Y年%-m月}<br>CF: %{customdata}<extra></extra>",
+                text=df_cf["cf_positive_label"],
+                texttemplate="%{text}",
+                textposition="inside",
+                textangle=0,
+            )
+        )
+        # CF(マイナス): 収入の上に積み上げ
+        fig.add_trace(
+            go.Bar(
+                x=df_cf["month"],
+                y=df_cf["cf_negative"],
+                base=df_cf["income_base"],
+                offsetgroup="income",
+                name="CF",
+                marker_color="#bb3333" if theme == "dark" else "#ee5555",
+                customdata=df_cf["cf_text"],
+                hovertemplate="%{x|%-Y年%-m月}<br>CF: %{customdata}<extra></extra>",
+                text=df_cf["cf_negative_label"],
+                texttemplate="%{text}",
+                textposition="inside",
+                textangle=0,
+                showlegend=False,
+            )
+        )
+
         self._add_bar_chart_labels(
             fig,
             df_graph,
@@ -791,7 +891,24 @@ class GraphGenerator(Base):
             theme,
             fontsize=12,
             label_threshold=10_000,
-            label_offset=20_000,
+            label_offset=30_000,
+        )
+
+        self._update_layout(fig, theme, ymax_for_format=ymax)
+        fig.update_layout(
+            dragmode="pan",
+        )
+
+        cutoff_date = dt.datetime.today() - dt.timedelta(
+            days=30 * (max_monthes - 1)
+        )
+        cutoff_date_str: str = cutoff_date.strftime("%Y-%m-01")
+        fig.update_xaxes(
+            fixedrange=False,
+            range=[cutoff_date_str, df_graph["month"].iloc[-1]],
+        )
+        fig.update_yaxes(
+            fixedrange=True,
         )
         graph_html: str = fig.to_html(
             full_html=False,
@@ -801,7 +918,7 @@ class GraphGenerator(Base):
                 displayModeBar=False,
             ),
         )
-        log.info("end 'generate_bar_chart' method")
+        log.info("end 'generate_monthly_bar_chart' method")
         return graph_html
 
     def generate_annual_fiscal_report_chart(
@@ -936,6 +1053,7 @@ class GraphGenerator(Base):
             title="ポートフォリオ",
             category_orders={"ticker": df_pie["ticker"].to_list()},
             color_discrete_map=graph_color,
+            opacity=0.8,
             hole=0.5,
             # NOTE: テンプレートを明示的に指定しないと、稀に無限ループ→Invalid valueエラーが発生することがある
             template="plotly_dark" if theme == "dark" else "plotly_white",
