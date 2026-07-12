@@ -855,7 +855,7 @@ class GraphGenerator(Base):
                 y=df_cf["cf_positive"],
                 base=df_cf["expense_base"],
                 offsetgroup="expense",
-                name="CF",
+                name="キャッシュフロー",
                 marker_color="#baa44b" if theme == "dark" else "#eecc55",
                 customdata=df_cf["cf_text"],
                 hovertemplate="%{x|%-Y年%-m月}<br>CF: %{customdata}<extra></extra>",
@@ -863,6 +863,7 @@ class GraphGenerator(Base):
                 texttemplate="%{text}",
                 textposition="inside",
                 textangle=0,
+                legendgroup="CF",
             )
         )
         # CF(マイナス): 収入の上に積み上げ
@@ -872,7 +873,7 @@ class GraphGenerator(Base):
                 y=df_cf["cf_negative"],
                 base=df_cf["income_base"],
                 offsetgroup="income",
-                name="CF",
+                name="キャッシュフロー",
                 marker_color="#bb3333" if theme == "dark" else "#ee5555",
                 customdata=df_cf["cf_text"],
                 hovertemplate="%{x|%-Y年%-m月}<br>CF: %{customdata}<extra></extra>",
@@ -881,6 +882,7 @@ class GraphGenerator(Base):
                 textposition="inside",
                 textangle=0,
                 showlegend=False,
+                legendgroup="CF",
             )
         )
 
