@@ -788,10 +788,10 @@ class GraphGenerator(Base):
         df_cf["income_base"] = df_cf["income_amount"]
 
         df_cf["cf_positive_label"] = df_cf["cf_positive"].apply(
-            lambda x: f"CF<br>¥{x:,.0f}" if x > 0 else ""
+            lambda x: f"キャッシュフロー<br>¥{x:,.0f}" if x > 0 else ""
         )
         df_cf["cf_negative_label"] = df_cf["cf_negative"].apply(
-            lambda x: f"CF<br>-¥{x:,.0f}" if x > 0 else ""
+            lambda x: f"キャッシュフロー<br>-¥{x:,.0f}" if x > 0 else ""
         )
         df_cf["cf_text"] = df_cf["cf"].apply(
             lambda x: f"-¥{abs(x):,.0f}" if x < 0 else f"+¥{x:,.0f}"
@@ -858,7 +858,7 @@ class GraphGenerator(Base):
                 name="キャッシュフロー",
                 marker_color="#baa44b" if theme == "dark" else "#eecc55",
                 customdata=df_cf["cf_text"],
-                hovertemplate="%{x|%-Y年%-m月}<br>CF: %{customdata}<extra></extra>",
+                hovertemplate="%{x|%-Y年%-m月}<br>キャッシュフロー: %{customdata}<extra></extra>",
                 text=df_cf["cf_positive_label"],
                 texttemplate="%{text}",
                 textposition="inside",
@@ -876,7 +876,7 @@ class GraphGenerator(Base):
                 name="キャッシュフロー",
                 marker_color="#bb3333" if theme == "dark" else "#ee5555",
                 customdata=df_cf["cf_text"],
-                hovertemplate="%{x|%-Y年%-m月}<br>CF: %{customdata}<extra></extra>",
+                hovertemplate="%{x|%-Y年%-m月}<br>キャッシュフロー: %{customdata}<extra></extra>",
                 text=df_cf["cf_negative_label"],
                 texttemplate="%{text}",
                 textposition="inside",
@@ -942,7 +942,7 @@ class GraphGenerator(Base):
         df_graph.at[0, "amount"] = df_annual["収入"].astype(int).sum()
         df_graph.at[1, "type"] = "支出"
         df_graph.at[1, "amount"] = df_annual["支出"].astype(int).sum()
-        df_graph.at[2, "type"] = "CF"
+        df_graph.at[2, "type"] = "キャッシュ<br>フロー"
         df_graph.at[2, "amount"] = (
             df_graph.loc[0, "amount"] + df_graph.loc[1, "amount"]
         )
