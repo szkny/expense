@@ -853,7 +853,6 @@ class GraphGenerator(Base):
             go.Bar(
                 x=df_cf["month"],
                 y=df_cf["cf_positive"],
-                base=df_cf["expense_base"],
                 offsetgroup="expense",
                 name="キャッシュフロー",
                 marker_color="#baa44b" if theme == "dark" else "#eecc55",
@@ -871,7 +870,6 @@ class GraphGenerator(Base):
             go.Bar(
                 x=df_cf["month"],
                 y=df_cf["cf_negative"],
-                base=df_cf["income_base"],
                 offsetgroup="income",
                 name="キャッシュフロー",
                 marker_color="#bb3333" if theme == "dark" else "#ee5555",
