@@ -28,7 +28,8 @@
       "asset_summary": "📊",
       "asset_chart": "📈",
       "asset_list": "📝",
-      "simulator": "🎯"
+      "simulator": "🎯",
+      "reload": "↻"
     },
     "graph": {
       "color": {

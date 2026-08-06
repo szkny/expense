@@ -11,7 +11,7 @@
   <script src="/static/preload.js?v={{ range(100000, 999999) | random }}"></script>
 </head>
 
-<body>
+<body data-reload-icon="{{ icons.get('reload', '🔄') }}">
   <button id="hamburger-menu-btn" class="small-btn"> ☰ </button>
   <div id="menu-container">
     <form method="get" action="/"><button type="submit" id="home-btn" class="small-btn"> {{ icons.get("home", "🏠") }} 家計簿　 </button></form>

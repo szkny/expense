@@ -789,14 +789,83 @@ tr:nth-child(even) {
   margin-right: 10px;
 }
 
+.asset-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding: 0 10px;
+}
+
+.asset-chart-header .asset-chart-title {
+  margin-left: 0;
+}
+
 .asset-chart-title {
   font-size: 17px;
   margin-left: 5%;
 }
 
+.chart-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 0 10px;
+}
+
+.chart-controls select {
+  margin-bottom: 0;
+  width: auto;
+  min-width: 120px;
+  height: 36px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.btn-reload {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.btn-reload:hover {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.btn-reload:active {
+  transform: scale(0.95) rotate(360deg);
+}
+
+.dark .btn-reload {
+  background: #374151;
+  color: #f3f4f6;
+  border-color: #4b5563;
+}
+
+.dark .btn-reload:hover {
+  background: #4b5563;
+  color: #ffffff;
+}
+
 .simulation-controls {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
   gap: 15px;
   justify-content: flex-end;
   margin-bottom: 10px;

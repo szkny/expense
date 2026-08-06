@@ -381,3 +381,7 @@ export function initAssetMasking() {
     localStorage.setItem("isAssetMasked", isMasked);
   });
 }
+
+export function initChartReloadUI() {
+  // Chart reload UI initialization hook
+}

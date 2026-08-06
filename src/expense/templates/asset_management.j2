@@ -11,7 +11,7 @@
   <script src="/static/preload.js?v={{ range(100000, 999999) | random }}"></script>
 </head>
 
-<body>
+<body data-reload-icon="{{ icons.get('reload', '🔄') }}">
   <button id="install-btn" class="btn install" style="display: none;"> {{ icons.get("pwa_install", "📲") }} インストール</button>
   <button id="hamburger-menu-btn" class="small-btn"> ☰ </button>
   <div id="menu-container">
@@ -134,23 +134,29 @@
       </h3>
       <div id="asset-chart-container" class="collapsible-content">
         {{ plotlyjs | safe }}
+        <div id="asset-pie-chart-controls" class="chart-controls"></div>
         <div id="asset-pie-chart-container" class="loading"><div class="spinner"></div></div>
         <hr>
+        <div id="asset-heatmap-chart-controls" class="chart-controls"></div>
         <div id="asset-heatmap-chart-container" class="loading"><div class="spinner"></div></div>
         <hr>
-        <div class="asset-chart-title">
-          銘柄別チャート
+        <div class="asset-chart-header">
+          <div class="asset-chart-title">
+            銘柄別チャート
+          </div>
+          <div id="asset-tradingview-chart-controls" class="chart-controls">
+            <select id="symbol-select" class="symbol-selector">
+              {% for s in asset_tickers %}
+                <option value="{{ s }}">{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
         </div>
-        <select id="symbol-select" class="symbol-selector">
-          {% for s in asset_tickers %}
-            <option value="{{ s }}">{{ s }}</option>
-          {% endfor %}
-        </select>
         <div id="asset-tradingview-chart-container"></div>
         <hr>
+        <div id="asset-waterfall-chart-controls" class="chart-controls"></div>
         <div id="asset-waterfall-chart-container" class="loading"><div class="spinner"></div></div>
         <hr>
-        <div id="asset-monthly-history-chart-container" class="loading"><div class="spinner"></div></div>
         <div id="asset-monthly-history-chart-controls" class="chart-controls simulation-controls">
           <div class="simulation-input-group">
             <label for="sim-yield">年利 (%)</label>
@@ -165,6 +171,7 @@
             <input type="number" id="sim-years" placeholder="5" step="0.1" min="0" max="100">
           </div>
         </div>
+        <div id="asset-monthly-history-chart-container" class="loading"><div class="spinner"></div></div>
       </div>
     </div>
 

@@ -31,11 +31,25 @@ const allChartConfigs = {
   ],
 };
 
-async function fetchAndRenderChart(config, params = {}) {
+function getReloadIcon() {
+  return document.body?.dataset?.reloadIcon || "↻";
+}
+
+function createReloadButton(onClickHandler) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn-reload";
+  btn.title = "グラフをリロード";
+  btn.innerHTML = getReloadIcon();
+  btn.addEventListener("click", onClickHandler);
+  return btn;
+}
+
+export async function fetchAndRenderChart(config, params = {}, force = false) {
   const container = document.getElementById(`${config.id}-chart-container`);
   if (
     !container ||
-    (container.dataset.loaded && Object.keys(params).length === 0)
+    (!force && container.dataset.loaded && Object.keys(params).length === 0)
   )
     return;
 
@@ -45,7 +59,7 @@ async function fetchAndRenderChart(config, params = {}) {
   let url = config.endpoint;
   const urlParams = new URLSearchParams();
   for (const key in params) {
-    if (params[key] !== null) {
+    if (params[key] !== null && params[key] !== undefined && params[key] !== "") {
       urlParams.append(key, params[key]);
     }
   }
@@ -62,9 +76,7 @@ async function fetchAndRenderChart(config, params = {}) {
       const data = await response.json();
       if (data.html) {
         container.innerHTML = data.html;
-        if (Object.keys(params).length === 0) {
-          createDropdown(config, data.months);
-        }
+        setupDropdownAndReload(config, data.months);
       } else {
         container.innerHTML = "";
       }
@@ -73,6 +85,7 @@ async function fetchAndRenderChart(config, params = {}) {
       if (html) {
         container.innerHTML = html;
       }
+      setupReloadButtonOnly(config);
     }
 
     container.dataset.loaded = "true";
@@ -87,32 +100,60 @@ async function fetchAndRenderChart(config, params = {}) {
   }
 }
 
-function createDropdown(config, months) {
+function setupReloadButtonOnly(config) {
+  if (config.id === "asset-monthly-history") return;
+
   const controlsContainer = document.getElementById(
     `${config.id}-chart-controls`,
   );
-  if (!controlsContainer || months.length === 0) return;
+  if (!controlsContainer) return;
 
-  const select = document.createElement("select");
-  select.id = `${config.id}-month-select`;
+  if (controlsContainer.querySelector(".btn-reload")) return;
 
-  const currentMonth = months[0];
-  months.forEach((month) => {
-    const option = document.createElement("option");
-    option.value = month;
-    option.textContent = month.replace("-", "年") + "月";
-    if (month === currentMonth) {
-      option.selected = true;
-    }
-    select.appendChild(option);
+  const btn = createReloadButton(() => {
+    fetchAndRenderChart(config, {}, true);
   });
+  controlsContainer.appendChild(btn);
+}
 
-  select.addEventListener("change", (e) => {
-    fetchAndRenderChart(config, { month: e.target.value });
-  });
+function setupDropdownAndReload(config, months) {
+  const controlsContainer = document.getElementById(
+    `${config.id}-chart-controls`,
+  );
+  if (!controlsContainer) return;
 
-  controlsContainer.innerHTML = "";
-  controlsContainer.appendChild(select);
+  let select = controlsContainer.querySelector("select");
+  if (!select && months.length > 0) {
+    controlsContainer.innerHTML = "";
+    select = document.createElement("select");
+    select.id = `${config.id}-month-select`;
+
+    const currentMonth = months[0];
+    months.forEach((month) => {
+      const option = document.createElement("option");
+      option.value = month;
+      option.textContent = month.replace("-", "年") + "月";
+      if (month === currentMonth) {
+        option.selected = true;
+      }
+      select.appendChild(option);
+    });
+
+    select.addEventListener("change", (e) => {
+      fetchAndRenderChart(config, { month: e.target.value });
+    });
+
+    controlsContainer.appendChild(select);
+  }
+
+  if (!controlsContainer.querySelector(".btn-reload")) {
+    const btn = createReloadButton(() => {
+      const currentSelect = document.getElementById(`${config.id}-month-select`);
+      const month = currentSelect ? currentSelect.value : null;
+      fetchAndRenderChart(config, { month }, true);
+    });
+    controlsContainer.appendChild(btn);
+  }
 }
 
 function initAssetSimulation() {
@@ -125,15 +166,33 @@ function initAssetSimulation() {
   const investmentInput = document.getElementById("sim-investment");
   const yearsInput = document.getElementById("sim-years");
 
+  const config = allChartConfigs.asset.find(
+    (c) => c.id === "asset-monthly-history",
+  );
+
+  const getParams = () => ({
+    annual_yield: yieldInput ? yieldInput.value : "",
+    monthly_investment: investmentInput ? investmentInput.value : "",
+    duration_years: yearsInput ? yearsInput.value : "",
+  });
+
+  if (config && !controls.querySelector(".btn-reload")) {
+    const btn = createReloadButton(() => {
+      const params = getParams();
+      fetchAndRenderChart(config, params, true);
+    });
+    controls.appendChild(btn);
+  }
+
   const saved = localStorage.getItem("simParams");
   if (saved) {
     try {
       const loadedParams = JSON.parse(saved);
-      if (loadedParams.annual_yield)
+      if (loadedParams.annual_yield && yieldInput)
         yieldInput.value = loadedParams.annual_yield;
-      if (loadedParams.monthly_investment)
+      if (loadedParams.monthly_investment && investmentInput)
         investmentInput.value = loadedParams.monthly_investment;
-      if (loadedParams.duration_years)
+      if (loadedParams.duration_years && yearsInput)
         yearsInput.value = loadedParams.duration_years;
     } catch (e) {
       console.error("Failed to parse simParams", e);
@@ -141,18 +200,10 @@ function initAssetSimulation() {
   }
 
   if (!yieldInput || !investmentInput || !yearsInput) return;
-
-  const config = allChartConfigs.asset.find(
-    (c) => c.id === "asset-monthly-history",
-  );
   if (!config) return;
 
-  const updateSim = (isInitial = false) => {
-    const params = {
-      annual_yield: yieldInput.value,
-      monthly_investment: investmentInput.value,
-      duration_years: yearsInput.value,
-    };
+  const updateSim = (isInitial = false, force = false) => {
+    const params = getParams();
     localStorage.setItem("simParams", JSON.stringify(params));
     if (
       yieldInput.value === "" ||
@@ -160,15 +211,13 @@ function initAssetSimulation() {
       yearsInput.value === ""
     ) {
       if (isInitial) {
-        // 初期ロード時で値が揃っていない場合は、通常のチャートを表示
-        fetchAndRenderChart(config);
+        fetchAndRenderChart(config, {}, force);
       }
       return;
     }
-    fetchAndRenderChart(config, params);
+    fetchAndRenderChart(config, params, force);
   };
 
-  // 初期ロード実行（シミュレーションまたは通常チャート）
   updateSim(true);
 
   [yieldInput, investmentInput, yearsInput].forEach((input) => {
@@ -180,6 +229,9 @@ function initTradingViewChart() {
   const symbolSelect = document.getElementById("symbol-select");
   const chartContainerId = "asset-tradingview-chart-container";
   const chartContainer = document.getElementById(chartContainerId);
+  const controlsContainer = document.getElementById(
+    "asset-tradingview-chart-controls",
+  );
   if (!symbolSelect || !chartContainer) return;
 
   const theme = document.documentElement.classList.contains("dark")
@@ -195,7 +247,6 @@ function initTradingViewChart() {
       tvSymbol = "FRED:BAMLH0A0HYM2";
     }
 
-    // Clear previous widget
     chartContainer.innerHTML = "";
 
     const isIndicator = ["VIX", "FRED:BAMLH0A0HYM2"].includes(tvSymbol);
@@ -223,6 +274,13 @@ function initTradingViewChart() {
           },
     });
   };
+
+  if (controlsContainer && !controlsContainer.querySelector(".btn-reload")) {
+    const btn = createReloadButton(() => {
+      loadChart(symbolSelect.value);
+    });
+    controlsContainer.appendChild(btn);
+  }
 
   if (symbolSelect.value) {
     loadChart(symbolSelect.value);

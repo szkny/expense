@@ -14,11 +14,13 @@ import {
   initPwaInstall,
   initAssetMasking,
   initMemoAutocomplete,
+  initChartReloadUI,
 } from "./ui.js";
 
 function onDOMContentLoaded() {
   initCollapsibleSections();
   initializeCharts();
+  initChartReloadUI();
   initializeTableFilter();
   initMenu();
   initClosableMessages();

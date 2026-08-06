@@ -11,7 +11,7 @@
   <script src="/static/preload.js?v={{ range(100000, 999999) | random }}"></script>
 </head>
 
-<body>
+<body data-reload-icon="{{ icons.get('reload', '🔄') }}">
   <button id="install-btn" class="btn install" style="display: none;"> {{ icons.get("pwa_install", "📲") }} インストール</button>
   <button id="hamburger-menu-btn" class="small-btn"> ☰ </button>
   <div id="menu-container">
@@ -223,8 +223,10 @@
           <div id="daily-chart-controls" class="chart-controls"></div>
           <div id="daily-chart-container" class="loading"><div class="spinner"></div></div>
           <hr>
+          <div id="bar-chart-controls" class="chart-controls"></div>
           <div id="bar-chart-container" class="loading"><div class="spinner"></div></div>
           <hr>
+          <div id="annual-fiscal-report-chart-controls" class="chart-controls"></div>
           <div id="annual-fiscal-report-chart-container" class="loading"><div class="spinner"></div></div>
         </div>
       </div>
