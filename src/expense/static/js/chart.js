@@ -1,4 +1,5 @@
 // src/expense/static/js/chart.js
+import { initAssetMasking } from "./ui.js";
 
 const allChartConfigs = {
   report: [
@@ -12,6 +13,11 @@ const allChartConfigs = {
     },
   ],
   asset: [
+    {
+      id: "asset-summary",
+      endpoint: "/api/asset_summary",
+      hasDropdown: false,
+    },
     { id: "asset-pie", endpoint: "/api/asset_pie_chart", hasDropdown: false },
     {
       id: "asset-heatmap",
@@ -94,6 +100,9 @@ export async function fetchAndRenderChart(config, params = {}, force = false) {
 
     container.dataset.loaded = "true";
     container.classList.remove("loading");
+    if (config.id === "asset-summary") {
+      initAssetMasking();
+    }
     const scripts = container.getElementsByTagName("script");
     for (let i = 0; i < scripts.length; i++) {
       new Function(scripts[i].innerHTML)();

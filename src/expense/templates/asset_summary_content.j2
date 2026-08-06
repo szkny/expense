@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ja">
+
+<div class="asset-summary-list">
+  <div class="asset-summary-content">
+    <span> 資産総額 </span>
+    <span class="asset-summary-details">
+      {{today.year}}年{{today.month}}月{{today.day}}日
+      {{"{:02d}".format(today.hour)}}:{{"{:02d}".format(today.minute)}}時点
+    </span>
+  </div>
+  <div id="total-asset-amount" class="asset-summary-display" data-original-value="{{asset_summary.total}}">
+    {{asset_summary.total}} </div>
+  <div class="asset-summary-details">
+    <span> 前日比 </span>
+    <span {% if "¥0" in asset_summary.change %} class="" {% elif "+¥" in asset_summary.change %}
+      class="asset-color-up asset-up" {% else %} class="asset-color-down asset-down" {% endif %}>
+      {{asset_summary.change}} </span>
+  </div>
+  <div class="asset-summary-details">
+    {% if "-" in asset_summary.drawdown %}
+    <span> ドローダウン </span>
+    <span class="asset-color-down"> {{asset_summary.drawdown}} </span>
+    {% else %}
+    <span class="asset-color-up asset-all-time-high"> 最高値更新 </span>
+    {% endif %}
+  </div>
+  <div id="asset-report-container" class="collapsible-content">
+    <br>
+    <div class="asset-summary-content">
+      <span> 含み益 </span>
+      <div class="asset-summary-display-sub">
+        <span {% if "¥0" in asset_summary.profit %} class="" {% elif "+¥" in asset_summary.profit %}
+          class="asset-color-up" {% else %} class="asset-color-down" {% endif %}> {{asset_summary.profit}} </span>
+      </div>
+    </div>
+    <div class="asset-summary-details">
+      <span> 内 ETF 含み益 </span>
+      <span {% if "¥0" in asset_summary.profit_etf %} class="" {% elif "+¥" in asset_summary.profit_etf %}
+        class="asset-color-up" {% else %} class="asset-color-down" {% endif %}> {{asset_summary.profit_etf}}
+      </span>
+    </div>
+    <div class="asset-summary-details">
+      <span> 損益率 </span>
+      <span {% if "+0.00%"==asset_summary.roi %} class="" {% elif "+" in asset_summary.roi %}
+        class="asset-color-up" {% else %} class="asset-color-down" {% endif %}> {{asset_summary.roi}} </span>
+    </div>
+    <br>
+    <div class="asset-summary-content">
+      <span> 為替レート : USD/JPY </span>
+      <span class="asset-summary-display-sub"> {{asset_summary.usdjpy}} </span>
+    </div>
+    <div class="asset-summary-details">
+      <span> 前日比 </span>
+      <span {% if "+0.00%"==asset_summary.change_usdjpy %} class="" {% elif "+" in asset_summary.change_usdjpy %}
+        class="asset-color-up" {% else %} class="asset-color-down" {% endif %}> {{asset_summary.change_usdjpy}}
+      </span>
+    </div>
+    <div class="link-container">
+      <br>
+      <a href="https://www.google.com/finance/beta?gsas=1" class="link-text">
+        {{ icons.get("link", "🔗") }} Google Financeを開く </a>
+    </div>
+  </div>
+</div>

@@ -164,6 +164,41 @@ def read_root(
     )
 
 
+def build_asset_summary_dict(
+    df_summary: pd.DataFrame, df_items: pd.DataFrame, df_stock: pd.DataFrame
+) -> dict:
+    df_usdjpy = df_stock.query("ticker == 'USDJPY'")
+    if df_usdjpy.empty:
+        usdjpy_chg = 0
+    else:
+        usdjpy_chg = df_usdjpy["change_pct"].iloc[0]
+    summary_list = df_summary.to_dict(orient="records")
+    if not len(summary_list):
+        return {}
+    summary = summary_list[0]
+    summary["total"] = f"¥{df_items['valuation'].sum():,.0f}"
+    summary["change"] = (
+        f" {'+' if summary['change_jpy'] >= 0 else '-'}¥{abs(summary['change_jpy']):,.0f}"
+        + f" ( {'+' if summary['change_pct'] >= 0 else '-'}{abs(summary['change_pct']):,.2f}% )"
+    )
+    summary["drawdown"] = f"{summary['drawdown']:,.2f}%"
+    summary["usdjpy"] = f"¥{summary['usdjpy']:,.2f}"
+    summary["change_usdjpy"] = (
+        f"{'+' if usdjpy_chg >= 0 else '-'}{abs(usdjpy_chg):,.2f}%"
+    )
+    summary["profit"] = df_items["profit"].sum()
+    summary["profit"] = (
+        f"{'+' if summary['profit'] >= 0 else '-'}¥{abs(summary['profit']):,.0f}"
+    )
+    summary["profit_etf"] = (
+        f"{'+' if summary['profit_etf'] >= 0 else '-'}¥{abs(summary['profit_etf']):,.0f}"
+    )
+    summary["roi"] = (
+        f"{'+' if summary['roi'] >= 0 else '-'}{abs(summary['roi']):,.2f}%"
+    )
+    return summary
+
+
 @app.get("/asset_management", response_class=HTMLResponse)
 def asset_management(
     request: Request,
@@ -179,34 +214,7 @@ def asset_management(
     df_summary, df_items, df_records, df_stock = get_cached_asset_table(
         asset_manager
     )
-    df_usdjpy = df_stock.query("ticker == 'USDJPY'")
-    if df_usdjpy.empty:
-        usdjpy_chg = 0
-    else:
-        usdjpy_chg = df_usdjpy["change_pct"].iloc[0]
-    summary = df_summary.to_dict(orient="records")
-    if len(summary):
-        summary = summary[0]
-        summary["total"] = f"¥{df_items['valuation'].sum():,.0f}"
-        summary["change"] = (
-            f" {'+' if summary['change_jpy'] >= 0 else '-'}¥{abs(summary['change_jpy']):,.0f}"
-            + f" ( {'+' if summary['change_pct'] >= 0 else '-'}{abs(summary['change_pct']):,.2f}% )"
-        )
-        summary["drawdown"] = f"{summary['drawdown']:,.2f}%"
-        summary["usdjpy"] = f"¥{summary['usdjpy']:,.2f}"
-        summary["change_usdjpy"] = (
-            f"{'+' if usdjpy_chg >= 0 else '-'}{abs(usdjpy_chg):,.2f}%"
-        )
-        summary["profit"] = df_items["profit"].sum()
-        summary["profit"] = (
-            f"{'+' if summary['profit'] >= 0 else '-'}¥{abs(summary['profit']):,.0f}"
-        )
-        summary["profit_etf"] = (
-            f"{'+' if summary['profit_etf'] >= 0 else '-'}¥{abs(summary['profit_etf']):,.0f}"
-        )
-        summary["roi"] = (
-            f"{'+' if summary['roi'] >= 0 else '-'}{abs(summary['roi']):,.2f}%"
-        )
+    summary = build_asset_summary_dict(df_summary, df_items, df_stock)
     items = df_items.to_dict(orient="records")
     asset_tickers = [
         t for t in df_stock["ticker"].dropna().unique().tolist() if t != "JPY"
@@ -365,6 +373,24 @@ def get_annual_fiscal_report_chart(request: Request) -> HTMLResponse:
     )
     log.info("end 'get_annual_fiscal_report_chart' method")
     return HTMLResponse(content=graph_html)
+
+
+@app.get("/api/asset_summary", response_class=HTMLResponse)
+def get_asset_summary(request: Request) -> HTMLResponse:
+    log.info("start 'get_asset_summary' method")
+    server_tools: ServerTools = ServerTools(app, gspread_handler)
+    df_summary, df_items, _, df_stock = get_cached_asset_table(asset_manager)
+    summary = build_asset_summary_dict(df_summary, df_items, df_stock)
+    log.info("end 'get_asset_summary' method")
+    return server_tools.templates.TemplateResponse(
+        "asset_summary_content.j2",
+        {
+            "request": request,
+            "icons": server_tools.icons,
+            "today": dt.datetime.today(),
+            "asset_summary": summary,
+        },
+    )
 
 
 @app.get("/api/asset_pie_chart", response_class=HTMLResponse)
