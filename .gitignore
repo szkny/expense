@@ -7,3 +7,4 @@ activate
 **.egg-info
 build
 dist
+.aider*
