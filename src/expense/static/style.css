@@ -843,7 +843,7 @@ tr:nth-child(even) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  cursor: none;
   transition: all 0.2s ease;
   flex-shrink: 0;
   line-height: 1;
