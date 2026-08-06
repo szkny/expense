@@ -426,7 +426,7 @@ img.screenshot {
 }
 
 .symbol-selector {
-  margin-top: 20px;
+  margin: 0;
 }
 
 /* テーブル */
@@ -801,6 +801,11 @@ tr:nth-child(even) {
   margin-left: 0;
 }
 
+.asset-chart-header .chart-controls {
+  margin-bottom: 0;
+  padding: 0;
+}
+
 .asset-chart-title {
   font-size: 17px;
   margin-left: 5%;
@@ -816,16 +821,18 @@ tr:nth-child(even) {
 }
 
 .chart-controls select {
-  margin-bottom: 0;
+  margin: 0;
   width: auto;
   min-width: 120px;
   height: 36px;
   padding: 6px 12px;
   border-radius: 12px;
   font-size: 14px;
+  box-sizing: border-box;
 }
 
 .btn-reload {
+  margin: 0;
   background: #f3f4f6;
   color: #374151;
   border: 1px solid #d1d5db;
@@ -840,6 +847,7 @@ tr:nth-child(even) {
   transition: all 0.2s ease;
   flex-shrink: 0;
   line-height: 1;
+  box-sizing: border-box;
 }
 
 .btn-reload:hover {
