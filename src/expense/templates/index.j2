@@ -12,31 +12,28 @@
 </head>
 
 <body data-reload-icon="{{ icons.get('reload', '🔄') }}">
-  <button id="install-btn" class="btn install" style="display: none;"> {{ icons.get("pwa_install", "📲") }} インストール</button>
+  <button id="install-btn" class="btn install" style="display: none;"> {{ icons.get("pwa_install", "📲") }}
+    インストール</button>
   <button id="hamburger-menu-btn" class="small-btn"> ☰ </button>
   <div id="menu-container">
-    <form method="get" action="/"><button type="submit" id="home-btn" class="small-btn"> {{ icons.get("home", "🏠") }} 家計簿　　　　 </button></form>
-    <form method="get" action="/asset_management"><button type="submit" id="asset-management-btn" class="small-btn"> {{ icons.get("asset_management", "📈") }} 資産管理　　　 </button></form>
-    <form method="get" action="/simulator"><button type="submit" id="simulator-btn" class="small-btn"> {{ icons.get("simulator", "🎯") }} シミュレーター </button></form>
-    <button id="theme-toggle" class="small-btn"> {% if theme == "dark" %} {{ icons.get("light_theme", "☀️") }} {% else %} {{ icons.get("dark_theme", "🌙") }} {% endif %} テーマ　　　　 </button>
+    <form method="get" action="/"><button type="submit" id="home-btn" class="small-btn"> {{ icons.get("home", "🏠") }}
+        家計簿　　　　 </button></form>
+    <form method="get" action="/asset_management"><button type="submit" id="asset-management-btn" class="small-btn"> {{
+        icons.get("asset_management", "📈") }} 資産管理　　　 </button></form>
+    <form method="get" action="/simulator"><button type="submit" id="simulator-btn" class="small-btn"> {{
+        icons.get("simulator", "🎯") }} シミュレーター </button></form>
+    <button id="theme-toggle" class="small-btn"> {% if theme == "dark" %} {{ icons.get("light_theme", "☀️") }} {% else
+      %} {{ icons.get("dark_theme", "🌙") }} {% endif %} テーマ　　　　 </button>
   </div>
   <div class="container">
     <h1> {{ icons.get("title", "") }} Expense </h1>
 
-    <div
-      class="msg"
-    {% if status and msg %}
-      id="success-msg"
-    {% elif not status and msg %}
-      id="failed-msg"
-    {% else %}
-      style="display: none;"
-    {% endif %}
-    >
+    <div class="msg" {% if status and msg %} id="success-msg" {% elif not status and msg %} id="failed-msg" {% else %}
+      style="display: none;" {% endif %}>
       {{ msg }}
-    {% if info %}
+      {% if info %}
       <p><strong>{{ info | info_to_html }}</strong></p>
-    {% endif %}
+      {% endif %}
       <button id="msg-close-btn" type="button" class="btn-close"> ✕ </button>
     </div>
 
@@ -47,41 +44,28 @@
           <span class="collapsible-toggle"></span>
         </h3>
         <div id="register-container" class="collapsible-content">
-          <input
-            type="date"
-            id="expense-date"
-            name="expense_date"
-            value="{{ expense_date or today }}"
-            min="{{ expense_date_range[0] }}"
-            max="{{ expense_date_range[1] }}"
-            required
-          />
-          <select id="expense-type" name="expense_type"
-            data-favorite-icon="{{ icons.get('favorite', '') }}"
-            data-frequent-icon="{{ icons.get('frequent', '') }}"
-            data-recent-icon="{{ icons.get('recent', '') }}"
-            required
-          >
+          <input type="date" id="expense-date" name="expense_date" value="{{ expense_date or today }}"
+            min="{{ expense_date_range[0] }}" max="{{ expense_date_range[1] }}" required />
+          <select id="expense-type" name="expense_type" data-favorite-icon="{{ icons.get('favorite', '') }}"
+            data-frequent-icon="{{ icons.get('frequent', '') }}" data-recent-icon="{{ icons.get('recent', '') }}"
+            required>
             <option value="" disabled selected hidden>
-                {{ icons.get('input_type', '🏷️') }} タイプを選択
+              {{ icons.get('input_type', '🏷️') }} タイプを選択
             </option>
             {% for item in items %}
-              {% if item.startswith("[HEAD] ") %}
-                <option disabled>── {{ item.replace("[HEAD] ", "") }} ──</option>
-              {% else %}
-                <option value="{{ item }}">
-                  {{ item }}
-                </option>
-              {% endif %}
+            {% if item.startswith("[HEAD] ") %}
+            <option disabled>── {{ item.replace("[HEAD] ", "") }} ──</option>
+            {% else %}
+            <option value="{{ item }}">
+              {{ item }}
+            </option>
+            {% endif %}
             {% endfor %}
           </select>
           <input type="number" id="expense-amount" name="expense_amount" value=""
-            placeholder="{{ icons.get('input_amount', '💴') }} 金額を入力"
-            required
-          />
+            placeholder="{{ icons.get('input_amount', '💴') }} 金額を入力" required />
           <input type="text" id="expense-memo" name="expense_memo" value=""
-            placeholder="{{ icons.get('input_memo', '✏️') }} メモを入力"
-          />
+            placeholder="{{ icons.get('input_memo', '✏️') }} メモを入力" />
           <datalist id="memo-list">
             {% for memo in records | map(attribute='expense_memo') | unique | reject('equalto', '') %}
             <option value="{{ memo }}"></option>
@@ -105,10 +89,9 @@
           </div>
           <div id="img-overlay" class="overlay"></div>
           <img id="screenshot" class="screenshot" alt="{{ screenshot_name.split(" /") | last }}"
-            src="data:image/png;base64,{{ screenshot_base64 }}"
-            onclick="this.classList.toggle('is-zoomed')"
-          >
-          <button type="submit" class="btn secondary" {% if disable_ocr %} disabled {% endif %}> {% if disable_ocr %} 登録済
+            src="data:image/png;base64,{{ screenshot_base64 }}" onclick="this.classList.toggle('is-zoomed')">
+          <button type="submit" class="btn secondary" {% if disable_ocr %} disabled {% endif %}> {% if disable_ocr %}
+            登録済
             {% else %} 読取実行 {% endif %}</button>
         </div>
       </form>
@@ -122,7 +105,7 @@
       </h3>
       <div id="confirmation-overlay" class="overlay" style="display: none;">
         <div id="confirmation-dialog" class="confirm">
-          <h3> {{ icons.get("confirm_dialog", "🛠️") }}  レコードを編集 </h3>
+          <h3> {{ icons.get("confirm_dialog", "🛠️") }} レコードを編集 </h3>
           <button id="confirmation-close-btn" type="button" class="btn-close"> ✕ </button>
           <div class="confirmation-btn-container">
             <form method="post" action="/edit">
@@ -130,14 +113,8 @@
               <input type="hidden" id="target-record-type" name="target_type">
               <input type="hidden" id="target-record-amount" name="target_amount">
               <input type="hidden" id="target-record-memo" name="target_memo">
-              <input
-                type="date"
-                id="new-expense-date"
-                name="new_expense_date"
-                min="{{ expense_date_range[0] }}"
-                max="{{ expense_date_range[1] }}"
-                required
-              />
+              <input type="date" id="new-expense-date" name="new_expense_date" min="{{ expense_date_range[0] }}"
+                max="{{ expense_date_range[1] }}" required />
               <select id="new-expense-type" name="new_expense_type">
                 {% for item in items %}
                 {% if "/" not in item and not item.startswith("[HEAD] ") %}
@@ -147,8 +124,10 @@
                 {% endif %}
                 {% endfor %}
               </select>
-              <input type="text" id="new-expense-amount" name="new_expense_amount" placeholder="{{ icons.get('input_amount', '💴') }} 金額を入力" required>
-              <input type="text" id="new-expense-memo" name="new_expense_memo" placeholder="{{ icons.get('input_memo', '✏️') }} メモを入力">
+              <input type="text" id="new-expense-amount" name="new_expense_amount"
+                placeholder="{{ icons.get('input_amount', '💴') }} 金額を入力" required>
+              <input type="text" id="new-expense-memo" name="new_expense_memo"
+                placeholder="{{ icons.get('input_memo', '✏️') }} メモを入力">
               <div class="space"></div>
               <button type="submit" class="btn-edit"> {{ icons.get("edit_record", "🔧") }} 修正 </button>
             </form>
@@ -162,10 +141,10 @@
           </div>
         </div>
       </div>
-        <div class="link-container">
-          <a href="{{ gspread_url }}" class="link-text">
-            {{ icons.get("link", "🔗") }} スプレッドシートを開く </a>
-        </div>
+      <div class="link-container">
+        <a href="{{ gspread_url }}" class="link-text">
+          {{ icons.get("link", "🔗") }} スプレッドシートを開く </a>
+      </div>
       <div id="record-container" class="collapsible-content">
         <div class="search-wrapper">
           <input type="text" id="search-input" placeholder="{{ icons.get('search', '🔍') }} 履歴を検索" />
@@ -218,16 +197,24 @@
           {{ plotlyjs | safe }}
           <hr>
           <div id="pie-chart-controls" class="chart-controls"></div>
-          <div id="pie-chart-container" class="loading"><div class="spinner"></div></div>
+          <div id="pie-chart-container" class="loading">
+            <div class="spinner"></div>
+          </div>
           <hr>
           <div id="daily-chart-controls" class="chart-controls"></div>
-          <div id="daily-chart-container" class="loading"><div class="spinner"></div></div>
+          <div id="daily-chart-container" class="loading">
+            <div class="spinner"></div>
+          </div>
           <hr>
           <div id="bar-chart-controls" class="chart-controls"></div>
-          <div id="bar-chart-container" class="loading"><div class="spinner"></div></div>
+          <div id="bar-chart-container" class="loading">
+            <div class="spinner"></div>
+          </div>
           <hr>
           <div id="annual-fiscal-report-chart-controls" class="chart-controls"></div>
-          <div id="annual-fiscal-report-chart-container" class="loading"><div class="spinner"></div></div>
+          <div id="annual-fiscal-report-chart-container" class="loading">
+            <div class="spinner"></div>
+          </div>
         </div>
       </div>
     </div>

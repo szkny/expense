@@ -59,7 +59,11 @@ export async function fetchAndRenderChart(config, params = {}, force = false) {
   let url = config.endpoint;
   const urlParams = new URLSearchParams();
   for (const key in params) {
-    if (params[key] !== null && params[key] !== undefined && params[key] !== "") {
+    if (
+      params[key] !== null &&
+      params[key] !== undefined &&
+      params[key] !== ""
+    ) {
       urlParams.append(key, params[key]);
     }
   }
@@ -148,7 +152,9 @@ function setupDropdownAndReload(config, months) {
 
   if (!controlsContainer.querySelector(".btn-reload")) {
     const btn = createReloadButton(() => {
-      const currentSelect = document.getElementById(`${config.id}-month-select`);
+      const currentSelect = document.getElementById(
+        `${config.id}-month-select`,
+      );
       const month = currentSelect ? currentSelect.value : null;
       fetchAndRenderChart(config, { month }, true);
     });
@@ -269,9 +275,9 @@ function initTradingViewChart() {
       studies_overrides: isIndicator
         ? {}
         : {
-            "moving average.length": 200,
-            "moving average.source": "close",
-          },
+          "moving average.length": 200,
+          "moving average.source": "close",
+        },
     });
   };
 

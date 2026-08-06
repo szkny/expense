@@ -12,13 +12,18 @@
 </head>
 
 <body data-reload-icon="{{ icons.get('reload', '🔄') }}">
-  <button id="install-btn" class="btn install" style="display: none;"> {{ icons.get("pwa_install", "📲") }} インストール</button>
+  <button id="install-btn" class="btn install" style="display: none;"> {{ icons.get("pwa_install", "📲") }}
+    インストール</button>
   <button id="hamburger-menu-btn" class="small-btn"> ☰ </button>
   <div id="menu-container">
-    <form method="get" action="/"><button type="submit" id="home-btn" class="small-btn"> {{ icons.get("home", "🏠") }} 家計簿　　　　 </button></form>
-    <form method="get" action="/asset_management"><button type="submit" id="asset-management-btn" class="small-btn"> {{ icons.get("asset_management", "📈") }} 資産管理　　　 </button></form>
-    <form method="get" action="/simulator"><button type="submit" id="simulator-btn" class="small-btn"> {{ icons.get("simulator", "🎯") }} シミュレーター </button></form>
-    <button id="theme-toggle" class="small-btn"> {% if theme == "dark" %} {{ icons.get("light_theme", "☀️") }} {% else %} {{ icons.get("dark_theme", "🌙") }} {% endif %} テーマ　　　　 </button>
+    <form method="get" action="/"><button type="submit" id="home-btn" class="small-btn"> {{ icons.get("home", "🏠") }}
+        家計簿　　　　 </button></form>
+    <form method="get" action="/asset_management"><button type="submit" id="asset-management-btn" class="small-btn"> {{
+        icons.get("asset_management", "📈") }} 資産管理　　　 </button></form>
+    <form method="get" action="/simulator"><button type="submit" id="simulator-btn" class="small-btn"> {{
+        icons.get("simulator", "🎯") }} シミュレーター </button></form>
+    <button id="theme-toggle" class="small-btn"> {% if theme == "dark" %} {{ icons.get("light_theme", "☀️") }} {% else
+      %} {{ icons.get("dark_theme", "🌙") }} {% endif %} テーマ　　　　 </button>
   </div>
   <div class="container">
     <h1> {{ icons.get("title", "") }} Asset Management </h1>
@@ -36,29 +41,20 @@
             {{"{:02d}".format(today.hour)}}:{{"{:02d}".format(today.minute)}}時点
           </span>
         </div>
-        <div
-            id="total-asset-amount" class="asset-summary-display" data-original-value="{{asset_summary.total}}"
-        > {{asset_summary.total}} </div>
+        <div id="total-asset-amount" class="asset-summary-display" data-original-value="{{asset_summary.total}}">
+          {{asset_summary.total}} </div>
         <div class="asset-summary-details">
           <span> 前日比 </span>
-          <span
-            {% if "¥0" in asset_summary.change %}
-              class=""
-            {% elif "+¥" in asset_summary.change %}
-              class="asset-color-up asset-up"
-            {% else %}
-              class="asset-color-down asset-down"
-            {% endif %}
-          > {{asset_summary.change}} </span>
+          <span {% if "¥0" in asset_summary.change %} class="" {% elif "+¥" in asset_summary.change %}
+            class="asset-color-up asset-up" {% else %} class="asset-color-down asset-down" {% endif %}>
+            {{asset_summary.change}} </span>
         </div>
         <div class="asset-summary-details">
           {% if "-" in asset_summary.drawdown %}
           <span> ドローダウン </span>
           <span class="asset-color-down"> {{asset_summary.drawdown}} </span>
           {% else %}
-          <span
-            class="asset-color-up asset-all-time-high"
-          > 最高値更新 </span>
+          <span class="asset-color-up asset-all-time-high"> 最高値更新 </span>
           {% endif %}
         </div>
         <div id="asset-report-container" class="collapsible-content">
@@ -66,40 +62,20 @@
           <div class="asset-summary-content">
             <span> 含み益 </span>
             <div class="asset-summary-display-sub">
-              <span
-                {% if "¥0" in asset_summary.profit %}
-                  class=""
-                {% elif "+¥" in asset_summary.profit %}
-                  class="asset-color-up"
-                {% else %}
-                  class="asset-color-down"
-                {% endif %}
-              > {{asset_summary.profit}} </span>
+              <span {% if "¥0" in asset_summary.profit %} class="" {% elif "+¥" in asset_summary.profit %}
+                class="asset-color-up" {% else %} class="asset-color-down" {% endif %}> {{asset_summary.profit}} </span>
             </div>
           </div>
           <div class="asset-summary-details">
             <span> 内 ETF 含み益 </span>
-            <span
-              {% if "¥0" in asset_summary.profit_etf %}
-                class=""
-              {% elif "+¥" in asset_summary.profit_etf %}
-                class="asset-color-up"
-              {% else %}
-                class="asset-color-down"
-              {% endif %}
-            > {{asset_summary.profit_etf}} </span>
+            <span {% if "¥0" in asset_summary.profit_etf %} class="" {% elif "+¥" in asset_summary.profit_etf %}
+              class="asset-color-up" {% else %} class="asset-color-down" {% endif %}> {{asset_summary.profit_etf}}
+            </span>
           </div>
           <div class="asset-summary-details">
             <span> 損益率 </span>
-            <span
-              {% if "+0.00%" == asset_summary.roi %}
-                class=""
-              {% elif "+" in asset_summary.roi %}
-                class="asset-color-up"
-              {% else %}
-                class="asset-color-down"
-              {% endif %}
-            > {{asset_summary.roi}} </span>
+            <span {% if "+0.00%"==asset_summary.roi %} class="" {% elif "+" in asset_summary.roi %}
+              class="asset-color-up" {% else %} class="asset-color-down" {% endif %}> {{asset_summary.roi}} </span>
           </div>
           <br>
           <div class="asset-summary-content">
@@ -108,20 +84,14 @@
           </div>
           <div class="asset-summary-details">
             <span> 前日比 </span>
-            <span
-              {% if "+0.00%" == asset_summary.change_usdjpy %}
-                class=""
-              {% elif "+" in asset_summary.change_usdjpy %}
-                class="asset-color-up"
-              {% else %}
-                class="asset-color-down"
-              {% endif %}
-            > {{asset_summary.change_usdjpy}} </span>
+            <span {% if "+0.00%"==asset_summary.change_usdjpy %} class="" {% elif "+" in asset_summary.change_usdjpy %}
+              class="asset-color-up" {% else %} class="asset-color-down" {% endif %}> {{asset_summary.change_usdjpy}}
+            </span>
           </div>
           <div class="link-container">
             <br>
             <a href="https://www.google.com/finance/beta?gsas=1" class="link-text">
-                {{ icons.get("link", "🔗") }} Google Financeを開く </a>
+              {{ icons.get("link", "🔗") }} Google Financeを開く </a>
           </div>
         </div>
       </div>
@@ -135,10 +105,14 @@
       <div id="asset-chart-container" class="collapsible-content">
         {{ plotlyjs | safe }}
         <div id="asset-pie-chart-controls" class="chart-controls"></div>
-        <div id="asset-pie-chart-container" class="loading"><div class="spinner"></div></div>
+        <div id="asset-pie-chart-container" class="loading">
+          <div class="spinner"></div>
+        </div>
         <hr>
         <div id="asset-heatmap-chart-controls" class="chart-controls"></div>
-        <div id="asset-heatmap-chart-container" class="loading"><div class="spinner"></div></div>
+        <div id="asset-heatmap-chart-container" class="loading">
+          <div class="spinner"></div>
+        </div>
         <hr>
         <div class="asset-chart-header">
           <div class="asset-chart-title">
@@ -147,7 +121,7 @@
           <div id="asset-tradingview-chart-controls" class="chart-controls">
             <select id="symbol-select" class="symbol-selector">
               {% for s in asset_tickers %}
-                <option value="{{ s }}">{{ s }}</option>
+              <option value="{{ s }}">{{ s }}</option>
               {% endfor %}
             </select>
           </div>
@@ -155,7 +129,9 @@
         <div id="asset-tradingview-chart-container"></div>
         <hr>
         <div id="asset-waterfall-chart-controls" class="chart-controls"></div>
-        <div id="asset-waterfall-chart-container" class="loading"><div class="spinner"></div></div>
+        <div id="asset-waterfall-chart-container" class="loading">
+          <div class="spinner"></div>
+        </div>
         <hr>
         <div id="asset-monthly-history-chart-controls" class="chart-controls simulation-controls">
           <div class="simulation-input-group">
@@ -171,7 +147,9 @@
             <input type="number" id="sim-years" placeholder="5" step="0.1" min="0" max="100">
           </div>
         </div>
-        <div id="asset-monthly-history-chart-container" class="loading"><div class="spinner"></div></div>
+        <div id="asset-monthly-history-chart-container" class="loading">
+          <div class="spinner"></div>
+        </div>
       </div>
     </div>
 
@@ -234,7 +212,7 @@
         <div class="link-container">
           <br>
           <a href="{{ gspread_url }}" class="link-text">
-              {{ icons.get("link", "🔗") }} スプレッドシートを開く </a>
+            {{ icons.get("link", "🔗") }} スプレッドシートを開く </a>
         </div>
       </div>
     </div>
