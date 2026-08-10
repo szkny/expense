@@ -297,11 +297,22 @@ function initTradingViewChart() {
     controlsContainer.appendChild(btn);
   }
 
+  const savedSymbol = localStorage.getItem("assetSymbol");
+  if (
+    savedSymbol &&
+    Array.from(symbolSelect.options).some(
+      (option) => option.value === savedSymbol,
+    )
+  ) {
+    symbolSelect.value = savedSymbol;
+  }
+
   if (symbolSelect.value) {
     loadChart(symbolSelect.value);
   }
 
   symbolSelect.addEventListener("change", (e) => {
+    localStorage.setItem("assetSymbol", e.target.value);
     loadChart(e.target.value);
   });
 }
