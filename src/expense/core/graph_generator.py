@@ -381,6 +381,7 @@ class GraphGenerator(Base):
                     offsetgroup=offsetgroup,
                     cliponaxis=False,
                     textposition="outside",
+                    constraintext="none",
                     **{
                         **label_trace_kwargs,
                         "y": [0] * len(y),
