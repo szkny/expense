@@ -332,6 +332,7 @@ class GraphGenerator(Base):
         label_nlags: int = 3,
         label_threshold: int = 1000,
         label_offset: int = 2000,
+        offsetgroup: str | None = None,
     ) -> None:
         totals = df_bar.groupby(key, as_index=False)["expense_amount"].sum()
         label = totals["expense_amount"].map(
@@ -348,23 +349,45 @@ class GraphGenerator(Base):
                     ]
                 ):
                     y[i] = y[i] + label_offset
-        fig.add_trace(
-            go.Scatter(
-                x=totals[key],
-                y=y,
-                text=label,
-                mode="text",
-                textposition="top center",
-                name="値ラベル",
-                textfont=dict(
-                    size=fontsize,
-                    weight="bold",
-                    color="#ffffff" if theme == "dark" else "#000000",
-                ),
-                showlegend=True,
-                hoverinfo="skip",
-            )
+        label_trace_kwargs = dict(
+            x=totals[key],
+            y=y,
+            text=label,
+            textfont=dict(
+                size=fontsize,
+                weight="bold",
+                color="#ffffff" if theme == "dark" else "#000000",
+            ),
+            name="値ラベル",
+            showlegend=True,
+            hoverinfo="skip",
         )
+        if offsetgroup is None:
+            fig.add_trace(
+                go.Scatter(
+                    mode="text",
+                    textposition="top center",
+                    **label_trace_kwargs,
+                )
+            )
+        else:
+            # 透明な棒を同じ offsetgroup に置き、ラベルも支出バーに揃える。
+            fig.add_trace(
+                go.Bar(
+                    marker=dict(
+                        color="rgba(0, 0, 0, 0)",
+                        line=dict(color="rgba(0, 0, 0, 0)"),
+                    ),
+                    offsetgroup=offsetgroup,
+                    cliponaxis=False,
+                    textposition="outside",
+                    **{
+                        **label_trace_kwargs,
+                        "y": [0] * len(y),
+                        "base": y,
+                    },
+                )
+            )
 
     def _update_traces(
         self, fig_bar: go.Figure, fig_line: go.Figure, fig_predict: go.Figure
@@ -892,6 +915,7 @@ class GraphGenerator(Base):
             fontsize=12,
             label_threshold=10_000,
             label_offset=30_000,
+            offsetgroup="expense",
         )
 
         self._update_layout(fig, theme, ymax_for_format=ymax)
