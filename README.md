@@ -104,6 +104,19 @@ The application's behavior can be customized through the `~/.config/expense/conf
       <td>Number of records to display in the history table.</td>
     </tr>
     <tr>
+      <td rowspan="2"><code>asset_management.allocation</code></td>
+      <td><code>tolerance_percent</code></td>
+      <td><code>number</code></td>
+      <td><code>2.0</code></td>
+      <td>Allowed deviation (%) from the target allocation. No trade is suggested within this range.</td>
+    </tr>
+    <tr>
+      <td><code>target_weights</code></td>
+      <td><code>object</code></td>
+      <td><code>{}</code></td>
+      <td>Target allocation percentage (%) for each ticker. Specify a combined allocation for multiple tickers like <code>{"US stocks": {"tickers": ["QQQ", "VTI"], "weight": 50}}</code>.</td>
+    </tr>
+    <tr>
       <td rowspan="4"><code>expense</code></td>
       <td><code>icons</code></td>
       <td><code>object</code></td>

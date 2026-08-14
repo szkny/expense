@@ -2,6 +2,7 @@ import re
 import gspread
 import logging
 import pandas as pd
+from typing import Any
 from yahoo_fin import stock_info as si
 from tenacity import retry, stop_after_attempt
 from google.oauth2 import service_account
@@ -32,6 +33,71 @@ class AssetManager(Base):
 
     def get_spreadsheet_url(self) -> str:
         return self.workbook.url + "/edit"
+
+    @staticmethod
+    def build_asset_allocation(
+        df_items: pd.DataFrame,
+        target_weights: dict[str, Any],
+        tolerance_percent: float = 0.0,
+    ) -> list[dict[str, Any]]:
+        """Build target allocation and trade suggestions for configured tickers."""
+        log.info("start 'build_asset_allocation' method")
+        try:
+            if df_items.empty or not target_weights:
+                return []
+
+            total_valuation = float(df_items["valuation"].sum())
+            if total_valuation <= 0:
+                return []
+
+            current_valuations = df_items.groupby("ticker")["valuation"].sum()
+            tolerance = max(float(tolerance_percent), 0.0)
+            allocation: list[dict[str, Any]] = []
+            for ticker, target in target_weights.items():
+                target_tickers: list[str] | None = None
+                if isinstance(target, dict):
+                    target_tickers = target.get("tickers")
+                    target = target.get("weight")
+                try:
+                    target_percent = float(target)
+                except (TypeError, ValueError):
+                    continue
+                if target_percent < 0 or target_percent > 100:
+                    continue
+                if target_tickers is None:
+                    current_value = float(current_valuations.get(ticker, 0.0))
+                else:
+                    if not isinstance(target_tickers, list) or not all(
+                        isinstance(target_ticker, str)
+                        for target_ticker in target_tickers
+                    ):
+                        continue
+                    current_value = sum(
+                        float(current_valuations.get(target_ticker, 0.0))
+                        for target_ticker in target_tickers
+                    )
+                current_percent = current_value / total_valuation * 100
+                difference_percent = target_percent - current_percent
+                target_value = total_valuation * target_percent / 100
+                trade_value = target_value - current_value
+                within_tolerance = abs(difference_percent) <= tolerance
+                allocation.append(
+                    {
+                        "ticker": ticker,
+                        "target_weight": target_percent,
+                        "current_weight": current_percent,
+                        "target_value": target_value,
+                        "current_value": current_value,
+                        "difference_weight": difference_percent,
+                        "trade_value": 0 if within_tolerance else trade_value,
+                        "action": "調整不要"
+                        if within_tolerance
+                        else ("買い" if trade_value > 0 else "売り"),
+                    }
+                )
+            return allocation
+        finally:
+            log.info("end 'build_asset_allocation' method")
 
     @retry(stop=stop_after_attempt(3))
     def get_live_price(self, ticker: str) -> float | None:

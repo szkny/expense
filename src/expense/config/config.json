@@ -79,7 +79,20 @@
     "filter_duplicated_items": true
   },
   "asset_management": {
-    "fitting_duration_multiplier": 1.1
+    "fitting_duration_multiplier": 1.0,
+    "allocation": {
+      "tolerance_percent": 2.0,
+      "target_weights": {
+        "株式": {
+          "tickers": [],
+          "weight": 70
+        },
+        "現金": {
+          "tickers": [],
+          "weight": 30
+        }
+      }
+    }
   },
   "ocr": {
     "tesseract_config": "--psm 6 --oem 3",

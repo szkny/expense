@@ -216,6 +216,14 @@ def asset_management(
     )
     summary = build_asset_summary_dict(df_summary, df_items, df_stock)
     items = df_items.to_dict(orient="records")
+    allocation_config = server_tools.config.get("asset_management", {}).get(
+        "allocation", {}
+    )
+    target_weights = allocation_config.get("target_weights", {})
+    tolerance_percent = allocation_config.get("tolerance_percent", 0.0)
+    asset_allocation = asset_manager.build_asset_allocation(
+        df_items, target_weights, tolerance_percent
+    )
     asset_tickers = [
         t for t in df_stock["ticker"].dropna().unique().tolist() if t != "JPY"
     ]
@@ -235,6 +243,8 @@ def asset_management(
             "today": dt.datetime.today(),
             "asset_summary": summary,
             "asset_items": items,
+            "asset_allocation": asset_allocation,
+            "allocation_tolerance_percent": tolerance_percent,
             "asset_tickers": asset_tickers,
             "plotlyjs": plotlyjs,
         },

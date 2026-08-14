@@ -372,6 +372,7 @@ img.screenshot {
 .report-open #report-container,
 .asset-record-open #asset-record-container,
 .asset-chart-open #asset-chart-container,
+.asset-allocation-open #asset-allocation-container,
 .asset-report-open #asset-report-container {
   max-height: 10000px;
   opacity: 1;
@@ -384,6 +385,7 @@ img.screenshot {
 .report-collapsed #report-container,
 .asset-record-collapsed #asset-record-container,
 .asset-chart-collapsed #asset-chart-container,
+.asset-allocation-collapsed #asset-allocation-container,
 .asset-report-collapsed #asset-report-container {
   max-height: 0;
   overflow: hidden;

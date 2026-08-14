@@ -99,6 +99,48 @@
     </div>
 
     <div class="card">
+      <h3 class="collapsible-trigger" data-key="asset-allocation">
+        <span>🎯 アセットアロケーション </span>
+        <span class="collapsible-toggle"></span>
+      </h3>
+      <div id="asset-allocation-container" class="collapsible-content">
+        {% if asset_allocation %}
+        <p>目標比率からの許容差: {{ "{:.2f}".format(allocation_tolerance_percent) }}%</p>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>銘柄</th>
+                <th>現在比率(%)</th>
+                <th>目標比率(%)</th>
+                <th>目標評価額(¥)</th>
+                <th>売買額(¥)</th>
+                <th>判定</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for allocation in asset_allocation %}
+              <tr>
+                <td>{{ allocation.ticker }}</td>
+                <td>{{ "{:.2f}".format(allocation.current_weight) }}%</td>
+                <td>{{ "{:.2f}".format(allocation.target_weight) }}%</td>
+                <td>¥ {{ "{:,.0f}".format(allocation.target_value) }}</td>
+                <td>
+                  {% if allocation.action == "買い" %}+{% elif allocation.action == "売り" %}-{% endif %}¥ {{ "{:,.0f}".format(allocation.trade_value|abs) }}
+                </td>
+                <td>{{ allocation.action }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p>config.json の asset_management.allocation.target_weights に目標比率を設定してください。</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
       <h3 class="collapsible-trigger" data-key="asset-record">
         <span> {{ icons.get("asset_list", "📝") }} 資産一覧 </span>
         <span class="collapsible-toggle"></span>

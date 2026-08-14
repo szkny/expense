@@ -6,6 +6,7 @@ import pandas as pd
 from unittest.mock import patch
 from src.expense.core.expense import get_fiscal_year, Expense
 from src.expense.core.ocr import get_latest_screenshot, Ocr
+from src.expense.core.asset_manager import AssetManager
 
 log: logging.Logger = logging.getLogger("expense")
 
@@ -141,6 +142,43 @@ class TestMain(unittest.TestCase):
             expense.store_expense("食費", "メモ", 1000)
             mock_open.assert_called_once_with(unittest.mock.ANY, "a")
             mock_open().write.assert_called_once()
+
+    def test_build_asset_allocation(self) -> None:
+        df_items = pd.DataFrame(
+            {
+                "ticker": ["AAA", "BBB"],
+                "valuation": [60000, 40000],
+            }
+        )
+        result = AssetManager.build_asset_allocation(
+            df_items,
+            {"AAA": 50, "BBB": 50},
+            tolerance_percent=2,
+        )
+        self.assertEqual(result[0]["action"], "売り")
+        self.assertEqual(result[0]["trade_value"], -10000)
+        self.assertEqual(result[1]["action"], "買い")
+        self.assertEqual(result[1]["trade_value"], 10000)
+
+        within_tolerance = AssetManager.build_asset_allocation(
+            df_items, {"AAA": 61, "BBB": 39}, tolerance_percent=2
+        )
+        self.assertEqual(within_tolerance[0]["action"], "調整不要")
+        self.assertEqual(within_tolerance[0]["trade_value"], 0)
+
+        invalid_target = AssetManager.build_asset_allocation(
+            df_items, {"AAA": "invalid", "BBB": 50}
+        )
+        self.assertEqual([item["ticker"] for item in invalid_target], ["BBB"])
+
+        grouped_target = AssetManager.build_asset_allocation(
+            df_items,
+            {"AAA": 30, "BBB": 20, "米国株": {"tickers": ["AAA", "BBB"], "weight": 50}},
+        )
+        group = grouped_target[2]
+        self.assertEqual(group["ticker"], "米国株")
+        self.assertEqual(group["current_value"], 100000)
+        self.assertEqual(group["trade_value"], -50000)
 
     def test_ocr_main(self, n: int = 3, offset: int = 0) -> None:
         ocr = Ocr()

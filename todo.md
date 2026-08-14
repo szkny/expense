@@ -36,11 +36,11 @@
 - [x] annual fiscal report
 - [x] monthly summary report of total expenses including fixed expenses
 - [x] button of reloading individual charts
+- [x] add a feature of navigating asset allocation
+- [ ] add a feature of setting target budget of expenses
 - [ ] button of switching between usd/jpy in asset heatmap
 - [ ] add drawdown history chart
 - [ ] fallback to yahoo_finance when error occurred in google_finance
-- [ ] add a feature of setting target budget of expenses
-- [ ] add a feature of navigating asset allocation
 - [ ] manage monthly subscription
 - [ ] assist user input of expense's memo using device GPS
 - [ ] add a feature of sorting cards in the Web UI
