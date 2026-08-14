@@ -181,6 +181,42 @@ class TestMain(unittest.TestCase):
         self.assertEqual(group["current_value"], 100000)
         self.assertEqual(group["trade_value"], -50000)
 
+        amount_target = AssetManager.build_asset_allocation(
+            df_items,
+            {
+                "AAA": {"weight": 10, "target_amount": 75000},
+                "BBB": 50,
+            },
+        )
+        self.assertEqual(amount_target[0]["target_value"], 75000)
+        self.assertEqual(amount_target[0]["target_weight"], 75)
+        self.assertEqual(amount_target[0]["trade_value"], 15000)
+        self.assertEqual(amount_target[0]["action"], "買い")
+
+        inferred_weight = AssetManager.build_asset_allocation(
+            df_items, {"AAA": 60, "BBB": {"weight": None}}
+        )
+        self.assertEqual(inferred_weight[1]["target_weight"], 40)
+        self.assertEqual(inferred_weight[1]["target_value"], 40000)
+
+        inferred_weight_with_amount = AssetManager.build_asset_allocation(
+            df_items,
+            {
+                "AAA": {"weight": 30, "target_amount": 20000},
+                "BBB": {"weight": None},
+            },
+        )
+        self.assertEqual(inferred_weight_with_amount[1]["target_weight"], 80)
+        self.assertEqual(inferred_weight_with_amount[1]["target_value"], 80000)
+
+        multiple_missing_weights = AssetManager.build_asset_allocation(
+            df_items,
+            {"AAA": 60, "BBB": {"weight": None}, "CCC": {"weight": None}},
+        )
+        self.assertEqual(
+            [item["ticker"] for item in multiple_missing_weights], ["AAA"]
+        )
+
     def test_ocr_main(self, n: int = 3, offset: int = 0) -> None:
         ocr = Ocr()
         ocr.toast_enabled = False

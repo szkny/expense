@@ -85,12 +85,13 @@
       "tolerance_percent": 2.0,
       "target_weights": {
         "株式": {
-          "tickers": [],
-          "weight": 70
+          "tickers": ["QQQ"],
+          "weight": 90
         },
         "現金": {
-          "tickers": [],
-          "weight": 30
+          "tickers": ["現金(日本円)"],
+          "weight": 10,
+          "target_amount": 1000000
         }
       }
     }

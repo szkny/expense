@@ -52,18 +52,54 @@ class AssetManager(Base):
 
             current_valuations = df_items.groupby("ticker")["valuation"].sum()
             tolerance = max(float(tolerance_percent), 0.0)
-            allocation: list[dict[str, Any]] = []
-            for ticker, target in target_weights.items():
-                target_tickers: list[str] | None = None
+            missing_weight_count = 0
+            specified_weight_total = 0.0
+            for target in target_weights.values():
                 if isinstance(target, dict):
-                    target_tickers = target.get("tickers")
+                    if target.get("target_amount") is not None:
+                        try:
+                            target_amount = float(target["target_amount"])
+                        except (TypeError, ValueError):
+                            continue
+                        if target_amount < 0:
+                            continue
+                        specified_weight_total += (
+                            target_amount / total_valuation * 100
+                        )
+                        continue
                     target = target.get("weight")
+                if target is None:
+                    missing_weight_count += 1
+                    continue
                 try:
                     target_percent = float(target)
                 except (TypeError, ValueError):
                     continue
-                if target_percent < 0 or target_percent > 100:
-                    continue
+                if 0 <= target_percent <= 100:
+                    specified_weight_total += target_percent
+            allocation: list[dict[str, Any]] = []
+            for ticker, target in target_weights.items():
+                target_tickers: list[str] | None = None
+                target_amount: float | None = None
+                if isinstance(target, dict):
+                    target_tickers = target.get("tickers")
+                    if target.get("target_amount") is not None:
+                        try:
+                            target_amount = float(target["target_amount"])
+                        except (TypeError, ValueError):
+                            continue
+                        if target_amount < 0:
+                            continue
+                    target = target.get("weight")
+                if target_amount is None:
+                    if target is None and missing_weight_count == 1:
+                        target = 100 - specified_weight_total
+                    try:
+                        target_percent = float(target)
+                    except (TypeError, ValueError):
+                        continue
+                    if target_percent < 0 or target_percent > 100:
+                        continue
                 if target_tickers is None:
                     current_value = float(current_valuations.get(ticker, 0.0))
                 else:
@@ -77,8 +113,12 @@ class AssetManager(Base):
                         for target_ticker in target_tickers
                     )
                 current_percent = current_value / total_valuation * 100
+                if target_amount is not None:
+                    target_value = target_amount
+                    target_percent = target_value / total_valuation * 100
+                else:
+                    target_value = total_valuation * target_percent / 100
                 difference_percent = target_percent - current_percent
-                target_value = total_valuation * target_percent / 100
                 trade_value = target_value - current_value
                 within_tolerance = abs(difference_percent) <= tolerance
                 allocation.append(
