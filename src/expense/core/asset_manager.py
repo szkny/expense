@@ -52,66 +52,32 @@ class AssetManager(Base):
 
             current_valuations = df_items.groupby("ticker")["valuation"].sum()
             tolerance = max(float(tolerance_percent), 0.0)
-            missing_weight_count = 0
-            specified_weight_total = 0.0
-            for target in target_weights.values():
-                if isinstance(target, dict):
-                    if target.get("target_amount") is not None:
-                        try:
-                            target_amount = float(target["target_amount"])
-                        except (TypeError, ValueError):
-                            continue
-                        if target_amount < 0:
-                            continue
-                        specified_weight_total += (
-                            target_amount / total_valuation * 100
-                        )
-                        continue
-                    target = target.get("weight")
-                if target is None:
-                    missing_weight_count += 1
-                    continue
-                try:
-                    target_percent = float(target)
-                except (TypeError, ValueError):
-                    continue
-                if 0 <= target_percent <= 100:
-                    specified_weight_total += target_percent
+            missing_weight_count, specified_weight_total = (
+                AssetManager._get_weight_summary(
+                    target_weights, total_valuation
+                )
+            )
             allocation: list[dict[str, Any]] = []
-            for ticker, target in target_weights.items():
-                target_tickers: list[str] | None = None
-                target_amount: float | None = None
-                if isinstance(target, dict):
-                    target_tickers = target.get("tickers")
-                    if target.get("target_amount") is not None:
-                        try:
-                            target_amount = float(target["target_amount"])
-                        except (TypeError, ValueError):
-                            continue
-                        if target_amount < 0:
-                            continue
-                    target = target.get("weight")
+            for ticker, configured_target in target_weights.items():
+                parsed_target = AssetManager._parse_target(configured_target)
+                if parsed_target is None:
+                    continue
+                target, target_tickers, target_amount = parsed_target
                 if target_amount is None:
-                    if target is None and missing_weight_count == 1:
+                    if target is None:
+                        if missing_weight_count != 1:
+                            continue
                         target = 100 - specified_weight_total
-                    try:
-                        target_percent = float(target)
-                    except (TypeError, ValueError):
+                    target_percent = AssetManager._parse_percent(target)
+                    if target_percent is None:
                         continue
-                    if target_percent < 0 or target_percent > 100:
-                        continue
-                if target_tickers is None:
-                    current_value = float(current_valuations.get(ticker, 0.0))
                 else:
-                    if not isinstance(target_tickers, list) or not all(
-                        isinstance(target_ticker, str)
-                        for target_ticker in target_tickers
-                    ):
-                        continue
-                    current_value = sum(
-                        float(current_valuations.get(target_ticker, 0.0))
-                        for target_ticker in target_tickers
-                    )
+                    target_percent = target_amount / total_valuation * 100
+                current_value = AssetManager._get_current_value(
+                    current_valuations, ticker, target_tickers
+                )
+                if current_value is None:
+                    continue
                 current_percent = current_value / total_valuation * 100
                 if target_amount is not None:
                     target_value = target_amount
@@ -139,6 +105,70 @@ class AssetManager(Base):
             return allocation
         finally:
             log.info("end 'build_asset_allocation' method")
+
+    @staticmethod
+    def _parse_target(
+        target: Any,
+    ) -> tuple[Any, list[str] | None, float | None] | None:
+        target_tickers: list[str] | None = None
+        target_amount: float | None = None
+        if isinstance(target, dict):
+            target_tickers = target.get("tickers")
+            if target.get("target_amount") is not None:
+                try:
+                    target_amount = float(target["target_amount"])
+                except (TypeError, ValueError):
+                    return None
+                if target_amount < 0:
+                    return None
+            target = target.get("weight")
+        return target, target_tickers, target_amount
+
+    @staticmethod
+    def _parse_percent(value: Any) -> float | None:
+        try:
+            percent = float(value)
+        except (TypeError, ValueError):
+            return None
+        return percent if 0 <= percent <= 100 else None
+
+    @staticmethod
+    def _get_weight_summary(
+        target_weights: dict[str, Any], total_valuation: float
+    ) -> tuple[int, float]:
+        missing_count = 0
+        specified_total = 0.0
+        for configured_target in target_weights.values():
+            parsed_target = AssetManager._parse_target(configured_target)
+            if parsed_target is None:
+                continue
+            target, _, target_amount = parsed_target
+            if target_amount is not None:
+                specified_total += target_amount / total_valuation * 100
+            elif target is None:
+                missing_count += 1
+            else:
+                target_percent = AssetManager._parse_percent(target)
+                if target_percent is not None:
+                    specified_total += target_percent
+        return missing_count, specified_total
+
+    @staticmethod
+    def _get_current_value(
+        current_valuations: pd.Series,
+        ticker: str,
+        target_tickers: list[str] | None,
+    ) -> float | None:
+        if target_tickers is None:
+            return float(current_valuations.get(ticker, 0.0))
+        if not isinstance(target_tickers, list) or not all(
+            isinstance(target_ticker, str) for target_ticker in target_tickers
+        ):
+            return None
+        return sum(
+            float(current_valuations.get(target_ticker, 0.0))
+            for target_ticker in target_tickers
+        )
 
     @retry(stop=stop_after_attempt(3))
     def get_live_price(self, ticker: str) -> float | None:
