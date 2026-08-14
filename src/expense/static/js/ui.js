@@ -289,6 +289,58 @@ export function initRecordEditor() {
   });
 }
 
+export function initAssetAllocationLongPress() {
+  const overlay = document.getElementById("allocation-tickers-overlay");
+  const dialog = document.getElementById("allocation-tickers-dialog");
+  const list = document.getElementById("allocation-tickers-list");
+  const closeBtn = document.getElementById("allocation-tickers-close-btn");
+  const rows = document.querySelectorAll("#asset-allocation-container tbody tr");
+  if (!overlay || !dialog || !list || !closeBtn || !rows.length) return;
+
+  let pressTimer;
+  const close = () => {
+    overlay.style.display = "none";
+  };
+  const show = (row) => {
+    let tickers;
+    try {
+      tickers = JSON.parse(row.dataset.tickers || "null");
+    } catch {
+      return;
+    }
+    if (!Array.isArray(tickers) || !tickers.length) return;
+
+    list.replaceChildren(
+      ...tickers.map((ticker) => {
+        const item = document.createElement("li");
+        item.textContent = ticker;
+        return item;
+      }),
+    );
+    overlay.style.display = "flex";
+  };
+  const cancel = () => clearTimeout(pressTimer);
+  const start = (row) => {
+    cancel();
+    pressTimer = setTimeout(() => show(row), 500);
+  };
+
+  rows.forEach((row) => {
+    row.addEventListener("contextmenu", (event) => event.preventDefault());
+    row.addEventListener("mousedown", () => start(row));
+    row.addEventListener("mouseup", cancel);
+    row.addEventListener("mouseleave", cancel);
+    row.addEventListener("touchstart", () => start(row), { passive: true });
+    row.addEventListener("touchend", cancel);
+    row.addEventListener("touchmove", cancel);
+  });
+
+  closeBtn.addEventListener("click", close);
+  overlay.addEventListener("click", (event) => {
+    if (!dialog.contains(event.target)) close();
+  });
+}
+
 export function initMemoAutocomplete() {
   const memoInputs = [
     document.getElementById("expense-memo"),

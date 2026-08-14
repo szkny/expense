@@ -84,6 +84,7 @@ class AssetManager(Base):
                 allocation.append(
                     {
                         "ticker": ticker,
+                        "tickers": target_tickers,
                         "target_weight": target_percent,
                         "current_weight": current_percent,
                         "target_value": target_value,

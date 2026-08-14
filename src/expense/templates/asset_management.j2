@@ -120,7 +120,7 @@
             </thead>
             <tbody>
               {% for allocation in asset_allocation %}
-              <tr>
+              <tr data-tickers='{{ allocation.tickers | tojson }}'>
                 <td>{{ allocation.ticker }}</td>
                 <td>{{ "{:.2f}".format(allocation.current_weight) }}%</td>
                 <td>{{ "{:.2f}".format(allocation.target_weight) }}%</td>
@@ -137,6 +137,14 @@
         {% else %}
         <p>config.json の asset_management.allocation.target_weights に目標比率を設定してください。</p>
         {% endif %}
+      </div>
+    </div>
+
+    <div id="allocation-tickers-overlay" class="overlay" style="display: none;">
+      <div id="allocation-tickers-dialog" class="confirm allocation-tickers-dialog">
+        <h3>グループ内の銘柄</h3>
+        <button id="allocation-tickers-close-btn" type="button" class="btn-close">✕</button>
+        <ul id="allocation-tickers-list"></ul>
       </div>
     </div>
 

@@ -522,6 +522,16 @@ tr:nth-child(even) {
   /* justify-content: flex-end; */
 }
 
+.allocation-tickers-dialog {
+  width: 70%;
+  max-width: 320px;
+}
+
+#allocation-tickers-list {
+  margin: 12px 0 0;
+  padding-left: 24px;
+}
+
 .space {
   margin: 30px;
 }

@@ -15,6 +15,7 @@ import {
   initAssetMasking,
   initMemoAutocomplete,
   initChartReloadUI,
+  initAssetAllocationLongPress,
 } from "./ui.js";
 
 function onDOMContentLoaded() {
@@ -33,6 +34,7 @@ function onDOMContentLoaded() {
   initAssetMasking();
   initMemoAutocomplete();
   initSimulator();
+  initAssetAllocationLongPress();
 }
 
 if (document.readyState === "loading") {

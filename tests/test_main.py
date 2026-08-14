@@ -177,6 +177,7 @@ class TestMain(unittest.TestCase):
         )
         group = grouped_target[2]
         self.assertEqual(group["ticker"], "米国株")
+        self.assertEqual(group["tickers"], ["AAA", "BBB"])
         self.assertEqual(group["current_value"], 100000)
         self.assertEqual(group["trade_value"], -50000)
 
