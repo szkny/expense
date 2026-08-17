@@ -156,24 +156,6 @@ export function initScreenshotZoom() {
 
 export function initCollapsibleSections() {
   const triggers = document.querySelectorAll(".collapsible-trigger");
-
-  triggers.forEach((trigger) => {
-    const key = trigger.dataset.key;
-    if (!key) return;
-
-    const isCollapsed = localStorage.getItem(`${key}Collapsed`) === "true";
-    const openClass = `${key}-open`;
-    const collapsedClass = `${key}-collapsed`;
-
-    if (isCollapsed) {
-      document.documentElement.classList.add(collapsedClass);
-      document.documentElement.classList.remove(openClass);
-    } else {
-      document.documentElement.classList.add(openClass);
-      document.documentElement.classList.remove(collapsedClass);
-    }
-  });
-
   const onOpenCallbacks = {
     report: () =>
       requestAnimationFrame(() =>
@@ -186,26 +168,33 @@ export function initCollapsibleSections() {
   };
 
   triggers.forEach((trigger) => {
+    const key = trigger.dataset.key;
+    if (!key) return;
+
+    const container = trigger.closest(".card")?.querySelector(
+      ".collapsible-content",
+    );
+    const isCollapsed = localStorage.getItem(`${key}Collapsed`) === "true";
+    const openClass = `${key}-open`;
+    const collapsedClass = `${key}-collapsed`;
+    const setCollapsed = (collapsed) => {
+      document.documentElement.classList.toggle(collapsedClass, collapsed);
+      document.documentElement.classList.toggle(openClass, !collapsed);
+      container?.classList.toggle("is-open", !collapsed);
+      trigger.setAttribute("aria-expanded", String(!collapsed));
+    };
+
+    setCollapsed(isCollapsed);
+
     trigger.addEventListener("click", () => {
-      const key = trigger.dataset.key;
-      if (!key) return;
+      const collapsed = !document.documentElement.classList.contains(
+        collapsedClass,
+      );
+      setCollapsed(collapsed);
+      localStorage.setItem(`${key}Collapsed`, String(collapsed));
 
-      const openClass = `${key}-open`;
-      const collapsedClass = `${key}-collapsed`;
-      const isCollapsed =
-        document.documentElement.classList.contains(collapsedClass);
-
-      if (isCollapsed) {
-        document.documentElement.classList.remove(collapsedClass);
-        document.documentElement.classList.add(openClass);
-        localStorage.setItem(`${key}Collapsed`, "false");
-        if (onOpenCallbacks[key]) {
-          onOpenCallbacks[key]();
-        }
-      } else {
-        document.documentElement.classList.remove(openClass);
-        document.documentElement.classList.add(collapsedClass);
-        localStorage.setItem(`${key}Collapsed`, "true");
+      if (!collapsed && onOpenCallbacks[key]) {
+        onOpenCallbacks[key]();
       }
     });
   });

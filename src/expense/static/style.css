@@ -361,38 +361,15 @@ img.screenshot {
   overflow: hidden;
   opacity: 0;
   transition:
-    max-height 0.5s ease,
-    opacity 0.5s ease;
-}
-
-/* TODO: refactor */
-.register-open #register-container,
-.ocr-open #ocr-container,
-.record-open #record-container,
-.report-open #report-container,
-.asset-record-open #asset-record-container,
-.asset-chart-open #asset-chart-container,
-.asset-allocation-open #asset-allocation-container,
-.asset-report-open #asset-report-container {
-  max-height: 10000px;
-  opacity: 1;
-}
-
-/* TODO: refactor */
-.register-collapsed #register-container,
-.ocr-collapsed #ocr-container,
-.record-collapsed #record-container,
-.report-collapsed #report-container,
-.asset-record-collapsed #asset-record-container,
-.asset-chart-collapsed #asset-chart-container,
-.asset-allocation-collapsed #asset-allocation-container,
-.asset-report-collapsed #asset-report-container {
-  max-height: 0;
-  overflow: hidden;
-  opacity: 0;
-  transition:
     max-height 0.2s ease,
     opacity 0.2s ease;
+}
+
+.collapsible-content.is-open,
+.card:has(.collapsible-trigger[aria-expanded="true"])
+  .collapsible-content {
+  max-height: 10000px;
+  opacity: 1;
 }
 
 .collapsible-toggle {
