@@ -192,34 +192,152 @@ class AssetManager(Base):
         finally:
             log.info("end 'get_live_price' method")
 
+    @staticmethod
+    def _flatten_values(
+        values: list[list[Any]], rows: int, columns: int
+    ) -> list[Any]:
+        padded_rows = [
+            row[:columns] + [""] * max(columns - len(row), 0)
+            for row in values[:rows]
+        ]
+        padded_rows.extend([[""] * columns] * (rows - len(padded_rows)))
+        return [value for row in padded_rows for value in row]
+
+    @staticmethod
+    def _parse_table_data(item_list: list[Any]) -> pd.DataFrame:
+        df = pd.DataFrame(item_list)
+        df = pd.DataFrame(df.to_numpy().reshape(len(item_list) // 10, 10))
+        df.columns = pd.Index(df.iloc[0], name=None)
+        df = df.drop(0).replace("", pd.NA).replace("#N/A", "0").dropna()
+        df = df.map(lambda s: re.sub("[$¥%,]", "", s))
+        df.iloc[:, 1:] = df.iloc[:, 1:].astype(float)
+        df.columns = pd.Index(
+            [
+                "ticker",
+                "num",
+                "acquisition",
+                "price_dollar",
+                "price",
+                "invest_amount",
+                "valuation",
+                "profit",
+                "weight",
+                "roi",
+            ]
+        )
+        return df
+
+    @staticmethod
+    def _parse_header_data(item_list: list[Any]) -> pd.DataFrame:
+        df = pd.DataFrame(item_list)
+        df = pd.DataFrame(df.to_numpy().reshape(len(item_list) // 8, 8))
+        df.columns = pd.Index(df.iloc[0], name=None)
+        df = df.drop(0).replace("", pd.NA).replace("#N/A", "0").dropna()
+        df = df.map(lambda s: re.sub("[$¥%,]", "", s))
+        df = df.astype(float)
+        df.columns = pd.Index(
+            [
+                "total",
+                "profit",
+                "profit_etf",
+                "roi",
+                "change_jpy",
+                "change_pct",
+                "drawdown",
+                "usdjpy",
+            ]
+        )
+        return df
+
+    @staticmethod
+    def _parse_stock_info_data(item_list: list[Any]) -> pd.DataFrame:
+        df = pd.DataFrame(item_list)
+        df = pd.DataFrame(df.to_numpy().reshape(len(item_list) // 14, 14))
+        df.columns = pd.Index(df.iloc[0], name=None)
+        cols = [c for c in df.columns if "チャート" not in c]
+        df = df[cols]
+        df.set_index("No", inplace=True)
+        df = df.map(lambda s: re.sub("[$¥%,+ー]", "", s))
+        df = df.iloc[1:]
+        df = df.replace("", pd.NA).replace("#N/A", pd.NA).dropna(how="all")
+        df.iloc[:, 1:] = df.iloc[:, 1:].astype("Float64")
+        df.columns = pd.Index(
+            [
+                "ticker",
+                "price",
+                "change_pct",
+                "change_pct_weekly",
+                "change_pct_monthly",
+                "drawdown",
+                "change_pct_yen",
+                "change_yen",
+                "valuation",
+                "profit",
+                "roi",
+            ]
+        )
+        return df
+
+    @staticmethod
+    def _parse_monthly_history_data(item_list: list[Any]) -> pd.DataFrame:
+        df = pd.DataFrame(item_list)
+        df = pd.DataFrame(df.to_numpy().reshape(len(item_list) // 5, 5))
+        df.columns = pd.Index(df.iloc[0], name=None)
+        df = df.drop(0).replace("", pd.NA).replace("#N/A", "0").dropna()
+        df = df.map(lambda s: re.sub("[$¥%,]", "", s))
+        df.columns = pd.Index(
+            ["date", "invest_amount", "valuation", "profit", "roi"]
+        )
+        df["date"] = pd.to_datetime(df["date"])
+        df.iloc[:, 1:] = df.iloc[:, 1:].astype(float)
+        return df
+
+    @retry(stop=stop_after_attempt(3))
+    def get_asset_data(
+        self,
+    ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+        """Get all asset-management ranges in one Sheets API request."""
+        log.info("start 'get_asset_data' method")
+        try:
+            ranges = [
+                "'ポートフォリオ'!A1:H2",
+                "'ポートフォリオ'!A4:J15",
+                "'資産推移 月次'!G18:K500",
+                "'株価情報'!A2:N15",
+            ]
+            response = self.workbook.values_batch_get(ranges)
+            value_ranges = response.get("valueRanges", [])
+            if len(value_ranges) != len(ranges):
+                raise ValueError("incomplete response from values_batch_get")
+
+            header_values = self._flatten_values(
+                value_ranges[0].get("values", []), 2, 8
+            )
+            table_values = self._flatten_values(
+                value_ranges[1].get("values", []), 12, 10
+            )
+            monthly_values = self._flatten_values(
+                value_ranges[2].get("values", []), 483, 5
+            )
+            stock_values = self._flatten_values(
+                value_ranges[3].get("values", []), 14, 14
+            )
+            return (
+                self._parse_header_data(header_values),
+                self._parse_table_data(table_values),
+                self._parse_monthly_history_data(monthly_values),
+                self._parse_stock_info_data(stock_values),
+            )
+        finally:
+            log.info("end 'get_asset_data' method")
+
     @retry(stop=stop_after_attempt(3))
     def get_table_data(self, cell_range: str = "A4:J15") -> pd.DataFrame:
         log.info("start 'get_table_data' method")
         try:
             cells = self.sheet.range(cell_range)
             item_list = [c.value for c in cells]
-            df = pd.DataFrame(item_list)
-            df = pd.DataFrame(df.to_numpy().reshape(len(item_list) // 10, 10))
-            df.columns = pd.Index(df.iloc[0], name=None)
-            df = df.drop(0).replace("", pd.NA).replace("#N/A", "0").dropna()
-            df = df.map(lambda s: re.sub("[$¥%,]", "", s))
-            df.iloc[:, 1:] = df.iloc[:, 1:].astype(float)
-            df.columns = pd.Index(
-                [
-                    "ticker",
-                    "num",
-                    "acquisition",
-                    "price_dollar",
-                    "price",
-                    "invest_amount",
-                    "valuation",
-                    "profit",
-                    "weight",
-                    "roi",
-                ]
-            )
-            # log.debug(f"df:\n{df}")
-            return df
+            return self._parse_table_data(item_list)
         except Exception:
             log.exception("Error occurred.")
             return pd.DataFrame(
@@ -245,26 +363,7 @@ class AssetManager(Base):
         try:
             cells = self.sheet.range(cell_range)
             item_list = [c.value for c in cells]
-            df = pd.DataFrame(item_list)
-            df = pd.DataFrame(df.to_numpy().reshape(len(item_list) // 8, 8))
-            df.columns = pd.Index(df.iloc[0], name=None)
-            df = df.drop(0).replace("", pd.NA).replace("#N/A", "0").dropna()
-            df = df.map(lambda s: re.sub("[$¥%,]", "", s))
-            df = df.astype(float)
-            df.columns = pd.Index(
-                [
-                    "total",
-                    "profit",
-                    "profit_etf",
-                    "roi",
-                    "change_jpy",
-                    "change_pct",
-                    "drawdown",
-                    "usdjpy",
-                ]
-            )
-            # log.debug(f"df:\n{df}")
-            return df
+            return self._parse_header_data(item_list)
         except Exception:
             log.exception("Error occurred.")
             return pd.DataFrame(

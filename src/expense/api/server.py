@@ -95,10 +95,12 @@ def get_cached_asset_table(
                 )
 
             log.debug("generate new DataFrame")
-            df_summary = asset_manager.get_header_data()
-            df_items = asset_manager.get_table_data()
-            df_records = asset_manager.get_monthly_history_data()
-            df_stock = asset_manager.get_stock_info_data()
+            (
+                df_summary,
+                df_items,
+                df_records,
+                df_stock,
+            ) = asset_manager.get_asset_data()
             df_jpy = df_items.query("ticker=='現金(日本円)'")
             df_stock = pd.concat(
                 [
