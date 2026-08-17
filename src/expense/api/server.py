@@ -243,6 +243,11 @@ def asset_management(
     asset_allocation = asset_manager.build_asset_allocation(
         df_items, target_weights, tolerance_percent
     )
+    allocation_adjustments = [
+        allocation["ticker"]
+        for allocation in asset_allocation
+        if allocation["action"] != "調整不要"
+    ]
     asset_tickers = [
         t for t in df_stock["ticker"].dropna().unique().tolist() if t != "JPY"
     ]
@@ -263,6 +268,7 @@ def asset_management(
             "asset_summary": summary,
             "asset_items": items,
             "asset_allocation": asset_allocation,
+            "allocation_adjustments": allocation_adjustments,
             "allocation_tolerance_percent": tolerance_percent,
             "asset_tickers": asset_tickers,
             "plotlyjs": plotlyjs,

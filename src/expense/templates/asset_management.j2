@@ -28,6 +28,14 @@
   <div class="container">
     <h1> {{ icons.get("title", "") }} Asset Management </h1>
 
+    {% if allocation_adjustments %}
+    <div class="msg" id="success-msg">
+      アセットアロケーションに調整が必要な項目があります。
+      <p><strong>{{ allocation_adjustments | join("、") }}</strong></p>
+      <button id="msg-close-btn" type="button" class="btn-close"> ✕ </button>
+    </div>
+    {% endif %}
+
     <div class="card">
       <div class="asset-chart-header">
         <h3 class="collapsible-trigger" data-key="asset-report">
