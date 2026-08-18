@@ -31,6 +31,12 @@ asset_manager: AssetManager = AssetManager()
 _df_cache_record: dict = {}
 _df_cache_asset_table: dict = {}
 _df_cache_asset_table_lock = threading.Lock()
+_ASSET_CACHE_TTL: dict[str, int] = {
+    "df_summary": 30,
+    "df_stock": 30,
+    "df_items": 300,
+    "df_records": 86400,
+}
 
 
 def get_cached_records(
@@ -62,75 +68,74 @@ def get_cached_records(
 
 def get_cached_asset_table(
     asset_manager: AssetManager,
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     log.info("start 'get_cached_asset_table' method")
     try:
-        now = dt.datetime.now()
-        cache_life_time = (
-            now - _df_cache_asset_table.get("timestamp", now)
-        ).total_seconds()
-        log.debug(f"lapsed time of latest cache: {cache_life_time: ,.1f} s")
-        if _df_cache_asset_table and cache_life_time < 30:
-            log.debug("returning cache DataFrame (< 30s)")
-            return (
-                pd.DataFrame(_df_cache_asset_table.get("df_summary")),
-                pd.DataFrame(_df_cache_asset_table.get("df_items")),
-                pd.DataFrame(_df_cache_asset_table.get("df_records")),
-                pd.DataFrame(_df_cache_asset_table.get("df_stock")),
-            )
+        expired_keys = _get_expired_asset_cache_keys()
+        if not expired_keys:
+            log.debug("returning asset cache")
+            return _get_asset_cache_dataframes()
 
         # Prevent concurrent requests from refreshing the same snapshot.
         with _df_cache_asset_table_lock:
-            now = dt.datetime.now()
-            cache_life_time = (
-                now - _df_cache_asset_table.get("timestamp", now)
-            ).total_seconds()
-            if _df_cache_asset_table and cache_life_time < 30:
-                log.debug("returning cache DataFrame after waiting for refresh")
-                return (
-                    pd.DataFrame(_df_cache_asset_table.get("df_summary")),
-                    pd.DataFrame(_df_cache_asset_table.get("df_items")),
-                    pd.DataFrame(_df_cache_asset_table.get("df_records")),
-                    pd.DataFrame(_df_cache_asset_table.get("df_stock")),
-                )
+            expired_keys = _get_expired_asset_cache_keys()
+            if not expired_keys:
+                log.debug("returning asset cache after waiting for refresh")
+                return _get_asset_cache_dataframes()
 
-            log.debug("generate new DataFrame")
-            (
-                df_summary,
-                df_items,
-                df_records,
-                df_stock,
-            ) = asset_manager.get_asset_data()
-            df_jpy = df_items.query("ticker=='現金(日本円)'")
-            df_stock = pd.concat(
-                [
-                    df_stock,
-                    pd.DataFrame(
-                        dict(
-                            ticker=["JPY"],
-                            price=[pd.NA],
-                            change_pct=[0],
-                            change_pct_weekly=[0],
-                            change_pct_monthly=[0],
-                            drawdown=[0],
-                            change_pct_yen=[0],
-                            change_yen=[0],
-                            valuation=[df_jpy["valuation"].iloc[0]],
-                            profit=[0],
-                            roi=[0],
-                        )
-                    ),
-                ]
-            )
-            df_stock.index = range(1, len(df_stock) + 1)
-            _df_cache_asset_table["df_summary"] = df_summary
-            _df_cache_asset_table["df_items"] = df_items
-            _df_cache_asset_table["df_records"] = df_records
-            _df_cache_asset_table["df_stock"] = df_stock
-            _df_cache_asset_table["timestamp"] = dt.datetime.now()
-            return (df_summary, df_items, df_records, df_stock)
+            log.debug(f"refreshing asset data: {expired_keys}")
+            data = asset_manager.get_asset_data(set(expired_keys))
+            refreshed_at = dt.datetime.now()
+            for key, dataframe in data.items():
+                _df_cache_asset_table[key] = dataframe
+                _df_cache_asset_table[f"{key}_timestamp"] = refreshed_at
+            return _get_asset_cache_dataframes()
     finally:
         log.info("end 'get_cached_asset_table' method")
+
+
+def _get_expired_asset_cache_keys() -> list[str]:
+    now = dt.datetime.now()
+    return [
+        key
+        for key, ttl in _ASSET_CACHE_TTL.items()
+        if key not in _df_cache_asset_table
+        or (
+            now - _df_cache_asset_table.get(f"{key}_timestamp", now)
+        ).total_seconds()
+        >= ttl
+    ]
+
+
+def _get_asset_cache_dataframes(
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    df_summary = pd.DataFrame(_df_cache_asset_table.get("df_summary"))
+    df_items = pd.DataFrame(_df_cache_asset_table.get("df_items"))
+    df_records = pd.DataFrame(_df_cache_asset_table.get("df_records"))
+    df_stock = pd.DataFrame(_df_cache_asset_table.get("df_stock"))
+    df_jpy = df_items.query("ticker=='現金(日本円)'")
+    df_stock = pd.concat(
+        [
+            df_stock,
+            pd.DataFrame(
+                dict(
+                    ticker=["JPY"],
+                    price=[pd.NA],
+                    change_pct=[0],
+                    change_pct_weekly=[0],
+                    change_pct_monthly=[0],
+                    drawdown=[0],
+                    change_pct_yen=[0],
+                    change_yen=[0],
+                    valuation=[df_jpy["valuation"].iloc[0]],
+                    profit=[0],
+                    roi=[0],
+                )
+            ),
+        ]
+    )
+    df_stock.index = range(1, len(df_stock) + 1)
+    return df_summary, df_items, df_records, df_stock
 
 
 @app.middleware("http")

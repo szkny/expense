@@ -76,7 +76,7 @@ class AssetManagerBatchGetTest(unittest.TestCase):
             ]
         )
 
-        summary, items, history, stock = manager.get_asset_data()
+        dataframes = manager.get_asset_data()
 
         self.assertEqual(
             manager.workbook.requested_ranges,
@@ -87,10 +87,24 @@ class AssetManagerBatchGetTest(unittest.TestCase):
                 "'株価情報'!A2:N15",
             ],
         )
-        self.assertEqual(summary.iloc[0]["total"], 100.0)
-        self.assertEqual(items.iloc[0]["ticker"], "VTI")
-        self.assertEqual(history.iloc[0]["valuation"], 110.0)
-        self.assertEqual(stock.iloc[0]["ticker"], "VTI")
+        self.assertEqual(dataframes["df_summary"].iloc[0]["total"], 100.0)
+        self.assertEqual(dataframes["df_items"].iloc[0]["ticker"], "VTI")
+        self.assertEqual(dataframes["df_records"].iloc[0]["valuation"], 110.0)
+        self.assertEqual(dataframes["df_stock"].iloc[0]["ticker"], "VTI")
+
+    def test_get_asset_data_requests_only_selected_ranges(self) -> None:
+        manager = object.__new__(AssetManager)
+        manager.workbook = FakeWorkbook(
+            [{"values": [["total", "profit", "profit_etf", "roi", "change_jpy", "change_pct", "drawdown", "usdjpy"], ["100", "10", "5", "10", "2", "1", "3", "150"]]}]
+        )
+
+        dataframes = manager.get_asset_data({"df_summary"})
+
+        self.assertEqual(
+            manager.workbook.requested_ranges,
+            ["'ポートフォリオ'!A1:H2"],
+        )
+        self.assertEqual(dataframes["df_summary"].iloc[0]["total"], 100.0)
 
 
 if __name__ == "__main__":

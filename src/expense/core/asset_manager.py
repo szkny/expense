@@ -295,39 +295,41 @@ class AssetManager(Base):
     @retry(stop=stop_after_attempt(3))
     def get_asset_data(
         self,
-    ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-        """Get all asset-management ranges in one Sheets API request."""
+        data_types: set[str] | None = None,
+    ) -> dict[str, pd.DataFrame]:
+        """Get selected asset-management ranges in one Sheets API request."""
         log.info("start 'get_asset_data' method")
         try:
-            ranges = [
-                "'ポートフォリオ'!A1:H2",
-                "'ポートフォリオ'!A4:J15",
-                "'資産推移 月次'!G18:K500",
-                "'株価情報'!A2:N15",
+            specs = [
+                ("df_summary", "'ポートフォリオ'!A1:H2", 2, 8),
+                ("df_items", "'ポートフォリオ'!A4:J15", 12, 10),
+                ("df_records", "'資産推移 月次'!G18:K500", 483, 5),
+                ("df_stock", "'株価情報'!A2:N15", 14, 14),
             ]
+            selected_specs = [
+                spec for spec in specs if data_types is None or spec[0] in data_types
+            ]
+            ranges = [spec[1] for spec in selected_specs]
             response = self.workbook.values_batch_get(ranges)
             value_ranges = response.get("valueRanges", [])
             if len(value_ranges) != len(ranges):
                 raise ValueError("incomplete response from values_batch_get")
 
-            header_values = self._flatten_values(
-                value_ranges[0].get("values", []), 2, 8
-            )
-            table_values = self._flatten_values(
-                value_ranges[1].get("values", []), 12, 10
-            )
-            monthly_values = self._flatten_values(
-                value_ranges[2].get("values", []), 483, 5
-            )
-            stock_values = self._flatten_values(
-                value_ranges[3].get("values", []), 14, 14
-            )
-            return (
-                self._parse_header_data(header_values),
-                self._parse_table_data(table_values),
-                self._parse_monthly_history_data(monthly_values),
-                self._parse_stock_info_data(stock_values),
-            )
+            dataframes: dict[str, pd.DataFrame] = {}
+            for spec, value_range in zip(selected_specs, value_ranges):
+                key, _, rows, columns = spec
+                values = self._flatten_values(
+                    value_range.get("values", []), rows, columns
+                )
+                if key == "df_summary":
+                    dataframes[key] = self._parse_header_data(values)
+                elif key == "df_items":
+                    dataframes[key] = self._parse_table_data(values)
+                elif key == "df_records":
+                    dataframes[key] = self._parse_monthly_history_data(values)
+                else:
+                    dataframes[key] = self._parse_stock_info_data(values)
+            return dataframes
         finally:
             log.info("end 'get_asset_data' method")
 
