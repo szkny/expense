@@ -29,6 +29,7 @@ gspread_handler: GspreadHandler = GspreadHandler(
 )
 asset_manager: AssetManager = AssetManager()
 _df_cache_record: dict = {}
+_df_cache_record_lock = threading.Lock()
 _df_cache_asset_table: dict = {}
 _df_cache_asset_table_lock = threading.Lock()
 _ASSET_CACHE_TTL: dict[str, int] = {
@@ -44,26 +45,40 @@ def get_cached_records(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     log.info("start 'get_cached_records' method")
     try:
-        now = dt.datetime.now()
-        cache_life_time = (
-            now - _df_cache_record.get("timestamp", now)
-        ).total_seconds()
-        log.debug(f"lapsed time of latest cache: {cache_life_time: ,.1f} s")
-        if _df_cache_record and cache_life_time < 30:
+        if _is_record_cache_valid():
             log.debug("returning cache DataFrame (< 30s)")
-            return (
-                pd.DataFrame(_df_cache_record.get("df_records")),
-                pd.DataFrame(_df_cache_record.get("df_annual")),
-            )
+            return _get_record_cache_dataframes()
 
-        log.debug("generate new DataFrame")
-        df_records, df_annual = get_dataframes(server_tools)
-        _df_cache_record["df_records"] = df_records
-        _df_cache_record["df_annual"] = df_annual
-        _df_cache_record["timestamp"] = now
-        return df_records, df_annual
+        with _df_cache_record_lock:
+            if _is_record_cache_valid():
+                log.debug("returning cache DataFrame after waiting for refresh")
+                return _get_record_cache_dataframes()
+
+            log.debug("generate new DataFrame")
+            df_records, df_annual = get_dataframes(server_tools)
+            _df_cache_record["df_records"] = df_records
+            _df_cache_record["df_annual"] = df_annual
+            _df_cache_record["timestamp"] = dt.datetime.now()
+            return df_records, df_annual
     finally:
         log.info("end 'get_cached_records' method")
+
+
+def _is_record_cache_valid() -> bool:
+    if not _df_cache_record:
+        return False
+    now = dt.datetime.now()
+    cache_life_time = (
+        now - _df_cache_record.get("timestamp", now)
+    ).total_seconds()
+    return cache_life_time < 30
+
+
+def _get_record_cache_dataframes() -> tuple[pd.DataFrame, pd.DataFrame]:
+    return (
+        pd.DataFrame(_df_cache_record.get("df_records")),
+        pd.DataFrame(_df_cache_record.get("df_annual")),
+    )
 
 
 def get_cached_asset_table(
