@@ -908,6 +908,25 @@ class GraphGenerator(Base):
             )
         )
 
+        # 支出の合計を折れ線として追加
+        fig.add_trace(
+            go.Scatter(
+                x=df_expense["month"],
+                y=df_expense["expense_amount"],
+                mode="lines+markers",
+                name="支出",
+                line=dict(
+                    color="#999999" if theme == "dark" else "#666666",
+                    dash="solid",
+                    width=0.5
+                ),
+                marker=dict(
+                    size=4
+                ),
+                hovertemplate="%{x|%-Y年%-m月}<br>支出: ¥%{y:,.0f}<extra></extra>",
+            )
+        )
+
         self._add_bar_chart_labels(
             fig,
             df_graph,
