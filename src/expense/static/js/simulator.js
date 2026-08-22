@@ -10,11 +10,11 @@ const PARAMS = {
   currentAge: 32,
   independenceAge: 37,
   targetAge: 40,
-  currentAssets: 3920,
+  currentAssets: 0,
   monthlyReturn: 5,
-  salaryMonthlyInvestment: 30,
-  freelanceIncome: 60,
-  monthlyExpense: 33,
+  salaryMonthlyInvestment: 0,
+  freelanceIncome: 0,
+  monthlyExpense: 0,
 };
 
 function calcProjection(params) {
@@ -62,6 +62,8 @@ function updateUI() {
   const monthlyInvestmentAfter = Math.max(0, monthlyBalance);
 
   // Update values display
+  document.getElementById("val-currentAge").textContent =
+    `${PARAMS.currentAge}歳`;
   document.getElementById("val-independenceAge").textContent =
     `${PARAMS.independenceAge}歳`;
   document.getElementById("val-salaryMonthlyInvestment").textContent =
@@ -236,11 +238,32 @@ export function initSimulator() {
   const app = document.getElementById("sim-app");
   if (!app) return;
 
-  PARAMS.currentAssets = parseInt(app.dataset.currentAssets || "3920");
+  const storedAge = Number(localStorage.getItem("expense.simulator.currentAge"));
+  if (Number.isInteger(storedAge) && storedAge >= 18 && storedAge <= 45) {
+    PARAMS.currentAge = storedAge;
+  }
+  PARAMS.currentAssets = Number(app.dataset.currentAssets || "0");
+  PARAMS.salaryMonthlyInvestment = Number(
+    app.dataset.monthlyInvestment || "0",
+  );
+  PARAMS.freelanceIncome = Number(app.dataset.monthlyIncome || "0");
+  PARAMS.monthlyExpense = Number(app.dataset.monthlyExpense || "0");
+  document.getElementById("input-currentAge").value = PARAMS.currentAge;
+  document.getElementById("input-independenceAge").min = String(
+    PARAMS.currentAge + 1,
+  );
+  document.getElementById("input-independenceAge").value =
+    PARAMS.independenceAge;
+  document.getElementById("input-salaryMonthlyInvestment").value =
+    PARAMS.salaryMonthlyInvestment;
+  document.getElementById("input-freelanceIncome").value =
+    PARAMS.freelanceIncome;
+  document.getElementById("input-monthlyExpense").value = PARAMS.monthlyExpense;
   document.getElementById("footer-current-assets").textContent =
     PARAMS.currentAssets.toLocaleString();
 
   const inputs = [
+    "currentAge",
     "independenceAge",
     "salaryMonthlyInvestment",
     "freelanceIncome",
@@ -263,6 +286,20 @@ export function initSimulator() {
     if (input) {
       input.addEventListener("input", (e) => {
         PARAMS[key] = Number(e.target.value);
+        if (key === "currentAge") {
+          localStorage.setItem(
+            "expense.simulator.currentAge",
+            PARAMS.currentAge,
+          );
+          const independenceInput = document.getElementById(
+            "input-independenceAge",
+          );
+          independenceInput.min = String(PARAMS.currentAge + 1);
+          if (PARAMS.independenceAge <= PARAMS.currentAge) {
+            PARAMS.independenceAge = PARAMS.currentAge + 1;
+            independenceInput.value = PARAMS.independenceAge;
+          }
+        }
         updateScenarioStatus(null);
         updateUI();
       });

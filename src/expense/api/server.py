@@ -296,6 +296,50 @@ def asset_management(
     )
 
 
+def get_simulation_averages(
+    records: list[dict],
+    income_types: list[str],
+    exclude_types: list[str],
+    today: dt.date,
+    average_months: int,
+) -> tuple[int, int, int]:
+    """今月を除く直近Nカ月の月次収支平均を万円で返す"""
+    months = max(1, average_months)
+    month_totals: dict[str, list[int]] = {}
+    for offset in range(1, months + 1):
+        month = today.replace(day=1)
+        month -= dt.timedelta(days=month.day)
+        for _ in range(offset - 1):
+            month = month.replace(day=1) - dt.timedelta(days=1)
+        month_totals[month.strftime("%Y-%m")] = [0, 0]
+
+    for record in records:
+        record_date = str(record.get("date", ""))[:10]
+        month_key = record_date[:7]
+        if month_key not in month_totals:
+            continue
+        amount = int(record.get("expense_amount", 0))
+        if record.get("expense_type") in income_types:
+            month_totals[month_key][0] += amount
+        elif record.get("expense_type") not in exclude_types:
+            month_totals[month_key][1] += amount
+
+    income_average_man_yen = round(
+        sum(v[0] for v in month_totals.values()) / months / 10000
+    )
+    expense_average_man_yen = round(
+        sum(v[1] for v in month_totals.values()) / months / 10000
+    )
+    surplus_average_man_yen = max(
+        0, income_average_man_yen - expense_average_man_yen
+    )
+    return (
+        income_average_man_yen,
+        expense_average_man_yen,
+        surplus_average_man_yen,
+    )
+
+
 @app.get("/simulator", response_class=HTMLResponse)
 def simulator(
     request: Request,
@@ -313,7 +357,19 @@ def simulator(
 
     current_assets_val = df_items["valuation"].sum()
     current_assets_man_yen = int(current_assets_val / 10000)
-
+    simulation_config = server_tools.config.get("simulation", {})
+    average_months = int(simulation_config.get("average_months", 3))
+    (
+        average_income_man_yen,
+        average_expense_man_yen,
+        average_surplus_man_yen,
+    ) = get_simulation_averages(
+        commons["records"],
+        server_tools.income_types,
+        server_tools.exclude_types,
+        dt.date.today(),
+        average_months,
+    )
     log.info("end 'simulator' method")
     return server_tools.templates.TemplateResponse(
         "simulator.j2",
@@ -323,6 +379,10 @@ def simulator(
             "msg": msg,
             "info": info,
             "current_assets_man_yen": current_assets_man_yen,
+            "average_months": max(1, average_months),
+            "average_income_man_yen": average_income_man_yen,
+            "average_expense_man_yen": average_expense_man_yen,
+            "average_surplus_man_yen": average_surplus_man_yen,
             **commons,
         },
     )

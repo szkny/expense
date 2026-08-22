@@ -162,3 +162,8 @@ The application's behavior can be customized through the `~/.config/expense/conf
     </tr>
   </tbody>
 </table>
+
+The simulator initializes the current assets from Asset Management and the
+average monthly income, expenses, and surplus from the previous
+`simulation.average_months` months in the household ledger. The current month
+is excluded. The current age is set in the simulator and saved in the browser.

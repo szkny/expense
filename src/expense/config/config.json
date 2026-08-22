@@ -96,6 +96,9 @@
       }
     }
   },
+  "simulation": {
+    "average_months": 3
+  },
   "ocr": {
     "tesseract_config": "--psm 6 --oem 3",
     "regions": {

@@ -21,11 +21,15 @@
   </div>
 
   <div class="container">
-    <div class="sim-container" id="sim-app" data-current-assets="{{ current_assets_man_yen }}">
+    <div class="sim-container" id="sim-app"
+      data-current-assets="{{ current_assets_man_yen }}"
+      data-monthly-income="{{ average_income_man_yen }}"
+      data-monthly-expense="{{ average_expense_man_yen }}"
+      data-monthly-investment="{{ average_surplus_man_yen }}">
       <!-- Header -->
       <div class="sim-header">
         <div class="sim-title">独立後シミュレーター</div>
-        <div class="sim-subtitle">40歳1億円 達成シナリオ分析 ／ 収入−生活費を全額投資</div>
+        <div class="sim-subtitle">実績連携による独立後シナリオ分析 ／ 収入−生活費を全額投資</div>
       </div>
 
       <!-- Scenario buttons -->
@@ -44,6 +48,13 @@
           <div class="sim-sec-label" style="margin: 0 0 12px;">独立前</div>
           <div class="slider-group">
             <div class="slider-header">
+              <span class="slider-label">現在年齢</span>
+              <span class="slider-value" id="val-currentAge">32歳</span>
+            </div>
+            <input type="range" id="input-currentAge" class="sim-input-range" min="18" max="45" step="1" value="32">
+          </div>
+          <div class="slider-group">
+            <div class="slider-header">
               <span class="slider-label">独立年齢</span>
               <span class="slider-value" id="val-independenceAge">37歳</span>
             </div>
@@ -52,32 +63,32 @@
           <div class="slider-group">
             <div class="slider-header">
               <span class="slider-label">毎月積立額</span>
-              <span class="slider-value" id="val-salaryMonthlyInvestment">30万円</span>
+              <span class="slider-value" id="val-salaryMonthlyInvestment">{{ average_surplus_man_yen }}万円</span>
             </div>
-            <input type="range" id="input-salaryMonthlyInvestment" class="sim-input-range" min="0" max="100" step="1" value="30">
+            <input type="range" id="input-salaryMonthlyInvestment" class="sim-input-range" min="0" max="100" step="1" value="{{ average_surplus_man_yen }}">
           </div>
 
           <div class="sim-sec-label">独立後</div>
           <div class="slider-group">
             <div class="slider-header">
               <span class="slider-label">フリーランス収入</span>
-              <span class="slider-value" id="val-freelanceIncome">60万円/月</span>
+              <span class="slider-value" id="val-freelanceIncome">{{ average_income_man_yen }}万円/月</span>
             </div>
-            <input type="range" id="input-freelanceIncome" class="sim-input-range" min="0" max="200" step="5" value="60">
+            <input type="range" id="input-freelanceIncome" class="sim-input-range" min="0" max="200" step="5" value="{{ average_income_man_yen }}">
           </div>
           <div class="slider-group">
             <div class="slider-header">
               <span class="slider-label">月間生活費</span>
-              <span class="slider-value" id="val-monthlyExpense">33万円/月</span>
+              <span class="slider-value" id="val-monthlyExpense">{{ average_expense_man_yen }}万円/月</span>
             </div>
-            <input type="range" id="input-monthlyExpense" class="sim-input-range" min="10" max="100" step="1" value="33">
+            <input type="range" id="input-monthlyExpense" class="sim-input-range" min="0" max="100" step="1" value="{{ average_expense_man_yen }}">
           </div>
 
           <!-- 自動計算された投資額の表示 -->
           <div class="investment-display">
             <div class="investment-display-label">毎月の投資額（自動計算）</div>
-            <div class="investment-display-value" id="monthly-investment-result">+27万円/月</div>
-            <div class="investment-display-label" id="monthly-investment-calc" style="margin-top: 4px;">収入 60万 − 生活費 33万</div>
+            <div class="investment-display-value" id="monthly-investment-result">+{{ average_surplus_man_yen }}万円/月</div>
+            <div class="investment-display-label" id="monthly-investment-calc" style="margin-top: 4px;">収入 {{ average_income_man_yen }}万 − 生活費 {{ average_expense_man_yen }}万</div>
           </div>
 
           <div class="sim-sec-label">想定リターン</div>
@@ -149,7 +160,7 @@
       </div>
 
       <div class="footer-note">
-        ※ 現在投資資産 <span id="footer-current-assets">0</span>万円をベースに試算。独立後は収入−生活費の余剰を全額投資と仮定。市場リターンは変動します。
+        ※ 資産管理の評価額 <span id="footer-current-assets">0</span>万円、家計簿の直近{{ average_months }}カ月平均（今月を除く）を初期値として試算。独立後は収入−生活費の余剰を全額投資と仮定。市場リターンは変動します。
       </div>
     </div>
   </div>
