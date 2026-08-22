@@ -4,6 +4,8 @@ import json
 import logging
 import datetime as dt
 import threading
+import time
+from typing import Any
 import pandas as pd
 from typing import Callable
 
@@ -24,7 +26,46 @@ from ..core.gspread_wrapper import GspreadHandler
 
 app: FastAPI = FastAPI()
 log: logging.Logger = logging.getLogger("expense")
-gspread_handler: GspreadHandler = GspreadHandler(
+
+
+class _LazyGspreadHandler:
+    """Google Sheetsへの接続を最初の利用時まで遅延させる。"""
+
+    def __init__(self, book_name: str) -> None:
+        self.book_name = book_name
+        self._handler: GspreadHandler | None = None
+        self._lock = threading.Lock()
+
+    def _get_handler(self) -> GspreadHandler:
+        if self._handler is not None:
+            return self._handler
+        with self._lock:
+            if self._handler is not None:
+                return self._handler
+            last_error: Exception | None = None
+            for attempt in range(3):
+                try:
+                    self._handler = GspreadHandler(self.book_name)
+                    return self._handler
+                except Exception as error:
+                    last_error = error
+                    if attempt < 2:
+                        time.sleep(2**attempt)
+            assert last_error is not None
+            raise last_error
+
+    def get_spreadsheet_url(self) -> str:
+        try:
+            return self._get_handler().get_spreadsheet_url()
+        except Exception:
+            log.exception("Google Sheets is unavailable.")
+            return ""
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._get_handler(), name)
+
+
+gspread_handler: Any = _LazyGspreadHandler(
     f"CF ({get_fiscal_year()}年度)"
 )
 asset_manager: AssetManager = AssetManager()
