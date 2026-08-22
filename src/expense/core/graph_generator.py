@@ -812,10 +812,10 @@ class GraphGenerator(Base):
         df_cf["income_base"] = df_cf["income_amount"]
 
         df_cf["cf_positive_label"] = df_cf["cf_positive"].apply(
-            lambda x: f"キャッシュフロー<br>¥{x:,.0f}" if x > 0 else ""
+            lambda x: f"ｷｬｯｼｭﾌﾛｰ<br>¥{x:,.0f}" if x > 0 else ""
         )
         df_cf["cf_negative_label"] = df_cf["cf_negative"].apply(
-            lambda x: f"キャッシュフロー<br>-¥{x:,.0f}" if x > 0 else ""
+            lambda x: f"ｷｬｯｼｭﾌﾛｰ<br>-¥{x:,.0f}" if x > 0 else ""
         )
         df_cf["cf_text"] = df_cf["cf"].apply(
             lambda x: f"-¥{abs(x):,.0f}" if x < 0 else f"+¥{x:,.0f}"
@@ -867,7 +867,7 @@ class GraphGenerator(Base):
                 texttemplate="%{text}",
                 textposition="inside",
                 textangle=0,
-                hovertemplate="%{x|%-Y年%-m月}<br>収入: ¥%{y:,.0f}<extra></extra>",
+                hovertemplate="%{x|%-Y年%-m月}<br>税引後収入: ¥%{y:,.0f}<extra></extra>",
             )
         )
 
@@ -878,10 +878,10 @@ class GraphGenerator(Base):
                 x=df_cf["month"],
                 y=df_cf["cf_positive"],
                 offsetgroup="expense",
-                name="キャッシュフロー",
+                name="ｷｬｯｼｭﾌﾛｰ",
                 marker_color="#baa44b" if theme == "dark" else "#eecc55",
                 customdata=df_cf["cf_text"],
-                hovertemplate="%{x|%-Y年%-m月}<br>キャッシュフロー: %{customdata}<extra></extra>",
+                hovertemplate="%{x|%-Y年%-m月}<br>ｷｬｯｼｭﾌﾛｰ: %{customdata}<extra></extra>",
                 text=df_cf["cf_positive_label"],
                 texttemplate="%{text}",
                 textposition="inside",
@@ -895,10 +895,10 @@ class GraphGenerator(Base):
                 x=df_cf["month"],
                 y=df_cf["cf_negative"],
                 offsetgroup="income",
-                name="キャッシュフロー",
+                name="ｷｬｯｼｭﾌﾛｰ",
                 marker_color="#bb3333" if theme == "dark" else "#ee5555",
                 customdata=df_cf["cf_text"],
-                hovertemplate="%{x|%-Y年%-m月}<br>キャッシュフロー: %{customdata}<extra></extra>",
+                hovertemplate="%{x|%-Y年%-m月}<br>ｷｬｯｼｭﾌﾛｰ: %{customdata}<extra></extra>",
                 text=df_cf["cf_negative_label"],
                 texttemplate="%{text}",
                 textposition="inside",
@@ -979,84 +979,121 @@ class GraphGenerator(Base):
             log.info("DataFrame is empty, skipping graph generation.")
             return ""
         df_annual = df.copy()
-        df_graph = pd.DataFrame()
-        df_graph.at[0, "type"] = "収入"
-        df_graph.at[0, "amount"] = df_annual["収入"].astype(int).sum()
-        df_graph.at[1, "type"] = "支出"
-        df_graph.at[1, "amount"] = df_annual["支出"].astype(int).sum()
-        df_graph.at[2, "type"] = "キャッシュ<br>フロー"
-        df_graph.at[2, "amount"] = (
-            df_graph.loc[0, "amount"] + df_graph.loc[1, "amount"]
+        current_month = pd.Timestamp.today().to_period("M")
+        completed_months = (
+            pd.to_datetime(df_annual.index).to_period("M") < current_month
         )
-        for i, r in df_graph.iterrows():
-            opr = "+" if r["amount"] >= 0 else "-"
-            df_graph.at[i, "label"] = (
-                f"{r['type']}<br>{opr}¥{abs(r['amount']):,.0f}"
-            )
+        df_completed = df_annual.loc[completed_months]
+        actual = [
+            int(df_completed["収入"].astype(int).sum()),
+            int(df_completed["支出"].astype(int).sum()),
+        ]
+        actual.append(actual[0] + actual[1])
+        labels = ["収入", "支出", "ｷｬｯｼｭﾌﾛｰ"]
 
-        fig = go.Figure(
-            go.Waterfall(
-                orientation="v",
-                x=df_graph["type"],
-                y=df_graph["amount"],
-                measure=["relative", "relative", "total"],
-                increasing=dict(
-                    marker=dict(
-                        color="#4466bb" if theme == "dark" else "#6699ee"
-                    )
+        # 今年度の経過月までの実績を年換算し、残りを予測として表示する。
+        today = dt.date.today()
+        fiscal_start_year = today.year if today.month >= 4 else today.year - 1
+        elapsed_months = (
+            (today.year - fiscal_start_year) * 12 + today.month - 4
+        )
+        elapsed_months = max(1, min(12, elapsed_months))
+        forecast_total = [int(amount * 12 / elapsed_months) for amount in actual]
+        forecast = [total - amount for total, amount in zip(forecast_total, actual)]
+
+        income, expense, cash_flow = actual
+        forecast_bases = [income, forecast_total[0] + expense, cash_flow]
+        actual_bases = [0, forecast_total[0], 0]
+        actual_colors = [
+            "#4466bb" if theme == "dark" else "#6699ee",
+            "#bb3333" if theme == "dark" else "#ee5555",
+            "#baa44b" if theme == "dark" else "#eecc55",
+        ]
+        forecast_colors = [
+            "rgba(68, 102, 187, 0.35)" if theme == "dark"
+            else "rgba(102, 153, 238, 0.45)",
+            "rgba(187, 51, 51, 0.35)" if theme == "dark"
+            else "rgba(238, 85, 85, 0.45)",
+            "rgba(186, 164, 75, 0.35)" if theme == "dark"
+            else "rgba(238, 204, 85, 0.45)",
+        ]
+
+        def signed_amount(amount: int) -> str:
+            operator = "+" if amount >= 0 else "-"
+            return f"{operator}¥{abs(amount):,.0f}"
+
+        def amount_label(label: str, amount: int, prefix: str = "") -> str:
+            return f"{prefix}{label}<br>{signed_amount(amount)}"
+
+        fig = go.Figure()
+        fig.add_trace(
+            go.Bar(
+                x=labels,
+                y=actual,
+                base=actual_bases,
+                marker_color=actual_colors,
+                text=[amount_label(label, amount) for label, amount in zip(labels, actual)],
+                textposition="inside",
+                insidetextanchor="middle",
+                textangle=0,
+                textfont=dict(
+                    size=14,
+                    color="#ffffff" if theme == "dark" else "#000000",
                 ),
-                decreasing=dict(
-                    marker=dict(
-                        color="#bb3333" if theme == "dark" else "#ee5555"
-                    )
-                ),
-                totals=dict(
-                    marker=dict(
-                        color="#baa44b" if theme == "dark" else "#eecc55"
-                    )
-                ),
-                connector=dict(
-                    line=dict(
-                        color="#ffffff" if theme == "dark" else "#000000",
-                        width=0.2,
-                        dash="dot",
-                    )
-                ),
-                text=df_graph["label"],
-                textposition="none",
-                hoverinfo="text",
+                constraintext="none",
+                hovertemplate=[
+                    f"{label}<br>実績: {signed_amount(amount)}<extra></extra>"
+                    for label, amount in zip(labels, actual)
+                ],
+                name="実績",
+                showlegend=True,
             )
         )
         fig.add_trace(
-            go.Scatter(
-                x=df_graph["type"],
-                y=(
-                    df_graph["amount"].cumsum() - df_graph["amount"] // 2
-                ).to_list()[:-1]
-                + [df_graph["amount"].iloc[-1] // 2],
-                text=df_graph["label"],
-                mode="text",
-                textposition="middle center",
+            go.Bar(
+                x=labels,
+                y=forecast,
+                base=forecast_bases,
+                marker_color=forecast_colors,
+                text=[amount_label("年間予測", total)
+                      for label, total in zip(labels, forecast_total)],
+                textposition="inside",
+                insidetextanchor="middle",
+                textangle=0,
                 textfont=dict(
                     size=14,
-                    weight="bold",
                     color="#ffffff" if theme == "dark" else "#000000",
                 ),
-                hoverinfo="skip",
+                constraintext="none",
+                hovertemplate=[
+                    f"{label}<br>年間予測: {signed_amount(total)}"
+                    f"<br>残り予測: {signed_amount(amount)}<extra></extra>"
+                    for label, total, amount in zip(labels, forecast_total, forecast)
+                ],
+                name="年間予測",
+                showlegend=True,
             )
         )
-        ymin, ymax = (0, 0)
-        if not df_graph.empty:
-            ymax = df_graph["amount"].max() * 1.1
-            ymin = df_graph["amount"].min() * 1.1
+        endpoints = actual_bases + forecast_bases + [
+            actual_bases[i] + actual[i] for i in range(len(actual))
+        ] + [forecast_bases[i] + forecast[i] for i in range(len(forecast))]
+        ymin = min(0, min(endpoints)) * 1.1
+        ymax = max(0, max(endpoints)) * 1.1
         fig.update_xaxes(showline=False, showticklabels=False, showgrid=False)
         fig.update_yaxes(range=(ymin, ymax))
         self._update_layout(fig, theme, ymax_for_format=ymax)
         fig.update_layout(
             title="今年度の収支サマリ",
-            waterfallgap=0.4,
+            barmode="overlay",
+            bargap=0.4,
             height=400,
-            showlegend=False,
+            legend=dict(
+                orientation="h",
+                y=-0.1,
+                x=0.5,
+                xanchor="center",
+            ),
+            margin=dict(b=70),
         )
         graph_html: str = fig.to_html(
             full_html=False,
