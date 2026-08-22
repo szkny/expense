@@ -71,6 +71,7 @@ gspread_handler: Any = _LazyGspreadHandler(
 asset_manager: AssetManager = AssetManager()
 _df_cache_record: dict = {}
 _df_cache_record_lock = threading.Lock()
+_RECORD_CACHE_TTL = 300
 _df_cache_asset_table: dict = {}
 _df_cache_asset_table_lock = threading.Lock()
 _ASSET_CACHE_TTL: dict[str, int] = {
@@ -87,7 +88,9 @@ def get_cached_records(
     log.info("start 'get_cached_records' method")
     try:
         if _is_record_cache_valid():
-            log.debug("returning cache DataFrame (< 30s)")
+            log.debug(
+                f"returning cache DataFrame (< {_RECORD_CACHE_TTL}s)"
+            )
             return _get_record_cache_dataframes()
 
         with _df_cache_record_lock:
@@ -99,6 +102,7 @@ def get_cached_records(
             df_records, df_annual = get_dataframes(server_tools)
             _df_cache_record["df_records"] = df_records
             _df_cache_record["df_annual"] = df_annual
+            _df_cache_record["graph_html"] = {}
             _df_cache_record["timestamp"] = dt.datetime.now()
             return df_records, df_annual
     finally:
@@ -112,7 +116,7 @@ def _is_record_cache_valid() -> bool:
     cache_life_time = (
         now - _df_cache_record.get("timestamp", now)
     ).total_seconds()
-    return cache_life_time < 30
+    return cache_life_time < _RECORD_CACHE_TTL
 
 
 def _get_record_cache_dataframes() -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -120,6 +124,26 @@ def _get_record_cache_dataframes() -> tuple[pd.DataFrame, pd.DataFrame]:
         pd.DataFrame(_df_cache_record.get("df_records")),
         pd.DataFrame(_df_cache_record.get("df_annual")),
     )
+
+
+def _get_cached_graph(
+    cache: dict,
+    lock: threading.Lock,
+    key: tuple[Any, ...],
+    generator: Callable[[], Any],
+) -> Any:
+    """同じデータスナップショットから生成したグラフHTMLを再利用する。"""
+    with lock:
+        graph_html = cache.setdefault("graph_html", {})
+        if key not in graph_html:
+            graph_html[key] = generator()
+        return graph_html[key]
+
+
+def _clear_record_cache() -> None:
+    """支出データと、それを元にしたグラフHTMLを破棄する。"""
+    with _df_cache_record_lock:
+        _df_cache_record.clear()
 
 
 def get_cached_asset_table(
@@ -145,6 +169,7 @@ def get_cached_asset_table(
             for key, dataframe in data.items():
                 _df_cache_asset_table[key] = dataframe
                 _df_cache_asset_table[f"{key}_timestamp"] = refreshed_at
+            _df_cache_asset_table["graph_html"] = {}
             return _get_asset_cache_dataframes()
     finally:
         log.info("end 'get_cached_asset_table' method")
@@ -466,15 +491,17 @@ def get_pie_chart(request: Request, month: str | None = None) -> JSONResponse:
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
     df_records, _ = get_cached_records(server_tools)
-    df_graph = server_tools.graph_generator.generate_monthly_df(df_records)
-    graph_html, available_months = (
-        server_tools.graph_generator.generate_pie_chart(
-            df_graph,
+    graph_html, available_months = _get_cached_graph(
+        _df_cache_record,
+        _df_cache_record_lock,
+        ("pie", theme, month or ""),
+        lambda: server_tools.graph_generator.generate_pie_chart(
+            server_tools.graph_generator.generate_monthly_df(df_records),
             df_records,
             target_month=month,
             theme=theme,
             include_plotlyjs=False,
-        )
+        ),
     )
     log.info("end 'get_pie_chart' method")
     return JSONResponse(
@@ -488,13 +515,16 @@ def get_daily_chart(request: Request, month: str | None = None) -> JSONResponse:
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
     df_records, _ = get_cached_records(server_tools)
-    graph_html, available_months = (
-        server_tools.graph_generator.generate_daily_chart(
+    graph_html, available_months = _get_cached_graph(
+        _df_cache_record,
+        _df_cache_record_lock,
+        ("daily", theme, month or ""),
+        lambda: server_tools.graph_generator.generate_daily_chart(
             df_records,
             target_month=month,
             theme=theme,
             include_plotlyjs=False,
-        )
+        ),
     )
     log.info("end 'get_daily_chart' method")
     return JSONResponse(
@@ -508,9 +538,15 @@ def get_monthly_bar_chart(request: Request) -> HTMLResponse:
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
     df_records, _ = get_cached_records(server_tools)
-    df_graph = server_tools.graph_generator.generate_monthly_df(df_records)
-    graph_html = server_tools.graph_generator.generate_monthly_bar_chart(
-        df_graph, theme=theme, include_plotlyjs=False
+    graph_html = _get_cached_graph(
+        _df_cache_record,
+        _df_cache_record_lock,
+        ("bar", theme),
+        lambda: server_tools.graph_generator.generate_monthly_bar_chart(
+            server_tools.graph_generator.generate_monthly_df(df_records),
+            theme=theme,
+            include_plotlyjs=False,
+        ),
     )
     log.info("end 'get_monthly_bar_chart' method")
     return HTMLResponse(content=graph_html)
@@ -522,10 +558,13 @@ def get_annual_fiscal_report_chart(request: Request) -> HTMLResponse:
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
     _, df_annual = get_cached_records(server_tools)
-    graph_html = (
-        server_tools.graph_generator.generate_annual_fiscal_report_chart(
+    graph_html = _get_cached_graph(
+        _df_cache_record,
+        _df_cache_record_lock,
+        ("annual_fiscal_report", theme),
+        lambda: server_tools.graph_generator.generate_annual_fiscal_report_chart(
             df_annual, theme, include_plotlyjs=False
-        )
+        ),
     )
     log.info("end 'get_annual_fiscal_report_chart' method")
     return HTMLResponse(content=graph_html)
@@ -557,10 +596,15 @@ def get_asset_pie_chart(request: Request) -> HTMLResponse:
     df_summary, df_items, df_records, df_stock = get_cached_asset_table(
         asset_manager
     )
-    graph_html = server_tools.graph_generator.generate_asset_pie_chart(
-        df_items,
-        theme=theme,
-        include_plotlyjs=False,
+    graph_html = _get_cached_graph(
+        _df_cache_asset_table,
+        _df_cache_asset_table_lock,
+        ("asset_pie", theme),
+        lambda: server_tools.graph_generator.generate_asset_pie_chart(
+            df_items,
+            theme=theme,
+            include_plotlyjs=False,
+        ),
     )
     log.info("end 'get_asset_pie_chart' method")
     return HTMLResponse(content=graph_html)
@@ -574,8 +618,13 @@ def get_asset_waterfall_chart(request: Request) -> HTMLResponse:
     df_summary, df_items, df_records, df_stock = get_cached_asset_table(
         asset_manager
     )
-    graph_html = server_tools.graph_generator.generate_asset_waterfall_chart(
-        df_items, theme=theme, include_plotlyjs=False
+    graph_html = _get_cached_graph(
+        _df_cache_asset_table,
+        _df_cache_asset_table_lock,
+        ("asset_waterfall", theme),
+        lambda: server_tools.graph_generator.generate_asset_waterfall_chart(
+            df_items, theme=theme, include_plotlyjs=False
+        ),
     )
     log.info("end 'get_asset_waterfall_chart' method")
     return HTMLResponse(content=graph_html)
@@ -589,12 +638,17 @@ def get_asset_heatmap_chart(request: Request) -> HTMLResponse:
     df_summary, df_items, df_records, df_stock = get_cached_asset_table(
         asset_manager
     )
-    graph_html = server_tools.graph_generator.generate_asset_heatmap_chart(
-        df_stock,
-        total_value=int(df_items["valuation"].sum()),
-        total_change_pct=df_summary["change_pct"].iloc[0],
-        theme=theme,
-        include_plotlyjs=False,
+    graph_html = _get_cached_graph(
+        _df_cache_asset_table,
+        _df_cache_asset_table_lock,
+        ("asset_heatmap", theme),
+        lambda: server_tools.graph_generator.generate_asset_heatmap_chart(
+            df_stock,
+            total_value=int(df_items["valuation"].sum()),
+            total_change_pct=df_summary["change_pct"].iloc[0],
+            theme=theme,
+            include_plotlyjs=False,
+        ),
     )
     log.info("end 'get_asset_heatmap_chart' method")
     return HTMLResponse(content=graph_html)
@@ -625,15 +679,25 @@ def get_asset_monthly_history_chart(
     )
     df_records = pd.concat([df_records, _df_add])
     df_records.index = pd.Index(range(len(df_records)))
-    graph_html = (
-        server_tools.graph_generator.generate_asset_monthly_history_chart(
+    graph_html = _get_cached_graph(
+        _df_cache_asset_table,
+        _df_cache_asset_table_lock,
+        (
+            "asset_monthly_history",
+            theme,
+            dt.date.today(),
+            annual_yield,
+            monthly_investment,
+            duration_years,
+        ),
+        lambda: server_tools.graph_generator.generate_asset_monthly_history_chart(
             df_records,
             theme=theme,
             include_plotlyjs=False,
             simulation_annual_yield=annual_yield,
             simulation_monthly_investment=monthly_investment,
             simulation_years=duration_years,
-        )
+        ),
     )
     log.info("end 'get_asset_monthly_history_chart' method")
     return HTMLResponse(content=graph_html)
@@ -681,12 +745,15 @@ def register(
                 server_tools.termux_api.toast("登録中..")
             except Exception:
                 log.info("Toast notification failed.")
-            server_tools.gspread_handler.register_expense(
-                expense_type, expense_amount_num, expense_memo, expense_date
-            )
-            server_tools.expense_handler.store_expense(
-                expense_type, expense_memo, expense_amount_num, expense_date
-            )
+            try:
+                server_tools.gspread_handler.register_expense(
+                    expense_type, expense_amount_num, expense_memo, expense_date
+                )
+                server_tools.expense_handler.store_expense(
+                    expense_type, expense_memo, expense_amount_num, expense_date
+                )
+            finally:
+                _clear_record_cache()
             msg = "✅ 家計簿への登録が完了しました。"
             info = (
                 f"[{expense_date}] "
@@ -771,18 +838,21 @@ def ocr_process(
                     server_tools.termux_api.toast("登録中..")
                 except Exception:
                     log.info("Toast notification failed.")
-                server_tools.gspread_handler.register_expense(
-                    expense_type, expense_amount, expense_memo, expense_date
-                )
-                json.dump(
-                    ocr_data,
-                    open(server_tools.cache_path / "ocr_data.json", "w"),
-                    ensure_ascii=False,
-                    indent=2,
-                )
-                server_tools.expense_handler.store_expense(
-                    expense_type, expense_memo, expense_amount, expense_date
-                )
+                try:
+                    server_tools.gspread_handler.register_expense(
+                        expense_type, expense_amount, expense_memo, expense_date
+                    )
+                    json.dump(
+                        ocr_data,
+                        open(server_tools.cache_path / "ocr_data.json", "w"),
+                        ensure_ascii=False,
+                        indent=2,
+                    )
+                    server_tools.expense_handler.store_expense(
+                        expense_type, expense_memo, expense_amount, expense_date
+                    )
+                finally:
+                    _clear_record_cache()
                 msg = "✅ 家計簿への登録が完了しました。"
                 info = (
                     f"[{expense_date}] "
@@ -836,17 +906,21 @@ def delete_process(
         # parse amount
         expense_amount = int(re.sub(r"[^\d]", "", str(expense_amount)))
 
-        if status and not server_tools.gspread_handler.delete_expense(
-            expense_date,
-            expense_type,
-            expense_amount,
-            expense_memo,
-        ):
-            status = False
-        if status and not server_tools.expense_handler.delete_expense(
-            expense_date, expense_type, expense_amount, expense_memo
-        ):
-            status = False
+        if status:
+            try:
+                if not server_tools.gspread_handler.delete_expense(
+                    expense_date,
+                    expense_type,
+                    expense_amount,
+                    expense_memo,
+                ):
+                    status = False
+                if status and not server_tools.expense_handler.delete_expense(
+                    expense_date, expense_type, expense_amount, expense_memo
+                ):
+                    status = False
+            finally:
+                _clear_record_cache()
         if status:
             msg = "✅ 家計簿の削除処理が完了しました。"
         else:
@@ -930,16 +1004,19 @@ def edit_process(
                 expense_amount=new_expense_amount,
                 expense_memo=new_expense_memo,
             )
-            if status and not server_tools.gspread_handler.edit_expense(
-                target_expense=target_expense,
-                new_expense=new_expense,
-            ):
-                status = False
-            if status and not server_tools.expense_handler.edit_expense(
-                target_expense=target_expense,
-                new_expense=new_expense,
-            ):
-                status = False
+            try:
+                if status and not server_tools.gspread_handler.edit_expense(
+                    target_expense=target_expense,
+                    new_expense=new_expense,
+                ):
+                    status = False
+                if status and not server_tools.expense_handler.edit_expense(
+                    target_expense=target_expense,
+                    new_expense=new_expense,
+                ):
+                    status = False
+            finally:
+                _clear_record_cache()
             if status:
                 msg = "✅ 家計簿の修正処理が完了しました。"
             else:
