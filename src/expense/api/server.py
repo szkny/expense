@@ -570,6 +570,29 @@ def get_annual_fiscal_report_chart(request: Request) -> HTMLResponse:
     return HTMLResponse(content=graph_html)
 
 
+@app.get("/api/fiscal_asset_history_chart", response_class=JSONResponse)
+def get_fiscal_asset_history_chart(
+    request: Request, year: str | None = None
+) -> JSONResponse:
+    log.info("start 'get_fiscal_asset_history_chart' method")
+    server_tools = ServerTools(app, gspread_handler)
+    theme = request.cookies.get("theme", "light")
+    df_records, _ = get_cached_records(server_tools)
+    graph_html, available_years = _get_cached_graph(
+        _df_cache_record,
+        _df_cache_record_lock,
+        ("fiscal_asset_history", theme, year or ""),
+        lambda: server_tools.graph_generator.generate_fiscal_asset_history_chart(
+            df_records,
+            target_year=year,
+            theme=theme,
+            include_plotlyjs=False,
+        ),
+    )
+    log.info("end 'get_fiscal_asset_history_chart' method")
+    return JSONResponse(content={"html": graph_html, "years": available_years})
+
+
 @app.get("/api/asset_summary", response_class=HTMLResponse)
 def get_asset_summary(request: Request) -> HTMLResponse:
     log.info("start 'get_asset_summary' method")

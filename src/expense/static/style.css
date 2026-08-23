@@ -13,6 +13,12 @@ body {
   user-select: none;
 }
 
+/* グラフ操作時のモバイルブラウザのタップハイライトを無効化 */
+.graph-container .plotly-graph-div {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
 .container {
   max-width: 800px;
   margin: auto;
@@ -366,8 +372,7 @@ img.screenshot {
 }
 
 .collapsible-content.is-open,
-.card:has(.collapsible-trigger[aria-expanded="true"])
-  .collapsible-content {
+.card:has(.collapsible-trigger[aria-expanded="true"]) .collapsible-content {
   max-height: 10000px;
   opacity: 1;
 }

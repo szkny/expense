@@ -11,6 +11,13 @@ const allChartConfigs = {
       endpoint: "/api/annual_fiscal_report_chart",
       hasDropdown: false,
     },
+    {
+      id: "fiscal-asset-history",
+      endpoint: "/api/fiscal_asset_history_chart",
+      hasDropdown: true,
+      dateParam: "year",
+      optionLabel: (year) => `${year}年度`,
+    },
   ],
   asset: [
     {
@@ -84,12 +91,8 @@ export async function fetchAndRenderChart(config, params = {}, force = false) {
 
     if (config.hasDropdown) {
       const data = await response.json();
-      if (data.html) {
-        container.innerHTML = data.html;
-        setupDropdownAndReload(config, data.months);
-      } else {
-        container.innerHTML = "";
-      }
+      container.innerHTML = data.html || "";
+      setupDropdownAndReload(config, data.months || data.years || []);
     } else {
       const html = await response.text();
       if (html) {
@@ -145,7 +148,9 @@ function setupDropdownAndReload(config, months) {
     months.forEach((month) => {
       const option = document.createElement("option");
       option.value = month;
-      option.textContent = month.replace("-", "年") + "月";
+      option.textContent = config.optionLabel
+        ? config.optionLabel(month)
+        : month.replace("-", "年") + "月";
       if (month === currentMonth) {
         option.selected = true;
       }
@@ -153,7 +158,8 @@ function setupDropdownAndReload(config, months) {
     });
 
     select.addEventListener("change", (e) => {
-      fetchAndRenderChart(config, { month: e.target.value });
+      const param = config.dateParam || "month";
+      fetchAndRenderChart(config, { [param]: e.target.value });
     });
 
     controlsContainer.appendChild(select);
@@ -164,8 +170,9 @@ function setupDropdownAndReload(config, months) {
       const currentSelect = document.getElementById(
         `${config.id}-month-select`,
       );
-      const month = currentSelect ? currentSelect.value : null;
-      fetchAndRenderChart(config, { month }, true);
+      const value = currentSelect ? currentSelect.value : null;
+      const param = config.dateParam || "month";
+      fetchAndRenderChart(config, { [param]: value }, true);
     });
     controlsContainer.appendChild(btn);
   }

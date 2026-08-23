@@ -1106,6 +1106,133 @@ class GraphGenerator(Base):
         log.info("end 'generate_annual_fiscal_report_chart' method")
         return graph_html
 
+    def generate_fiscal_asset_history_chart(
+        self,
+        df: pd.DataFrame,
+        target_year: str | None = None,
+        theme: str = "light",
+        include_plotlyjs: bool | str = True,
+    ) -> tuple[str, list[str]]:
+        """今年度の収入・支出・収支の累積推移を生成する。"""
+        log.info("start 'generate_fiscal_asset_history_chart' method")
+        if df.empty:
+            log.info("DataFrame is empty, skipping graph generation.")
+            return "", []
+
+        today = pd.Timestamp(dt.date.today())
+        df_graph = df.copy()
+        df_graph["date"] = pd.to_datetime(df_graph["date"], errors="coerce")
+        df_graph["expense_amount"] = pd.to_numeric(
+            df_graph["expense_amount"], errors="coerce"
+        )
+        df_graph.dropna(subset=["date", "expense_amount"], inplace=True)
+        df_graph = df_graph.loc[
+            df_graph["expense_type"].isin(
+                self.income_types + self.fixed_types + self.variable_types
+            )
+        ].copy()
+        if df_graph.empty:
+            log.info("No records for the fiscal asset history graph.")
+            return "", []
+
+        df_graph["date"] = df_graph["date"].dt.normalize()
+        fiscal_years = df_graph["date"].dt.year - (
+            df_graph["date"].dt.month < 4
+        ).astype(int)
+        current_fiscal_year = today.year - int(today.month < 4)
+        available_years = sorted(
+            set(fiscal_years.unique()) | {current_fiscal_year}, reverse=True
+        )
+        available_year_strings = [str(year) for year in available_years]
+        fiscal_year = (
+            int(target_year)
+            if target_year in available_year_strings
+            else available_years[0]
+        )
+        fiscal_start = pd.Timestamp(fiscal_year, 4, 1)
+        fiscal_end = pd.Timestamp(fiscal_year + 1, 3, 31)
+        if fiscal_year == current_fiscal_year:
+            fiscal_end = today
+        df_graph = df_graph.loc[
+            (df_graph["date"] >= fiscal_start)
+            & (df_graph["date"] <= fiscal_end)
+        ]
+        if df_graph.empty:
+            log.info("No records in the selected fiscal year.")
+            return "", available_year_strings
+
+        df_graph["income"] = df_graph["expense_amount"].where(
+            df_graph["expense_type"].isin(self.income_types), 0
+        )
+        df_graph["expense"] = df_graph["expense_amount"].where(
+            df_graph["expense_type"].isin(
+                self.fixed_types + self.variable_types
+            ),
+            0,
+        )
+        daily = (
+            df_graph.groupby("date")[['income', 'expense']]
+            .sum()
+            .reindex(pd.date_range(fiscal_start, fiscal_end), fill_value=0)
+        )
+        daily["income_cumulative"] = daily["income"].cumsum()
+        daily["expense_cumulative"] = daily["expense"].cumsum()
+        daily["balance"] = (
+            daily["income_cumulative"] - daily["expense_cumulative"]
+        )
+
+        colors = (
+            ["#6699ee", "#ee5555", "#eecc55"]
+            if theme != "dark"
+            else ["#4466bb", "#bb3333", "#baa44b"]
+        )
+        fig = go.Figure()
+        for column, name, color in zip(
+            ["income_cumulative", "expense_cumulative", "balance"],
+            ["収入累計", "支出累計", "収支累計"],
+            colors,
+        ):
+            fig.add_trace(
+                go.Scatter(
+                    x=daily.index,
+                    y=daily[column],
+                    mode="lines",
+                    name=name,
+                    line=dict(color=color, shape="hv", width=2),
+                    hovertemplate=(
+                        "%{x|%-Y年%-m月%-d日}<br>"
+                        f"{name}: ¥%{{y:,.0f}}<extra></extra>"
+                    ),
+                )
+            )
+
+        y_values = daily[[
+            "income_cumulative",
+            "expense_cumulative",
+            "balance",
+        ]].to_numpy()
+        y_min = float(y_values.min())
+        y_max = float(y_values.max())
+        y_margin = max((y_max - y_min) * 0.1, 1)
+        fig.update_layout(
+            title="今年度の資産推移",
+            hovermode="x unified",
+            xaxis=dict(range=[fiscal_start, fiscal_end], fixedrange=True),
+            yaxis=dict(range=[y_min - y_margin, y_max + y_margin]),
+        )
+        self._update_layout(fig, theme, ymax_for_format=max(abs(y_min), y_max))
+        fig.update_xaxes(range=[fiscal_start, fiscal_end], fixedrange=True)
+        fig.update_yaxes(
+            range=[y_min - y_margin, y_max + y_margin], fixedrange=True
+        )
+        graph_html: str = fig.to_html(
+            full_html=False,
+            include_plotlyjs=include_plotlyjs,
+            config=dict(responsive=True, displayModeBar=False),
+        )
+        log.info("end 'generate_fiscal_asset_history_chart' method")
+        return graph_html, available_year_strings
+
     def generate_asset_pie_chart(
         self,
         df: pd.DataFrame,
