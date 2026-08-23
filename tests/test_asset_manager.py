@@ -41,7 +41,18 @@ class AssetManagerBatchGetTest(unittest.TestCase):
                 "weight",
                 "roi",
             ],
-            ["VTI", "1", "100", "110", "16000", "100", "110", "10", "100", "10"],
+            [
+                "VTI",
+                "1",
+                "100",
+                "110",
+                "16000",
+                "100",
+                "110",
+                "10",
+                "100",
+                "10",
+            ],
         ]
         monthly_history = [
             ["date", "invest_amount", "valuation", "profit", "roi"],
@@ -64,7 +75,20 @@ class AssetManagerBatchGetTest(unittest.TestCase):
                 "チャート1",
                 "チャート2",
             ],
-            ["1", "VTI", "110", "1", "2", "3", "4", "5", "6", "110", "10", "10"],
+            [
+                "1",
+                "VTI",
+                "110",
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "110",
+                "10",
+                "10",
+            ],
         ]
         manager = object.__new__(AssetManager)
         manager.workbook = FakeWorkbook(
@@ -95,7 +119,23 @@ class AssetManagerBatchGetTest(unittest.TestCase):
     def test_get_asset_data_requests_only_selected_ranges(self) -> None:
         manager = object.__new__(AssetManager)
         manager.workbook = FakeWorkbook(
-            [{"values": [["total", "profit", "profit_etf", "roi", "change_jpy", "change_pct", "drawdown", "usdjpy"], ["100", "10", "5", "10", "2", "1", "3", "150"]]}]
+            [
+                {
+                    "values": [
+                        [
+                            "total",
+                            "profit",
+                            "profit_etf",
+                            "roi",
+                            "change_jpy",
+                            "change_pct",
+                            "drawdown",
+                            "usdjpy",
+                        ],
+                        ["100", "10", "5", "10", "2", "1", "3", "150"],
+                    ]
+                }
+            ]
         )
 
         dataframes = manager.get_asset_data({"df_summary"})

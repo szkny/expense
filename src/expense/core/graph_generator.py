@@ -918,11 +918,9 @@ class GraphGenerator(Base):
                 line=dict(
                     color="#999999" if theme == "dark" else "#666666",
                     dash="solid",
-                    width=0.5
+                    width=0.5,
                 ),
-                marker=dict(
-                    size=4
-                ),
+                marker=dict(size=4),
                 hovertemplate="%{x|%-Y年%-m月}<br>支出: ¥%{y:,.0f}<extra></extra>",
             )
         )
@@ -1020,9 +1018,7 @@ class GraphGenerator(Base):
             & (df_annual["date"] <= fiscal_end)
         ]
         if fiscal_year == current_fiscal_year:
-            df_completed = df_annual.loc[
-                df_annual["date"] < today
-            ]
+            df_completed = df_annual.loc[df_annual["date"] < today]
             elapsed_days = max(1, (today - fiscal_start).days)
             fiscal_days = (
                 pd.Timestamp(fiscal_year + 1, 4, 1) - fiscal_start
@@ -1072,12 +1068,21 @@ class GraphGenerator(Base):
             "#baa44b" if theme == "dark" else "#eecc55",
         ]
         forecast_colors = [
-            "rgba(68, 102, 187, 0.35)" if theme == "dark"
-            else "rgba(102, 153, 238, 0.45)",
-            "rgba(187, 51, 51, 0.35)" if theme == "dark"
-            else "rgba(238, 85, 85, 0.45)",
-            "rgba(186, 164, 75, 0.35)" if theme == "dark"
-            else "rgba(238, 204, 85, 0.45)",
+            (
+                "rgba(68, 102, 187, 0.35)"
+                if theme == "dark"
+                else "rgba(102, 153, 238, 0.45)"
+            ),
+            (
+                "rgba(187, 51, 51, 0.35)"
+                if theme == "dark"
+                else "rgba(238, 85, 85, 0.45)"
+            ),
+            (
+                "rgba(186, 164, 75, 0.35)"
+                if theme == "dark"
+                else "rgba(238, 204, 85, 0.45)"
+            ),
         ]
 
         def signed_amount(amount: int) -> str:
@@ -1094,7 +1099,10 @@ class GraphGenerator(Base):
                 y=actual,
                 base=actual_bases,
                 marker_color=actual_colors,
-                text=[amount_label(label, amount) for label, amount in zip(labels, actual)],
+                text=[
+                    amount_label(label, amount)
+                    for label, amount in zip(labels, actual)
+                ],
                 textposition="inside",
                 insidetextanchor="middle",
                 textangle=0,
@@ -1117,8 +1125,10 @@ class GraphGenerator(Base):
                 y=forecast,
                 base=forecast_bases,
                 marker_color=forecast_colors,
-                text=[amount_label("年間予測", total)
-                      for label, total in zip(labels, forecast_total)],
+                text=[
+                    amount_label("年間予測", total)
+                    for label, total in zip(labels, forecast_total)
+                ],
                 textposition="inside",
                 insidetextanchor="middle",
                 textangle=0,
@@ -1130,15 +1140,20 @@ class GraphGenerator(Base):
                 hovertemplate=[
                     f"{label}<br>年間予測: {signed_amount(total)}"
                     f"<br>残り予測: {signed_amount(amount)}<extra></extra>"
-                    for label, total, amount in zip(labels, forecast_total, forecast)
+                    for label, total, amount in zip(
+                        labels, forecast_total, forecast
+                    )
                 ],
                 name="年間予測",
                 showlegend=True,
             )
         )
-        endpoints = actual_bases + forecast_bases + [
-            actual_bases[i] + actual[i] for i in range(len(actual))
-        ] + [forecast_bases[i] + forecast[i] for i in range(len(forecast))]
+        endpoints = (
+            actual_bases
+            + forecast_bases
+            + [actual_bases[i] + actual[i] for i in range(len(actual))]
+            + [forecast_bases[i] + forecast[i] for i in range(len(forecast))]
+        )
         ymin = min(0, min(endpoints)) * 1.1
         ymax = max(0, max(endpoints)) * 1.1
         fig.update_xaxes(showline=False, showticklabels=False, showgrid=False)
@@ -1233,7 +1248,7 @@ class GraphGenerator(Base):
             0,
         )
         daily = (
-            df_graph.groupby("date")[['income', 'expense']]
+            df_graph.groupby("date")[["income", "expense"]]
             .sum()
             .reindex(pd.date_range(fiscal_start, fiscal_end), fill_value=0)
         )
@@ -1268,11 +1283,13 @@ class GraphGenerator(Base):
                 )
             )
 
-        y_values = daily[[
-            "income_cumulative",
-            "expense_cumulative",
-            "balance",
-        ]].to_numpy()
+        y_values = daily[
+            [
+                "income_cumulative",
+                "expense_cumulative",
+                "balance",
+            ]
+        ].to_numpy()
         y_min = float(y_values.min())
         y_max = float(y_values.max())
         y_margin = max((y_max - y_min) * 0.1, 1)

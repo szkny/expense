@@ -97,9 +97,11 @@ class AssetManager(Base):
                         "current_value": current_value,
                         "difference_weight": difference_percent,
                         "trade_value": 0 if within_tolerance else trade_value,
-                        "action": "調整不要"
-                        if within_tolerance
-                        else ("買い" if trade_value > 0 else "売り"),
+                        "action": (
+                            "調整不要"
+                            if within_tolerance
+                            else ("買い" if trade_value > 0 else "売り")
+                        ),
                     }
                 )
             return allocation
@@ -307,7 +309,9 @@ class AssetManager(Base):
                 ("df_stock", "'株価情報'!A2:N15", 14, 14),
             ]
             selected_specs = [
-                spec for spec in specs if data_types is None or spec[0] in data_types
+                spec
+                for spec in specs
+                if data_types is None or spec[0] in data_types
             ]
             ranges = [spec[1] for spec in selected_specs]
             response = self.workbook.values_batch_get(ranges)

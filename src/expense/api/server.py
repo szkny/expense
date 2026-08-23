@@ -65,9 +65,7 @@ class _LazyGspreadHandler:
         return getattr(self._get_handler(), name)
 
 
-gspread_handler: Any = _LazyGspreadHandler(
-    f"CF ({get_fiscal_year()}年度)"
-)
+gspread_handler: Any = _LazyGspreadHandler(f"CF ({get_fiscal_year()}年度)")
 asset_manager: AssetManager = AssetManager()
 _df_cache_record: dict = {}
 _df_cache_record_lock = threading.Lock()
@@ -88,9 +86,7 @@ def get_cached_records(
     log.info("start 'get_cached_records' method")
     try:
         if _is_record_cache_valid():
-            log.debug(
-                f"returning cache DataFrame (< {_RECORD_CACHE_TTL}s)"
-            )
+            log.debug(f"returning cache DataFrame (< {_RECORD_CACHE_TTL}s)")
             return _get_record_cache_dataframes()
 
         with _df_cache_record_lock:
@@ -188,8 +184,9 @@ def _get_expired_asset_cache_keys() -> list[str]:
     ]
 
 
-def _get_asset_cache_dataframes(
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def _get_asset_cache_dataframes() -> (
+    tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]
+):
     df_summary = pd.DataFrame(_df_cache_asset_table.get("df_summary"))
     df_items = pd.DataFrame(_df_cache_asset_table.get("df_items"))
     df_records = pd.DataFrame(_df_cache_asset_table.get("df_records"))

@@ -173,7 +173,11 @@ class TestMain(unittest.TestCase):
 
         grouped_target = AssetManager.build_asset_allocation(
             df_items,
-            {"AAA": 30, "BBB": 20, "米国株": {"tickers": ["AAA", "BBB"], "weight": 50}},
+            {
+                "AAA": 30,
+                "BBB": 20,
+                "米国株": {"tickers": ["AAA", "BBB"], "weight": 50},
+            },
         )
         group = grouped_target[2]
         self.assertEqual(group["ticker"], "米国株")

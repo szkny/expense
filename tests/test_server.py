@@ -14,18 +14,18 @@ from src.expense.api.server import (
 class TestLazyGspreadHandler(unittest.TestCase):
     def test_connects_on_first_use_and_retries(self) -> None:
         handler = Mock()
-        handler.get_spreadsheet_url.return_value = 'https://example.test'
+        handler.get_spreadsheet_url.return_value = "https://example.test"
         with (
             patch(
-                'src.expense.api.server.GspreadHandler',
-                side_effect=[RuntimeError('temporary'), handler],
+                "src.expense.api.server.GspreadHandler",
+                side_effect=[RuntimeError("temporary"), handler],
             ) as constructor,
-            patch('src.expense.api.server.time.sleep') as sleep,
+            patch("src.expense.api.server.time.sleep") as sleep,
         ):
-            lazy_handler = _LazyGspreadHandler('book')
+            lazy_handler = _LazyGspreadHandler("book")
 
             self.assertEqual(
-                lazy_handler.get_spreadsheet_url(), 'https://example.test'
+                lazy_handler.get_spreadsheet_url(), "https://example.test"
             )
             self.assertEqual(constructor.call_count, 2)
             sleep.assert_called_once_with(1)
@@ -33,20 +33,20 @@ class TestLazyGspreadHandler(unittest.TestCase):
     def test_does_not_fail_when_sheets_are_unavailable(self) -> None:
         with (
             patch(
-                'src.expense.api.server.GspreadHandler',
-                side_effect=RuntimeError('unavailable'),
+                "src.expense.api.server.GspreadHandler",
+                side_effect=RuntimeError("unavailable"),
             ),
-            patch('src.expense.api.server.time.sleep'),
+            patch("src.expense.api.server.time.sleep"),
         ):
-            lazy_handler = _LazyGspreadHandler('book')
+            lazy_handler = _LazyGspreadHandler("book")
 
-            self.assertEqual(lazy_handler.get_spreadsheet_url(), '')
+            self.assertEqual(lazy_handler.get_spreadsheet_url(), "")
 
 
 class TestCachedGraph(unittest.TestCase):
     def test_record_cache_can_be_cleared(self) -> None:
-        _df_cache_record['graph_html'] = {('bar',): '<div>graph</div>'}
-        _df_cache_record['timestamp'] = 'not-a-real-timestamp'
+        _df_cache_record["graph_html"] = {("bar",): "<div>graph</div>"}
+        _df_cache_record["timestamp"] = "not-a-real-timestamp"
 
         _clear_record_cache()
 
@@ -81,5 +81,5 @@ class TestCachedGraph(unittest.TestCase):
         self.assertEqual(_RECORD_CACHE_TTL, 300)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
