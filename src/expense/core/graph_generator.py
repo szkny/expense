@@ -1215,7 +1215,7 @@ class GraphGenerator(Base):
         y_max = float(y_values.max())
         y_margin = max((y_max - y_min) * 0.1, 1)
         fig.update_layout(
-            title="今年度の資産推移",
+            title=f"{target_year if target_year else '今'}年度の収支推移",
             hovermode="x unified",
             xaxis=dict(range=[fiscal_start, fiscal_end], fixedrange=True),
             yaxis=dict(range=[y_min - y_margin, y_max + y_margin]),
