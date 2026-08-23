@@ -1,4 +1,3 @@
-import io
 import os
 import re
 import base64
@@ -176,6 +175,40 @@ class ServerTools(Base):
             "prev_monthly_total": prev_monthly_total,
         }
 
+    def get_latest_screenshot_data(self) -> dict[str, Any]:
+        """最新スクリーンショットとOCR登録状態を取得する。"""
+        try:
+            screenshot_path = get_latest_screenshot()
+            if not screenshot_path:
+                return {
+                    "screenshot_name": "",
+                    "screenshot_base64": "",
+                    "disable_ocr": True,
+                }
+
+            with open(screenshot_path, "rb") as screenshot_file:
+                img_base64 = base64.b64encode(screenshot_file.read()).decode(
+                    "utf-8"
+                )
+
+            latest_ocr_data = self.expense_handler.get_ocr_expense()
+            disable_ocr = bool(latest_ocr_data) and (
+                latest_ocr_data.get("screenshot_name", "")
+                == os.path.basename(screenshot_path)
+            )
+            return {
+                "screenshot_name": screenshot_path,
+                "screenshot_base64": img_base64,
+                "disable_ocr": disable_ocr,
+            }
+        except Exception:
+            log.exception("Error occurred in screenshot process.")
+            return {
+                "screenshot_name": "",
+                "screenshot_base64": "",
+                "disable_ocr": True,
+            }
+
     def generate_commons(self, request: Request) -> dict[str, Any]:
         """
         テンプレートに渡す共通データを生成
@@ -191,28 +224,10 @@ class ServerTools(Base):
         )
 
         # 最新のスクリーンショットを取得してBase64エンコード
-        try:
-            screenshot_name = get_latest_screenshot()
-            if screenshot_name:
-                buf = io.BytesIO()
-                with open(screenshot_name, "rb") as f:
-                    buf.write(f.read())
-                buf.seek(0)
-                img_base64 = base64.b64encode(buf.read()).decode("utf-8")
-                # 最新のOCRデータを取得して、最新のスクリーンショットと同じならOCR登録済みとみなす
-                latest_ocr_data = self.expense_handler.get_ocr_expense()
-                disable_ocr = len(latest_ocr_data) and (
-                    latest_ocr_data.get("screenshot_name", "")
-                    == os.path.basename(screenshot_name)
-                )
-            else:
-                img_base64 = ""
-                disable_ocr = True
-        except Exception:
-            log.exception("Error occurred in screenshot process.")
-            screenshot_name = ""
-            img_base64 = ""
-            disable_ocr = True
+        screenshot_data = self.get_latest_screenshot_data()
+        screenshot_name = screenshot_data["screenshot_name"]
+        img_base64 = screenshot_data["screenshot_base64"]
+        disable_ocr = screenshot_data["disable_ocr"]
 
         # インスタント登録用のアイテムを取得
         items = self.generate_items()

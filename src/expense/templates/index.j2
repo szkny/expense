@@ -85,14 +85,21 @@
         </h3>
         <div id="ocr-container" class="collapsible-content">
           <div id="screenshot-name">
-            {{ icons.get("screenshot_name", "") }} 対象画像 : {{ screenshot_name.split("/") | last }}
+            <span id="screenshot-name-icon">{{ icons.get("screenshot_name", "") }}</span>
+            <span id="screenshot-name-text">対象画像 : {{ screenshot_name.split("/") | last }}</span>
           </div>
           <div id="img-overlay" class="overlay"></div>
-          <img id="screenshot" class="screenshot" alt="{{ screenshot_name.split(" /") | last }}"
-            src="data:image/png;base64,{{ screenshot_base64 }}" onclick="this.classList.toggle('is-zoomed')">
-          <button type="submit" class="btn secondary" {% if disable_ocr %} disabled {% endif %}> {% if disable_ocr %}
-            登録済
-            {% else %} 読取実行 {% endif %}</button>
+          <div class="screenshot-preview">
+            <img id="screenshot" class="screenshot" alt="{{ screenshot_name.split(" /") | last }}"
+              src="data:image/png;base64,{{ screenshot_base64 }}" onclick="this.classList.toggle('is-zoomed')">
+            <button id="ocr-reload-btn" type="button" class="btn-reload" title="OCR画像をリロード"
+              aria-label="OCR画像をリロード">
+              {{ icons.get("reload", "↻") }}
+            </button>
+          </div>
+          <button id="ocr-submit-btn" type="submit" class="btn secondary" {% if disable_ocr %} disabled {% endif %}>
+            <span id="ocr-submit-label">{% if disable_ocr %}登録済{% else %}読取実行{% endif %}</span>
+          </button>
         </div>
       </form>
     </div>

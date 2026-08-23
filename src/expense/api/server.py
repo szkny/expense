@@ -266,6 +266,17 @@ def read_root(
     )
 
 
+@app.get("/api/ocr/latest", response_class=JSONResponse)
+def get_latest_ocr_screenshot() -> JSONResponse:
+    """最新のOCR対象画像を返すエンドポイント"""
+    server_tools: ServerTools = ServerTools(app, gspread_handler)
+    screenshot_data = server_tools.get_latest_screenshot_data()
+    screenshot_name = screenshot_data["screenshot_name"]
+    if screenshot_name:
+        screenshot_data["screenshot_name"] = os.path.basename(screenshot_name)
+    return JSONResponse(content=screenshot_data)
+
+
 def build_asset_summary_dict(
     df_summary: pd.DataFrame, df_items: pd.DataFrame, df_stock: pd.DataFrame
 ) -> dict:

@@ -154,6 +154,40 @@ export function initScreenshotZoom() {
   });
 }
 
+export function initOcrReload() {
+  const reloadButton = document.getElementById("ocr-reload-btn");
+  const screenshotName = document.getElementById("screenshot-name-text");
+  const screenshot = document.getElementById("screenshot");
+  const submitButton = document.getElementById("ocr-submit-btn");
+  const submitLabel = document.getElementById("ocr-submit-label");
+  if (
+    !reloadButton ||
+    !screenshotName ||
+    !screenshot ||
+    !submitButton ||
+    !submitLabel
+  ) {
+    return;
+  }
+
+  reloadButton.addEventListener("click", async () => {
+    try {
+      const response = await fetch("/api/ocr/latest");
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      if (!data.screenshot_name) return;
+
+      screenshotName.textContent = `対象画像 : ${data.screenshot_name}`;
+      screenshot.src = `data:image/png;base64,${data.screenshot_base64}`;
+      screenshot.alt = data.screenshot_name;
+      submitButton.disabled = data.disable_ocr;
+      submitLabel.textContent = data.disable_ocr ? "登録済" : "読取実行";
+    } catch (error) {
+      console.error("OCR画像のリロードに失敗しました。", error);
+    }
+  });
+}
+
 export function initCollapsibleSections() {
   const triggers = document.querySelectorAll(".collapsible-trigger");
   const onOpenCallbacks = {

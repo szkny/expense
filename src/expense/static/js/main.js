@@ -9,6 +9,7 @@ import {
   initFormLoaders,
   initThemeToggle,
   initScreenshotZoom,
+  initOcrReload,
   initCollapsibleSections,
   initRecordEditor,
   initPwaInstall,
@@ -29,6 +30,7 @@ function onDOMContentLoaded() {
   initFormLoaders();
   initThemeToggle();
   initScreenshotZoom();
+  initOcrReload();
   initRecordEditor();
   initPwaInstall();
   initAssetMasking();

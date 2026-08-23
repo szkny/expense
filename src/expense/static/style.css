@@ -313,6 +313,17 @@ img.screenshot {
   z-index: 2000;
 }
 
+.screenshot-preview {
+  position: relative;
+}
+
+.screenshot-preview .btn-reload {
+  position: absolute;
+  top: 5px;
+  right: 10px;
+  z-index: 2001;
+}
+
 #img-overlay {
   position: fixed;
   top: 0;

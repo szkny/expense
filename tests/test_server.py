@@ -1,6 +1,6 @@
 import unittest
 import threading
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, mock_open
 
 from src.expense.api.server import (
     _RECORD_CACHE_TTL,
@@ -9,6 +9,7 @@ from src.expense.api.server import (
     _df_cache_record,
     _get_cached_graph,
 )
+from src.expense.api.server_tools import ServerTools
 
 
 class TestLazyGspreadHandler(unittest.TestCase):
@@ -79,6 +80,37 @@ class TestCachedGraph(unittest.TestCase):
 
     def test_record_cache_ttl_is_five_minutes(self) -> None:
         self.assertEqual(_RECORD_CACHE_TTL, 300)
+
+
+class TestLatestScreenshotData(unittest.TestCase):
+    def test_returns_screenshot_and_registration_state(self) -> None:
+        server_tools = ServerTools.__new__(ServerTools)
+        server_tools.expense_handler = Mock(
+            get_ocr_expense=Mock(return_value={})
+        )
+        with (
+            patch(
+                "src.expense.api.server_tools.get_latest_screenshot",
+                return_value="/screenshots/receipt.png",
+            ),
+            patch("builtins.open", mock_open(read_data=b"png")),
+        ):
+            result = server_tools.get_latest_screenshot_data()
+
+        self.assertEqual(result["screenshot_name"], "/screenshots/receipt.png")
+        self.assertEqual(result["screenshot_base64"], "cG5n")
+        self.assertFalse(result["disable_ocr"])
+
+    def test_returns_empty_data_when_screenshot_is_missing(self) -> None:
+        server_tools = ServerTools.__new__(ServerTools)
+        with patch(
+            "src.expense.api.server_tools.get_latest_screenshot",
+            return_value="",
+        ):
+            result = server_tools.get_latest_screenshot_data()
+
+        self.assertEqual(result["screenshot_name"], "")
+        self.assertTrue(result["disable_ocr"])
 
 
 if __name__ == "__main__":
