@@ -967,43 +967,105 @@ class GraphGenerator(Base):
 
     def generate_annual_fiscal_report_chart(
         self,
-        df: pd.DataFrame,
+        df_records: pd.DataFrame,
+        target_year: str | None = None,
         theme: str = "light",
         include_plotlyjs: bool | str = True,
-    ) -> str:
+    ) -> tuple[str, list[str]]:
         """
-        今年度の収支サマリのレポートグラフを生成
+        年度の収支サマリのレポートグラフを生成
         """
         log.info("start 'generate_annual_fiscal_report_chart' method")
-        if df.empty:
+        if df_records.empty:
             log.info("DataFrame is empty, skipping graph generation.")
-            return ""
-        df_annual = df.copy()
-        current_month = pd.Timestamp.today().to_period("M")
-        completed_months = (
-            pd.to_datetime(df_annual.index).to_period("M") < current_month
+            return "", []
+
+        today = pd.Timestamp(dt.date.today())
+        df_annual = df_records.copy()
+        df_annual["date"] = pd.to_datetime(df_annual["date"], errors="coerce")
+        df_annual["expense_amount"] = pd.to_numeric(
+            df_annual["expense_amount"], errors="coerce"
         )
-        df_completed = df_annual.loc[completed_months]
+        df_annual.dropna(subset=["date", "expense_amount"], inplace=True)
+        df_annual["date"] = df_annual["date"].dt.normalize()
+        df_annual = df_annual.loc[
+            df_annual["expense_type"].isin(
+                self.income_types + self.fixed_types + self.variable_types
+            )
+        ].copy()
+        if df_annual.empty:
+            return "", []
+
+        fiscal_years = df_annual["date"].dt.year - (
+            df_annual["date"].dt.month < 4
+        ).astype(int)
+        current_fiscal_year = today.year - int(today.month < 4)
+        available_years = sorted(
+            set(fiscal_years.unique()) | {current_fiscal_year}, reverse=True
+        )
+        available_year_strings = [str(year) for year in available_years]
+        fiscal_year = (
+            int(target_year)
+            if target_year in available_year_strings
+            else available_years[0]
+        )
+        fiscal_start = pd.Timestamp(fiscal_year, 4, 1)
+        fiscal_end = (
+            today
+            if fiscal_year == current_fiscal_year
+            else pd.Timestamp(fiscal_year + 1, 3, 31)
+        )
+        df_annual = df_annual.loc[
+            (df_annual["date"] >= fiscal_start)
+            & (df_annual["date"] <= fiscal_end)
+        ]
+        if fiscal_year == current_fiscal_year:
+            df_completed = df_annual.loc[
+                df_annual["date"] < today
+            ]
+            elapsed_days = max(1, (today - fiscal_start).days)
+            fiscal_days = (
+                pd.Timestamp(fiscal_year + 1, 4, 1) - fiscal_start
+            ).days
+        else:
+            df_completed = df_annual
+            fiscal_days = (
+                pd.Timestamp(fiscal_year + 1, 4, 1) - fiscal_start
+            ).days
+            elapsed_days = fiscal_days
+
+        income = int(
+            df_completed.loc[
+                df_completed["expense_type"].isin(self.income_types),
+                "expense_amount",
+            ].sum()
+        )
+        expense = -int(
+            df_completed.loc[
+                df_completed["expense_type"].isin(
+                    self.fixed_types + self.variable_types
+                ),
+                "expense_amount",
+            ].sum()
+        )
         actual = [
-            int(df_completed["収入"].astype(int).sum()),
-            int(df_completed["支出"].astype(int).sum()),
+            income,
+            expense,
         ]
         actual.append(actual[0] + actual[1])
         labels = ["収入", "支出", "ｷｬｯｼｭﾌﾛｰ"]
 
-        # 今年度の経過月までの実績を年換算し、残りを予測として表示する。
-        today = dt.date.today()
-        fiscal_start_year = today.year if today.month >= 4 else today.year - 1
-        elapsed_months = (
-            (today.year - fiscal_start_year) * 12 + today.month - 4
-        )
-        elapsed_months = max(1, min(12, elapsed_months))
-        forecast_total = [int(amount * 12 / elapsed_months) for amount in actual]
-        forecast = [total - amount for total, amount in zip(forecast_total, actual)]
+        # 経過日数の実績を年度日数へ換算し、残りを予測として表示する。
+        forecast_total = [
+            int(amount * fiscal_days / elapsed_days) for amount in actual
+        ]
+        forecast = [
+            total - amount for total, amount in zip(forecast_total, actual)
+        ]
 
         income, expense, cash_flow = actual
-        forecast_bases = [income, forecast_total[0] + expense, cash_flow]
-        actual_bases = [0, forecast_total[0], 0]
+        forecast_bases = [income, expense, cash_flow]
+        actual_bases = [0, 0, 0]
         actual_colors = [
             "#4466bb" if theme == "dark" else "#6699ee",
             "#bb3333" if theme == "dark" else "#ee5555",
@@ -1083,7 +1145,7 @@ class GraphGenerator(Base):
         fig.update_yaxes(range=(ymin, ymax))
         self._update_layout(fig, theme, ymax_for_format=ymax)
         fig.update_layout(
-            title="今年度の収支サマリ",
+            title=f"{fiscal_year}年度の収支サマリ",
             barmode="overlay",
             bargap=0.4,
             height=400,
@@ -1104,7 +1166,7 @@ class GraphGenerator(Base):
             ),
         )
         log.info("end 'generate_annual_fiscal_report_chart' method")
-        return graph_html
+        return graph_html, available_year_strings
 
     def generate_fiscal_asset_history_chart(
         self,

@@ -9,13 +9,16 @@ const allChartConfigs = {
     {
       id: "annual-fiscal-report",
       endpoint: "/api/annual_fiscal_report_chart",
-      hasDropdown: false,
+      hasDropdown: true,
+      dateParam: "year",
+      optionLabel: (year) => `${year}年度`,
     },
     {
       id: "fiscal-asset-history",
       endpoint: "/api/fiscal_asset_history_chart",
       hasDropdown: true,
       dateParam: "year",
+      defaultParams: () => ({ year: getCurrentFiscalYear() }),
       optionLabel: (year) => `${year}年度`,
     },
   ],
@@ -44,6 +47,13 @@ const allChartConfigs = {
   ],
 };
 
+function getCurrentFiscalYear() {
+  const today = new Date();
+  return String(
+    today.getFullYear() - (today.getMonth() + 1 < 4 ? 1 : 0),
+  );
+}
+
 function getReloadIcon() {
   return document.body?.dataset?.reloadIcon || "↻";
 }
@@ -59,6 +69,9 @@ function createReloadButton(onClickHandler) {
 }
 
 export async function fetchAndRenderChart(config, params = {}, force = false) {
+  if (Object.keys(params).length === 0 && config.defaultParams) {
+    params = config.defaultParams();
+  }
   const container = document.getElementById(`${config.id}-chart-container`);
   if (
     !container ||
