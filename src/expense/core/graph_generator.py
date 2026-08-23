@@ -1189,7 +1189,7 @@ class GraphGenerator(Base):
         fig = go.Figure()
         for column, name, color in zip(
             ["income_cumulative", "expense_cumulative", "balance"],
-            ["収入累計", "支出累計", "収支累計"],
+            ["収入", "支出", "ｷｬｯｼｭﾌﾛｰ"],
             colors,
         ):
             fig.add_trace(
@@ -1217,7 +1217,15 @@ class GraphGenerator(Base):
         fig.update_layout(
             title=f"{target_year if target_year else '今'}年度の収支推移",
             hovermode="x unified",
-            xaxis=dict(range=[fiscal_start, fiscal_end], fixedrange=True),
+            xaxis=dict(
+                range=[fiscal_start, fiscal_end],
+                fixedrange=True,
+                showspikes=True,
+                spikemode="across",
+                spikecolor="#ffffff" if theme == "dark" else "#000000",
+                spikethickness=1,
+                spikedash="dot",
+            ),
             yaxis=dict(range=[y_min - y_margin, y_max + y_margin]),
         )
         self._update_layout(fig, theme, ymax_for_format=max(abs(y_min), y_max))
