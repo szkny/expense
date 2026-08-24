@@ -1228,11 +1228,10 @@ class GraphGenerator(Base):
         )
         fiscal_start = pd.Timestamp(fiscal_year, 4, 1)
         fiscal_end = pd.Timestamp(fiscal_year + 1, 3, 31)
-        if fiscal_year == current_fiscal_year:
-            fiscal_end = today
+        actual_end = today if fiscal_year == current_fiscal_year else fiscal_end
         df_graph = df_graph.loc[
             (df_graph["date"] >= fiscal_start)
-            & (df_graph["date"] <= fiscal_end)
+            & (df_graph["date"] <= actual_end)
         ]
         if df_graph.empty:
             log.info("No records in the selected fiscal year.")
@@ -1250,7 +1249,7 @@ class GraphGenerator(Base):
         daily = (
             df_graph.groupby("date")[["income", "expense"]]
             .sum()
-            .reindex(pd.date_range(fiscal_start, fiscal_end), fill_value=0)
+            .reindex(pd.date_range(fiscal_start, actual_end), fill_value=0)
         )
         daily["income_cumulative"] = daily["income"].cumsum()
         daily["expense_cumulative"] = daily["expense"].cumsum()
@@ -1264,6 +1263,7 @@ class GraphGenerator(Base):
             else ["#4466bb", "#bb3333", "#baa44b"]
         )
         fig = go.Figure()
+        forecast_y_values: list[np.ndarray] = []
         for column, name, color in zip(
             ["income_cumulative", "expense_cumulative", "balance"],
             ["収入", "支出", "ｷｬｯｼｭﾌﾛｰ"],
@@ -1283,6 +1283,72 @@ class GraphGenerator(Base):
                 )
             )
 
+        if fiscal_year == current_fiscal_year and actual_end < fiscal_end:
+            forecast_dates = pd.date_range(actual_end, fiscal_end)
+            forecast_days = (forecast_dates - actual_end).days.to_numpy()
+            elapsed_days = max(1, (actual_end - fiscal_start).days)
+            fiscal_days = (
+                fiscal_end + pd.Timedelta(days=1) - fiscal_start
+            ).days
+            completed = df_graph.loc[df_graph["date"] < actual_end]
+            completed_income = int(
+                completed.loc[
+                    completed["expense_type"].isin(self.income_types),
+                    "expense_amount",
+                ].sum()
+            )
+            completed_expense = int(
+                completed.loc[
+                    completed["expense_type"].isin(
+                        self.fixed_types + self.variable_types
+                    ),
+                    "expense_amount",
+                ].sum()
+            )
+            completed_balance = completed_income - completed_expense
+            forecast_totals = [
+                int(completed_income * fiscal_days / elapsed_days),
+                int(completed_expense * fiscal_days / elapsed_days),
+                int(completed_balance * fiscal_days / elapsed_days),
+            ]
+            forecast_columns = [
+                "income_cumulative",
+                "expense_cumulative",
+                "balance",
+            ]
+            for column, name, color, target_value in zip(
+                forecast_columns,
+                ["収入", "支出", "ｷｬｯｼｭﾌﾛｰ"],
+                colors,
+                forecast_totals,
+            ):
+                current_value = daily[column].iloc[-1]
+                forecast_values = (
+                    current_value
+                    + (target_value - current_value)
+                    * forecast_days
+                    / (fiscal_end - actual_end).days
+                )
+                forecast_y_values.append(forecast_values)
+                fig.add_trace(
+                    go.Scatter(
+                        x=forecast_dates,
+                        y=forecast_values,
+                        mode="lines",
+                        name=f"{name}（予測）",
+                        line=dict(
+                            color=color,
+                            dash="dash",
+                            shape="hv",
+                            width=2,
+                        ),
+                        hovertemplate=(
+                            "%{x|%-Y年%-m月%-d日}<br>"
+                            f"{name}（予測）: ¥%{{y:,.0f}}<extra></extra>"
+                        ),
+                    )
+                )
+
         y_values = daily[
             [
                 "income_cumulative",
@@ -1290,6 +1356,8 @@ class GraphGenerator(Base):
                 "balance",
             ]
         ].to_numpy()
+        if fiscal_year == current_fiscal_year and actual_end < fiscal_end:
+            y_values = np.concatenate([y_values, np.array(forecast_y_values).T])
         y_min = float(y_values.min())
         y_max = float(y_values.max())
         y_margin = max((y_max - y_min) * 0.1, 1)
