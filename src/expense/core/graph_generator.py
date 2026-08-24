@@ -1164,13 +1164,14 @@ class GraphGenerator(Base):
             barmode="overlay",
             bargap=0.4,
             height=400,
+            showlegend=False,
             legend=dict(
                 orientation="h",
                 y=0.0,
                 x=0.5,
                 xanchor="center",
             ),
-            margin=dict(b=70),
+            margin=dict(b=0),
         )
         graph_html: str = fig.to_html(
             full_html=False,
