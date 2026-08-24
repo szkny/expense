@@ -1166,7 +1166,7 @@ class GraphGenerator(Base):
             height=400,
             legend=dict(
                 orientation="h",
-                y=-0.1,
+                y=0.0,
                 x=0.5,
                 xanchor="center",
             ),
