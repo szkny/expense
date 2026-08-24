@@ -1,5 +1,8 @@
 import unittest
 import datetime
+import json
+import tempfile
+from pathlib import Path
 import pandas as pd
 from unittest.mock import patch
 from src.expense.core.expense import get_fiscal_year, Expense
@@ -131,6 +134,112 @@ class TestMain(unittest.TestCase):
 
             mock_read_csv.side_effect = FileNotFoundError
             self.assertEqual(expense.get_recent_expenses(2), [])
+
+    def test_get_recent_expenses_with_dates_and_duplicates(self) -> None:
+        expense = Expense()
+        data = pd.DataFrame(
+            {
+                "date": ["2024-04-01", "2024-04-02", "2024-04-02"],
+                "expense_type": ["食費", "交通費", "交通費"],
+                "expense_memo": ["", "電車", "電車"],
+                "expense_amount": [1000, 500, 500],
+            }
+        )
+        with patch("src.expense.core.expense.pd.read_csv", return_value=data):
+            result = expense.get_recent_expenses(
+                3, drop_duplicates=False, with_date=True
+            )
+
+        self.assertEqual(result[0]["date"], "2024-04-02(火)")
+        self.assertEqual(len(result), 3)
+
+    def test_get_ocr_expense_handles_valid_and_invalid_cache(self) -> None:
+        expense = Expense()
+        expense.cache_path = Path("/cache")
+        valid = {
+            "expense_type": "食費",
+            "expense_memo": "昼食",
+            "expense_amount": "1200",
+            "screenshot_name": "receipt.jpg",
+        }
+        with patch(
+            "builtins.open",
+            unittest.mock.mock_open(read_data=json.dumps(valid)),
+        ):
+            self.assertEqual(expense.get_ocr_expense()["expense_amount"], 1200)
+        with patch("builtins.open", unittest.mock.mock_open(read_data="{}")):
+            self.assertEqual(expense.get_ocr_expense()["expense_type"], "")
+        with patch(
+            "builtins.open", unittest.mock.mock_open(read_data="invalid")
+        ):
+            self.assertEqual(expense.get_ocr_expense(), {})
+        with patch("builtins.open", side_effect=FileNotFoundError):
+            self.assertEqual(expense.get_ocr_expense(), {})
+
+    def test_delete_expense_updates_history(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            expense = object.__new__(Expense)
+            expense.expense_history = Path(directory) / "history.log"
+            expense.expense_history.write_text(
+                "2024-04-01T10:00:00.000000,食費,昼食,1000\n"
+                "2024-04-02T10:00:00.000000,交通費,電車,500\n"
+            )
+
+            self.assertTrue(
+                expense.delete_expense("2024-04-01", "食費", 1000, "昼食")
+            )
+            self.assertFalse(
+                expense.delete_expense("2024-04-09", "食費", 1000, "昼食")
+            )
+            self.assertEqual(
+                len(expense.expense_history.read_text().splitlines()), 1
+            )
+            expense.expense_history.unlink()
+            self.assertFalse(
+                expense.delete_expense("2024-04-01", "食費", 1000, "昼食")
+            )
+
+    def test_edit_expense_updates_matching_history(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            expense = object.__new__(Expense)
+            expense.expense_history = Path(directory) / "history.log"
+            expense.expense_history.write_text(
+                "2024-04-01T10:00:00.000000,食費,昼食,1000\n"
+            )
+
+            self.assertTrue(
+                expense.edit_expense(
+                    {
+                        "expense_date": "2024-04-01",
+                        "expense_type": "食費",
+                        "expense_memo": "昼食",
+                        "expense_amount": "¥1,000",
+                    },
+                    {
+                        "expense_date": "2024-04-03",
+                        "expense_type": "外食",
+                        "expense_memo": "夕食",
+                        "expense_amount": "2000",
+                    },
+                )
+            )
+            self.assertIn("外食,夕食,2000", expense.expense_history.read_text())
+            self.assertFalse(
+                expense.edit_expense(
+                    {"expense_type": "食費", "expense_amount": 1000}, {}
+                )
+            )
+            expense.expense_history.unlink()
+            self.assertFalse(
+                expense.edit_expense(
+                    {
+                        "expense_date": "2024-04-01",
+                        "expense_type": "食費",
+                        "expense_amount": 1000,
+                    },
+                    {},
+                )
+            )
 
     def test_store_expense(self) -> None:
         expense = Expense()
