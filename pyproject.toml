@@ -33,6 +33,11 @@ dependencies = [
     "lxml_html_clean>=0.4.0"
 ]
 
+[project.optional-dependencies]
+dev = [
+    "coverage>=7.0",
+]
+
 [project.scripts]
 expense = "expense.__main__:main"
 

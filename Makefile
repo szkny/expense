@@ -1,4 +1,4 @@
-.PHONY: build install
+.PHONY: build install test coverage ocr-test
 
 build: clean
 	@echo "Building the project..."
@@ -28,6 +28,19 @@ webui:
 test:
 	@echo "Running tests..."
 	LOG_LEVEL=DEBUG python -m unittest tests/test_*.py
+	@echo
+
+coverage:
+	@echo "Running tests with coverage..."
+	coverage erase
+	LOG_LEVEL=DEBUG coverage run --source=src/expense -m unittest discover -s tests -p "test_*.py"
+	coverage report -m
+	coverage html
+	@echo
+
+ocr-test:
+	@echo "Running OCR diagnostic test..."
+	LOG_LEVEL=DEBUG python -m unittest tests/ocr_diagnostic.py
 	@echo
 
 clean:

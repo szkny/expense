@@ -8,3 +8,6 @@ activate
 build
 dist
 .aider*
+.coverage
+coverage.xml
+htmlcov/
