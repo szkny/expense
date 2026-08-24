@@ -1018,8 +1018,8 @@ class GraphGenerator(Base):
             & (df_annual["date"] <= fiscal_end)
         ]
         if fiscal_year == current_fiscal_year:
-            df_completed = df_annual.loc[df_annual["date"] < today]
-            elapsed_days = max(1, (today - fiscal_start).days)
+            df_completed = df_annual
+            elapsed_days = max(1, (today - fiscal_start).days + 1)
             fiscal_days = (
                 pd.Timestamp(fiscal_year + 1, 4, 1) - fiscal_start
             ).days
@@ -1051,7 +1051,7 @@ class GraphGenerator(Base):
         actual.append(actual[0] + actual[1])
         labels = ["収入", "支出", "ｷｬｯｼｭﾌﾛｰ"]
 
-        # 経過日数の実績を年度日数へ換算し、残りを予測として表示する。
+        # 今日までの実績を年度日数へ換算し、明日以降を予測として表示する。
         forecast_total = [
             int(amount * fiscal_days / elapsed_days) for amount in actual
         ]
@@ -1257,6 +1257,7 @@ class GraphGenerator(Base):
         daily["balance"] = (
             daily["income_cumulative"] - daily["expense_cumulative"]
         )
+        daily["cash_flow"] = daily["income"] - daily["expense"]
 
         colors = (
             ["#6699ee", "#ee5555", "#eecc55"]
@@ -1285,51 +1286,25 @@ class GraphGenerator(Base):
             )
 
         if fiscal_year == current_fiscal_year and actual_end < fiscal_end:
-            forecast_dates = pd.date_range(actual_end, fiscal_end)
+            forecast_dates = pd.date_range(
+                actual_end + pd.Timedelta(days=1), fiscal_end
+            )
             forecast_days = (forecast_dates - actual_end).days.to_numpy()
-            elapsed_days = max(1, (actual_end - fiscal_start).days)
-            fiscal_days = (
-                fiscal_end + pd.Timedelta(days=1) - fiscal_start
-            ).days
-            completed = df_graph.loc[df_graph["date"] < actual_end]
-            completed_income = int(
-                completed.loc[
-                    completed["expense_type"].isin(self.income_types),
-                    "expense_amount",
-                ].sum()
-            )
-            completed_expense = int(
-                completed.loc[
-                    completed["expense_type"].isin(
-                        self.fixed_types + self.variable_types
-                    ),
-                    "expense_amount",
-                ].sum()
-            )
-            completed_balance = completed_income - completed_expense
-            forecast_totals = [
-                int(completed_income * fiscal_days / elapsed_days),
-                int(completed_expense * fiscal_days / elapsed_days),
-                int(completed_balance * fiscal_days / elapsed_days),
-            ]
+            elapsed_days = max(1, (actual_end - fiscal_start).days + 1)
             forecast_columns = [
                 "income_cumulative",
                 "expense_cumulative",
                 "balance",
             ]
-            for column, name, color, target_value in zip(
+            for column, daily_column, name, color in zip(
                 forecast_columns,
+                ["income", "expense", "cash_flow"],
                 ["収入", "支出", "ｷｬｯｼｭﾌﾛｰ"],
                 colors,
-                forecast_totals,
             ):
                 current_value = daily[column].iloc[-1]
-                forecast_values = (
-                    current_value
-                    + (target_value - current_value)
-                    * forecast_days
-                    / (fiscal_end - actual_end).days
-                )
+                daily_average = daily[daily_column].sum() / elapsed_days
+                forecast_values = current_value + daily_average * forecast_days
                 forecast_y_values.append(forecast_values)
                 fig.add_trace(
                     go.Scatter(
