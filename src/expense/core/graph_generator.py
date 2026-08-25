@@ -501,7 +501,12 @@ class GraphGenerator(Base):
                 return {}
 
             ticktext = [
-                self._format_tick_label(v, unit, suffix) for v in tickvals
+                self._format_tick_label(
+                    v,
+                    10_000 if abs(v) < 100_000_000 else unit,
+                    "万" if abs(v) < 100_000_000 else suffix,
+                )
+                for v in tickvals
             ]
 
             return {
