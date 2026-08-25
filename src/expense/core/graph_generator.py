@@ -54,6 +54,18 @@ class GraphGenerator(Base):
         log.info("end 'get_plotlyjs' method")
         return script_html
 
+    @staticmethod
+    def _calculate_monthly_returns(df: pd.DataFrame) -> pd.Series:
+        """月初の積立額を除いた月次リターンを計算する。"""
+        df_returns = df.copy()
+        df_returns["date"] = pd.to_datetime(df_returns["date"])
+        df_returns = df_returns.sort_values("date")
+        valuation = pd.to_numeric(df_returns["valuation"], errors="coerce")
+        invested = pd.to_numeric(df_returns["invest_amount"], errors="coerce")
+        contribution = invested.diff()
+        monthly_returns = valuation / (valuation.shift(1) + contribution) - 1
+        return monthly_returns.replace([np.inf, -np.inf], np.nan).dropna()
+
     def generate_monthly_df(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         月別のDataFrameを生成
@@ -1741,15 +1753,9 @@ class GraphGenerator(Base):
 
             sim_values = project_values(simulation_annual_yield)
 
-            # Use historical monthly valuation volatility as a one-sigma risk
-            # estimate. Contributions are included in the valuation history,
-            # so this is intentionally a visual estimate rather than a forecast.
-            monthly_returns = (
-                pd.to_numeric(df_graph["valuation"], errors="coerce")
-                .pct_change(fill_method=None)
-                .replace([np.inf, -np.inf], np.nan)
-                .dropna()
-            )
+            # Assume contributions are made at the beginning of each month.
+            # invest_amount is cumulative, so its difference is the contribution.
+            monthly_returns = self._calculate_monthly_returns(df_graph)
             if len(monthly_returns) >= 2:
                 annual_volatility = float(
                     monthly_returns.std(ddof=1) * np.sqrt(12) * 100
