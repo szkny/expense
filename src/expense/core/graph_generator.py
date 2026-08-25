@@ -1721,49 +1721,90 @@ class GraphGenerator(Base):
             latest_date = pd.to_datetime(latest_row["date"])
             latest_valuation = latest_row["valuation"]
 
-            monthly_yield = (1 + simulation_annual_yield / 100) ** (1 / 12) - 1
-            sim_dates = [latest_date]
-            sim_values = [latest_valuation]
+            n_simulation_months = int(simulation_years * 12)
+            sim_dates = [
+                latest_date + pd.DateOffset(months=i)
+                for i in range(n_simulation_months + 1)
+            ]
 
-            current_valuation = latest_valuation
-            for i in range(1, int(simulation_years * 12) + 1):
-                # Next month start
-                next_date = latest_date + pd.DateOffset(months=i)
-                current_valuation = (
-                    current_valuation * (1 + monthly_yield)
-                    + simulation_monthly_investment
-                )
-                sim_dates.append(next_date)
-                sim_values.append(current_valuation)
-            sim_values = [max(v, 0) for v in sim_values]
+            def project_values(annual_yield: float) -> list[float]:
+                monthly_yield = (1 + annual_yield / 100) ** (1 / 12) - 1
+                values = [latest_valuation]
+                current_valuation = latest_valuation
+                for i in range(1, n_simulation_months + 1):
+                    current_valuation = (
+                        current_valuation * (1 + monthly_yield)
+                        + simulation_monthly_investment
+                    )
+                    values.append(max(current_valuation, 0))
+                return values
 
-            if max(sim_values) > ymax:
-                ymax = max(sim_values)
+            sim_values = project_values(simulation_annual_yield)
 
-            fill_color = (
-                "rgba(120, 255, 160, 0.1)"
-                if theme == "dark"
-                else "rgba(50, 200, 80, 0.1)"
+            # Use historical monthly valuation volatility as a one-sigma risk
+            # estimate. Contributions are included in the valuation history,
+            # so this is intentionally a visual estimate rather than a forecast.
+            monthly_returns = (
+                pd.to_numeric(df_graph["valuation"], errors="coerce")
+                .pct_change(fill_method=None)
+                .replace([np.inf, -np.inf], np.nan)
+                .dropna()
             )
+            if len(monthly_returns) >= 2:
+                annual_volatility = float(
+                    monthly_returns.std(ddof=1) * np.sqrt(12) * 100
+                )
+            else:
+                annual_volatility = 0.0
+            lower_values = project_values(
+                max(-99.9, simulation_annual_yield - annual_volatility)
+            )
+            upper_values = project_values(
+                simulation_annual_yield + annual_volatility
+            )
+            ymax = max(ymax, max(upper_values))
+
+            if annual_volatility > 0:
+                fig.add_trace(
+                    go.Scatter(
+                        x=sim_dates,
+                        y=lower_values,
+                        mode="lines",
+                        line=dict(width=0, color="rgba(16, 185, 129, 0)"),
+                        hoverinfo="skip",
+                        showlegend=False,
+                        legendgroup="simulation",
+                    )
+                )
+                fig.add_trace(
+                    go.Scatter(
+                        x=sim_dates,
+                        y=upper_values,
+                        mode="lines",
+                        name="シミュレーションのリスク範囲（±1σ）",
+                        line=dict(width=0, color="rgba(16, 185, 129, 0)"),
+                        fill="tonexty",
+                        fillcolor=(
+                            "rgba(16, 185, 129, 0.18)"
+                            if theme == "dark"
+                            else "rgba(16, 185, 129, 0.12)"
+                        ),
+                        hoverinfo="skip",
+                        showlegend=False,
+                        legendgroup="simulation",
+                    )
+                )
             fig.add_trace(
                 go.Scatter(
                     x=sim_dates,
                     y=sim_values,
                     mode="lines",
-                    name="シミュレーション",
+                    name="シミュレーション（±1σ）",
+                    legendgroup="simulation",
                     line=dict(
                         width=2,
                         dash="dash",
                         color="#10b981",
-                    ),
-                    fill="tozeroy",
-                    fillgradient=dict(
-                        type="vertical",
-                        colorscale=[
-                            (0, "rgba(0, 0, 0, 0.00)"),
-                            (0.5, fill_color),
-                            (1, fill_color),
-                        ],
                     ),
                     hovertext=[
                         f"シミュレーション<br>  ({x.strftime('%Y年%-m月%-d日')} ¥{y:,.0f})"
