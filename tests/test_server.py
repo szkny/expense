@@ -1,6 +1,9 @@
 import unittest
 import threading
+import datetime as dt
 from unittest.mock import Mock, patch, mock_open
+
+import pandas as pd
 
 from src.expense.api.server import (
     _RECORD_CACHE_TTL,
@@ -111,6 +114,33 @@ class TestLatestScreenshotData(unittest.TestCase):
 
         self.assertEqual(result["screenshot_name"], "")
         self.assertTrue(result["disable_ocr"])
+
+
+class TestReportSummary(unittest.TestCase):
+    def test_monthly_total_includes_expenses_later_on_today(self) -> None:
+        server_tools = ServerTools.__new__(ServerTools)
+        df = pd.DataFrame(
+            {
+                "date": pd.to_datetime(
+                    [
+                        "2026-08-01 12:00",
+                        "2026-08-25 00:01",
+                        "2026-08-25 23:59",
+                        "2026-07-31 23:59",
+                    ]
+                ),
+                "expense_amount": [100, 200, 300, 400],
+            }
+        )
+
+        fixed_now = dt.datetime(2026, 8, 25, 18)
+        with patch("src.expense.api.server_tools.dt.datetime") as datetime_mock:
+            datetime_mock.today.return_value = fixed_now
+            result = server_tools.generate_report_summary(df)
+
+        self.assertEqual(result["today_total"], 500)
+        self.assertEqual(result["monthly_total"], 600)
+        self.assertEqual(result["prev_monthly_total"], 400)
 
 
 if __name__ == "__main__":

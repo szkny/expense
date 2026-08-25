@@ -146,28 +146,30 @@ class ServerTools(Base):
         """
         log.info("start 'generate_report_summary' method")
         t = dt.datetime.today()
-        today_str = t.date().isoformat()
-        month_start = dt.date(t.year, t.month, 1).isoformat()
-        prev_month_start = dt.date(
-            t.year if t.month > 1 else t.year - 1,
-            t.month - 1 if t.month > 1 else 12,
-            1,
-        ).isoformat()
-        prev_month_end = (
-            dt.date(t.year, t.month, 1) - dt.timedelta(days=1)
-        ).isoformat()
-
-        def calc_total(start: str, end: str | None = None) -> int:
-            operator = ">=" if end else "=="
-            condition1 = f"date {operator} @pd.Timestamp('{start}')"
-            condition2 = f" and date <= @pd.Timestamp('{end}')" if end else ""
-            return int(
-                df.query(condition1 + condition2).loc[:, "expense_amount"].sum()
+        today = pd.Timestamp(t.date())
+        tomorrow = today + pd.Timedelta(days=1)
+        month_start = pd.Timestamp(dt.date(t.year, t.month, 1))
+        prev_month_start = pd.Timestamp(
+            dt.date(
+                t.year if t.month > 1 else t.year - 1,
+                t.month - 1 if t.month > 1 else 12,
+                1,
             )
+        )
+        next_month_start = pd.Timestamp(
+            dt.date(t.year, t.month + 1 if t.month < 12 else 1, 1)
+        )
 
-        today_total = calc_total(today_str)
-        monthly_total = calc_total(month_start, today_str)
-        prev_monthly_total = calc_total(prev_month_start, prev_month_end)
+        dates = pd.to_datetime(df["date"], errors="coerce")
+        amounts = pd.to_numeric(df["expense_amount"], errors="coerce").fillna(0)
+
+        def calc_total(start: pd.Timestamp, end: pd.Timestamp) -> int:
+            # 終端を翌日の00:00未満にして、時刻付きの当日データも含める。
+            return int(amounts[dates.ge(start) & dates.lt(end)].sum())
+
+        today_total = calc_total(today, tomorrow)
+        monthly_total = calc_total(month_start, next_month_start)
+        prev_monthly_total = calc_total(prev_month_start, month_start)
         log.info("end 'generate_report_summary' method")
         return {
             "today_total": today_total,
