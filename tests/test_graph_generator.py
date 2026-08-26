@@ -35,3 +35,24 @@ class GraphGeneratorMonthlyReturnsTest(unittest.TestCase):
 
         self.assertAlmostEqual(returns.iloc[0], 0.1)
         self.assertAlmostEqual(returns.iloc[1], 0.1)
+
+
+class GraphGeneratorForecastTest(unittest.TestCase):
+    def test_recent_daily_records_have_more_weight(self) -> None:
+        df = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2024-01-01", "2026-01-01"]),
+                "income": [100, 200],
+                "expense": [0, 0],
+            }
+        )
+
+        income_rate, expense_rate = (
+            GraphGenerator._calculate_weighted_daily_rates(
+                df, pd.Timestamp("2026-01-01")
+            )
+        )
+
+        unweighted_rate = 300 / len(pd.date_range("2024-01-01", "2026-01-01"))
+        self.assertGreater(income_rate, unweighted_rate)
+        self.assertEqual(expense_rate, 0)
