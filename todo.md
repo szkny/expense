@@ -37,13 +37,13 @@
 - [x] monthly summary report of total expenses including fixed expenses
 - [x] button of reloading individual charts
 - [x] add a feature of navigating asset allocation
+- [x] add a feature of sorting cards in the Web UI
 - [ ] add a feature of setting target budget of expenses
 - [ ] button of switching between usd/jpy in asset heatmap
 - [ ] add drawdown history chart
 - [ ] fallback to yahoo_finance when error occurred in google_finance
 - [ ] manage monthly subscription
 - [ ] assist user input of expense's memo using device GPS
-- [ ] add a feature of sorting cards in the Web UI
 - [ ] personalized analysis and insight / prediction report by LLM
 - [ ] add a feature of validation for usage history of credit card
 - [ ] optimize performance time
