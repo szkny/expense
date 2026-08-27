@@ -957,9 +957,9 @@ class GraphGenerator(Base):
                 mode="lines+markers",
                 name="支出",
                 line=dict(
-                    color="#999999" if theme == "dark" else "#666666",
-                    dash="solid",
-                    width=0.5,
+                    color="#bb8877" if theme == "dark" else "#996655",
+                    dash="dot",
+                    width=1.0,
                 ),
                 marker=dict(size=4),
                 hovertemplate="%{x|%-Y年%-m月}<br>支出: ¥%{y:,.0f}<extra></extra>",
