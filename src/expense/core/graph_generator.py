@@ -1418,9 +1418,9 @@ class GraphGenerator(Base):
                         name=f"{name}（予測）",
                         line=dict(
                             color=color,
-                            dash="dash",
+                            dash="dot",
                             shape="hv",
-                            width=2,
+                            width=1.5,
                         ),
                         hovertemplate=(
                             "%{x|%-Y年%-m月%-d日}<br>"
