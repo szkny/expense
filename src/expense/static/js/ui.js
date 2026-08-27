@@ -234,6 +234,253 @@ export function initCollapsibleSections() {
   });
 }
 
+export function initCardReordering() {
+  const container = document.querySelector(".container");
+  const cards = Array.from(container?.querySelectorAll(":scope > .card") ?? []);
+  if (!container || cards.length < 2) return;
+
+  const pageKey = location.pathname === "/asset_management" ? "asset" : "home";
+  const storageKey = `expense.cardOrder.${pageKey}`;
+  const cardByKey = new Map(
+    cards
+      .map((card) => [card.dataset.cardKey, card])
+      .filter(([key]) => key),
+  );
+
+  try {
+    const savedKeys = JSON.parse(localStorage.getItem(storageKey) || "[]");
+    if (Array.isArray(savedKeys)) {
+      savedKeys
+        .filter((key) => cardByKey.has(key))
+        .forEach((key) => container.appendChild(cardByKey.get(key)));
+    }
+  } catch {
+    localStorage.removeItem(storageKey);
+  }
+
+  const saveOrder = () => {
+    const order = Array.from(container.querySelectorAll(":scope > .card"))
+      .map((card) => card.dataset.cardKey)
+      .filter(Boolean);
+    localStorage.setItem(storageKey, JSON.stringify(order));
+  };
+
+  const collapseCardsForDrag = () => {
+    const states = cards.map((card) => {
+      const trigger = card.querySelector(".collapsible-trigger");
+      const content = card.querySelector(".collapsible-content");
+      const key = trigger?.dataset.key;
+      const collapsed = trigger?.getAttribute("aria-expanded") !== "true";
+      card.classList.add("is-drag-collapsed");
+      trigger?.setAttribute("aria-expanded", "false");
+      content?.classList.remove("is-open");
+      if (key) {
+        document.documentElement.classList.remove(`${key}-open`);
+        document.documentElement.classList.add(`${key}-collapsed`);
+      }
+      return { card, trigger, content, key, collapsed };
+    });
+
+    return () => {
+      states.forEach(({ card, trigger, content, key, collapsed }) => {
+        card.classList.remove("is-drag-collapsed");
+        trigger?.setAttribute("aria-expanded", String(!collapsed));
+        content?.classList.toggle("is-open", !collapsed);
+        if (key) {
+          document.documentElement.classList.toggle(`${key}-open`, !collapsed);
+          document.documentElement.classList.toggle(`${key}-collapsed`, collapsed);
+        }
+      });
+    };
+  };
+
+  let draggedCard = null;
+  let restoreCollapsedCards = null;
+  cards.forEach((card) => {
+    const handle = card.querySelector(".collapsible-trigger");
+    if (!handle) return;
+
+    let touchStart = null;
+    let touchDragging = false;
+    let suppressClick = false;
+    let touchPreview = null;
+    let touchPlaceholder = null;
+    let touchOffset = null;
+    let touchOriginalStyle = null;
+    let touchTimer = null;
+    let touchPointerId = null;
+
+    const clearTouchDrag = (save) => {
+      if (!touchDragging) return;
+      if (touchPlaceholder?.parentNode) {
+        touchPlaceholder.parentNode.insertBefore(card, touchPlaceholder);
+        touchPlaceholder.remove();
+      }
+      if (touchOriginalStyle === null) {
+        card.removeAttribute("style");
+      } else {
+        card.setAttribute("style", touchOriginalStyle);
+      }
+      touchPreview?.remove();
+      if (save) saveOrder();
+      restoreCollapsedCards?.();
+      restoreCollapsedCards = null;
+      card.classList.remove("is-dragging");
+      cards.forEach((item) => item.classList.remove("drop-target"));
+      draggedCard = null;
+      touchPreview = null;
+      touchPlaceholder = null;
+      touchOffset = null;
+      touchOriginalStyle = null;
+      touchPointerId = null;
+      touchDragging = false;
+    };
+
+    const startTouchDrag = (x, y) => {
+      if (touchDragging) return;
+      touchDragging = true;
+      suppressClick = true;
+      draggedCard = card;
+      const initialRect = card.getBoundingClientRect();
+      restoreCollapsedCards = collapseCardsForDrag();
+      card.classList.add("is-dragging");
+      const rect = card.getBoundingClientRect();
+      touchOffset = {
+        x: x - initialRect.left,
+        y: y - initialRect.top,
+      };
+      touchPlaceholder = document.createElement("div");
+      touchPlaceholder.className = "card-drop-placeholder";
+      touchPlaceholder.style.height = `${rect.height}px`;
+      touchOriginalStyle = card.getAttribute("style");
+      container.insertBefore(touchPlaceholder, card);
+      card.style.position = "fixed";
+      card.style.left = "-10000px";
+      card.style.top = "-10000px";
+      card.style.pointerEvents = "none";
+      touchPreview = card.cloneNode(true);
+      touchPreview.classList.add("card-drag-preview");
+      touchPreview.style.width = `${rect.width}px`;
+      touchPreview.style.left = `${x - touchOffset.x}px`;
+      touchPreview.style.top = `${y - touchOffset.y}px`;
+      touchPreview.style.transform = "rotate(0deg)";
+      document.body.appendChild(touchPreview);
+      handle.setPointerCapture(touchPointerId);
+    };
+
+    handle.draggable = true;
+    handle.classList.add("card-drag-handle");
+    handle.addEventListener("dragstart", (event) => {
+      draggedCard = card;
+      restoreCollapsedCards = collapseCardsForDrag();
+      card.classList.add("is-dragging");
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", card.dataset.cardKey || "");
+    });
+    handle.addEventListener("dragend", () => {
+      restoreCollapsedCards?.();
+      restoreCollapsedCards = null;
+      card.classList.remove("is-dragging");
+      draggedCard = null;
+      cards.forEach((item) => item.classList.remove("drop-target"));
+    });
+
+    handle.addEventListener("pointerdown", (event) => {
+      if (event.pointerType !== "touch") return;
+      handle.draggable = false;
+      touchStart = { x: event.clientX, y: event.clientY };
+      touchPointerId = event.pointerId;
+      touchDragging = false;
+      suppressClick = false;
+      touchTimer = setTimeout(
+        () => startTouchDrag(touchStart.x, touchStart.y),
+        300,
+      );
+    });
+    handle.addEventListener(
+      "pointermove",
+      (event) => {
+        if (event.pointerType !== "touch" || !touchStart) return;
+        const distance = Math.hypot(
+          event.clientX - touchStart.x,
+          event.clientY - touchStart.y,
+        );
+        if (!touchDragging) {
+          if (distance >= 8) {
+            clearTimeout(touchTimer);
+            touchStart = null;
+          }
+          return;
+        }
+
+        event.preventDefault();
+        touchPreview.style.left = `${event.clientX - touchOffset.x}px`;
+        touchPreview.style.top = `${event.clientY - touchOffset.y}px`;
+        const tilt = Math.max(-4, Math.min(4, (event.clientX - touchStart.x) / 8));
+        touchPreview.style.transform = `rotate(${tilt}deg)`;
+        const target = document
+          .elementFromPoint(event.clientX, event.clientY)
+          ?.closest(".card");
+        if (!target || !cardByKey.has(target.dataset.cardKey) || target === card) {
+          return;
+        }
+
+        cards.forEach((item) => item.classList.remove("drop-target"));
+        target.classList.add("drop-target");
+        const rect = target.getBoundingClientRect();
+        const insertBefore = event.clientY < rect.top + rect.height / 2;
+        container.insertBefore(
+          touchPlaceholder,
+          insertBefore ? target : target.nextSibling,
+        );
+      },
+      { passive: false },
+    );
+    handle.addEventListener("pointerup", (event) => {
+      if (event.pointerType !== "touch") return;
+      const hasCapture = handle.hasPointerCapture(event.pointerId);
+      clearTimeout(touchTimer);
+      clearTouchDrag(true);
+      if (hasCapture) {
+        handle.releasePointerCapture(event.pointerId);
+      }
+      handle.draggable = true;
+      touchStart = null;
+    });
+    handle.addEventListener("pointercancel", () => {
+      clearTimeout(touchTimer);
+      clearTouchDrag(false);
+      handle.draggable = true;
+      touchStart = null;
+    });
+    handle.addEventListener("click", (event) => {
+      if (!suppressClick) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      suppressClick = false;
+    });
+  });
+
+  cards.forEach((card) => {
+    card.addEventListener("dragover", (event) => {
+      if (!draggedCard || draggedCard === card) return;
+      event.preventDefault();
+      cards.forEach((item) => item.classList.remove("drop-target"));
+      card.classList.add("drop-target");
+    });
+    card.addEventListener("dragleave", () => card.classList.remove("drop-target"));
+    card.addEventListener("drop", (event) => {
+      event.preventDefault();
+      if (!draggedCard || draggedCard === card) return;
+      const rect = card.getBoundingClientRect();
+      const insertBefore = event.clientY < rect.top + rect.height / 2;
+      container.insertBefore(draggedCard, insertBefore ? card : card.nextSibling);
+      card.classList.remove("drop-target");
+      saveOrder();
+    });
+  });
+}
+
 export function initRecordEditor() {
   const overlay = document.getElementById("confirmation-overlay");
   if (!overlay) return;

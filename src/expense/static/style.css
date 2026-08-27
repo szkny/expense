@@ -138,6 +138,49 @@ hr {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
+.card-drag-handle {
+  cursor: grab;
+  touch-action: none;
+}
+
+.card-drag-handle:active {
+  cursor: grabbing;
+}
+
+.card.is-dragging {
+  opacity: 0.45;
+}
+
+.card.drop-target {
+  outline: 2px dashed #2563eb;
+  outline-offset: 4px;
+}
+
+.card-drop-placeholder {
+  margin: 16px 0;
+  border: 2px dashed #93c5fd;
+  border-radius: 28px;
+  background: rgba(219, 234, 254, 0.35);
+}
+
+.card-drag-preview {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  opacity: 0.9;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.25);
+  transform-origin: center;
+}
+
+.card.is-drag-collapsed .collapsible-content,
+.card.is-drag-collapsed #asset-summary-chart-container,
+.card.is-drag-collapsed .asset-chart-header ~ * {
+  max-height: 0 !important;
+  overflow: hidden;
+  opacity: 0 !important;
+  transition: none !important;
+}
+
 /* 入力フォーム */
 input,
 select {

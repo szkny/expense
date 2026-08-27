@@ -17,9 +17,11 @@ import {
   initMemoAutocomplete,
   initChartReloadUI,
   initAssetAllocationLongPress,
+  initCardReordering,
 } from "./ui.js";
 
 function onDOMContentLoaded() {
+  initCardReordering();
   initCollapsibleSections();
   initializeCharts();
   initChartReloadUI();

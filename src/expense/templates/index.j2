@@ -37,7 +37,7 @@
       <button id="msg-close-btn" type="button" class="btn-close"> ✕ </button>
     </div>
 
-    <div class="card">
+    <div class="card" data-card-key="register">
       <form method="post" action="/register">
         <h3 class="collapsible-trigger" data-key="register">
           <span> {{ icons.get("register", "🚀") }} 家計簿に登録する情報を入力 </span>
@@ -77,7 +77,7 @@
     </div>
 
     {% if screenshot_name %}
-    <div class="card">
+    <div class="card" data-card-key="ocr">
       <form method="post" action="/ocr">
         <h3 class="collapsible-trigger" data-key="ocr">
           <span> {{ icons.get("ocr", "📷") }} QR決済の画像から支払情報を取得 </span>
@@ -105,7 +105,7 @@
     </div>
     {% endif %}
 
-    <div class="card">
+    <div class="card" data-card-key="record">
       <h3 class="collapsible-trigger" data-key="record">
         <span> {{ icons.get("record_table", "🧾") }} 直近の支出履歴 ({{n_records}}件) </span>
         <span class="collapsible-toggle"></span>
@@ -189,7 +189,7 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" data-card-key="report">
       <h3 class="collapsible-trigger" data-key="report">
         <span> {{ icons.get("report", "📊") }} 支出レポート ({{today}}) </span>
         <span class="collapsible-toggle"></span>
