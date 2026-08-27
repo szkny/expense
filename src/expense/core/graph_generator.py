@@ -342,7 +342,7 @@ class GraphGenerator(Base):
             y="cumsum",
             line_shape="hv",
             color_discrete_sequence=[
-                "#3b82f6" if theme == "dark" else "#223377"
+                "#3b82f6" if theme == "dark" else "#2277bb"
             ],
         )
 
