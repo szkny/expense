@@ -17,7 +17,7 @@ log: logging.Logger = logging.getLogger("expense")
 
 
 class GraphGenerator(Base):
-    _FORECAST_HALF_LIFE_DAYS = 180
+    _FORECAST_HALF_LIFE_DAYS = 90
 
     def __init__(
         self,
@@ -1363,10 +1363,29 @@ class GraphGenerator(Base):
                     fill_value=0,
                 )
             )
-            # 月による季節変動は使わず、日番号ごとの典型的な1か月を作る。
-            daily_pattern = history_daily.groupby(history_daily.index.day)[
-                ["income", "expense"]
-            ].mean()
+            # 月による季節変動は使わず、直近ほど重くした日番号ごとの
+            # 典型的な1か月を作る。
+            age_days = (actual_end - history_daily.index).days.to_numpy()
+            pattern_weights = np.exp(
+                -np.log(2) * age_days / self._FORECAST_HALF_LIFE_DAYS
+            )
+            weighted_values = history_daily[["income", "expense"]].mul(
+                pattern_weights, axis=0
+            )
+            pattern_days = history_daily.index.day
+            weight_totals = (
+                pd.Series(pattern_weights, index=history_daily.index)
+                .groupby(pattern_days)
+                .sum()
+            )
+            daily_pattern = (
+                weighted_values.groupby(pattern_days)
+                .sum()
+                .div(
+                    weight_totals,
+                    axis=0,
+                )
+            )
             overall_pattern = history_daily[["income", "expense"]].mean()
             weighted_income, weighted_expense = (
                 self._calculate_weighted_daily_rates(df_history, actual_end)
