@@ -1,6 +1,7 @@
 import unittest
 import datetime
 import json
+import subprocess
 import tempfile
 from pathlib import Path
 import pandas as pd
@@ -8,9 +9,22 @@ from unittest.mock import patch
 from src.expense.core.expense import get_fiscal_year, Expense
 from src.expense.core.ocr import Ocr
 from src.expense.core.asset_manager import AssetManager
+from src.expense.core.termux_api import TermuxAPI
 
 
 class TestMain(unittest.TestCase):
+
+    def test_toast_timeout_is_ignored(self) -> None:
+        termux_api = TermuxAPI()
+        with patch(
+            "src.expense.core.termux_api.subprocess.run",
+            side_effect=subprocess.TimeoutExpired(
+                cmd="termux-toast", timeout=10
+            ),
+        ) as mock_run:
+            termux_api.toast("通知")
+
+        self.assertEqual(mock_run.call_args.kwargs["timeout"], 10)
 
     def test_normalize_capture_text(self) -> None:
         ocr = Ocr()

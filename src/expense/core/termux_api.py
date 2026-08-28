@@ -163,7 +163,7 @@ class TermuxAPI(Base):
         log.info("end 'confirmation' method")
         return choice == "yes"
 
-    def toast(self, content: str, timeout: int = 5) -> None:
+    def toast(self, content: str, timeout: int = 10) -> None:
         """
         toast popup message
         """
@@ -178,12 +178,16 @@ class TermuxAPI(Base):
                 content,
             ]
             log.debug(f"execute command: {notify_command}")
-            subprocess.run(
-                notify_command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                timeout=timeout,
-            )
+            try:
+                subprocess.run(
+                    notify_command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    timeout=timeout,
+                )
+            except (OSError, subprocess.SubprocessError):
+                # Toast is optional and must not interrupt the main operation.
+                log.warning("Failed to display Termux toast", exc_info=True)
         else:
             log.info(f"toast_enabled: {self.toast_enabled}")
         log.info("end 'toast' method")
