@@ -309,6 +309,8 @@ export function initCardReordering() {
     let touchOriginalStyle = null;
     let touchTimer = null;
     let touchPointerId = null;
+    let touchLastY = null;
+    let touchScrolling = false;
 
     const clearTouchDrag = (save) => {
       if (!touchDragging) return;
@@ -389,6 +391,8 @@ export function initCardReordering() {
       if (event.pointerType !== "touch") return;
       handle.draggable = false;
       touchStart = { x: event.clientX, y: event.clientY };
+      touchLastY = event.clientY;
+      touchScrolling = false;
       touchPointerId = event.pointerId;
       touchDragging = false;
       suppressClick = false;
@@ -408,7 +412,12 @@ export function initCardReordering() {
         if (!touchDragging) {
           if (distance >= 8) {
             clearTimeout(touchTimer);
-            touchStart = null;
+            touchScrolling = true;
+            suppressClick = true;
+          }
+          if (touchScrolling) {
+            window.scrollBy(0, touchLastY - event.clientY);
+            touchLastY = event.clientY;
           }
           return;
         }
@@ -469,12 +478,16 @@ export function initCardReordering() {
       }
       handle.draggable = true;
       touchStart = null;
+      touchLastY = null;
+      touchScrolling = false;
     });
     handle.addEventListener("pointercancel", () => {
       clearTimeout(touchTimer);
       clearTouchDrag(false);
       handle.draggable = true;
       touchStart = null;
+      touchLastY = null;
+      touchScrolling = false;
     });
     handle.addEventListener("click", (event) => {
       if (!suppressClick) return;
