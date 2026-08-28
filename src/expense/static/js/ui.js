@@ -429,10 +429,33 @@ export function initCardReordering() {
         target.classList.add("drop-target");
         const rect = target.getBoundingClientRect();
         const insertBefore = event.clientY < rect.top + rect.height / 2;
+
+        const previousPositions = new Map(
+          cards.map((item) => [item, item.getBoundingClientRect()]),
+        );
         container.insertBefore(
           touchPlaceholder,
           insertBefore ? target : target.nextSibling,
         );
+
+        cards.forEach((item) => {
+          const previous = previousPositions.get(item);
+          const current = item.getBoundingClientRect();
+          if (!previous) return;
+          const offsetY = previous.top - current.top;
+          if (offsetY === 0) return;
+          item.getAnimations().forEach((animation) => animation.cancel());
+          item.animate(
+            [
+              { transform: `translateY(${offsetY}px)` },
+              { transform: "translateY(0)" },
+            ],
+            {
+              duration: 180,
+              easing: "ease-out",
+            },
+          );
+        });
       },
       { passive: false },
     );

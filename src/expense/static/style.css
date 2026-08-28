@@ -152,7 +152,7 @@ hr {
 }
 
 .card.drop-target {
-  outline: 2px dashed #2563eb;
+  outline: 0px dashed #2563eb;
   outline-offset: 4px;
 }
 
