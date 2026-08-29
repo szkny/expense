@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "scripts": {
+    "format:js": "prettier --write \"src/expense/static/**/*.js\"",
+    "format:js:check": "prettier --check \"src/expense/static/**/*.js\""
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3"
+  }
+}

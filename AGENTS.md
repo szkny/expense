@@ -49,11 +49,12 @@
 - Termux連携: Termux API コマンド、Androidブラウザ起動
 - フロントエンド: Jinja2で配信するHTML、CSS、Vanilla JavaScript、PWA
 - テスト: Python `unittest`、モックは `unittest.mock`
-- 品質管理: mypy、Ruff lint、Black
+- 品質管理: mypy、Ruff lint、Black、Prettier
 
 ## 4. コーディング規約
 
 - Pythonは4スペースインデント、1行80文字を基本とする。整形はBlackに統一し、Ruff formatterの設定を手動で上書きしない。
+- JavaScriptはPrettierで整形する。対象ファイルは `src/expense/static/**/*.js` とし、`npm run format:js` で適用、`npm run format:js:check` で確認する。
 - 新しい関数・メソッドには戻り値と引数の型注釈を付ける。`pyproject.toml` の mypy 設定（未型付け定義の禁止など）を満たす。
 - importは標準ライブラリ、外部ライブラリ、ローカルモジュールの順にまとめる。既存コードの相対import構成を維持する。
 - 既存のロガー `logging.getLogger("expense")` を使い、機密情報・アクセストークン・家計の実データをログへ出さない。例外は握りつぶさず、必要な境界でログとユーザー向け通知を分ける。

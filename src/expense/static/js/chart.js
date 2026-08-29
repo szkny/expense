@@ -49,9 +49,7 @@ const allChartConfigs = {
 
 function getCurrentFiscalYear() {
   const today = new Date();
-  return String(
-    today.getFullYear() - (today.getMonth() + 1 < 4 ? 1 : 0),
-  );
+  return String(today.getFullYear() - (today.getMonth() + 1 < 4 ? 1 : 0));
 }
 
 function getReloadIcon() {
@@ -304,9 +302,9 @@ function initTradingViewChart() {
       studies_overrides: isIndicator
         ? {}
         : {
-          "moving average.length": 200,
-          "moving average.source": "close",
-        },
+            "moving average.length": 200,
+            "moving average.source": "close",
+          },
     });
   };
 

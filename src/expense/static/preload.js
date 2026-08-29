@@ -4,7 +4,7 @@ if (localStorage.getItem("theme") === "dark")
 if (localStorage.getItem("isAssetMasked") === "true")
   document.documentElement.classList.add("asset-masked");
 
-(function() {
+(function () {
   const keys = [
     "register",
     "ocr",

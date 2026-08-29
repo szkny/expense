@@ -238,14 +238,14 @@ export function initSimulator() {
   const app = document.getElementById("sim-app");
   if (!app) return;
 
-  const storedAge = Number(localStorage.getItem("expense.simulator.currentAge"));
+  const storedAge = Number(
+    localStorage.getItem("expense.simulator.currentAge"),
+  );
   if (Number.isInteger(storedAge) && storedAge >= 18 && storedAge <= 45) {
     PARAMS.currentAge = storedAge;
   }
   PARAMS.currentAssets = Number(app.dataset.currentAssets || "0");
-  PARAMS.salaryMonthlyInvestment = Number(
-    app.dataset.monthlyInvestment || "0",
-  );
+  PARAMS.salaryMonthlyInvestment = Number(app.dataset.monthlyInvestment || "0");
   PARAMS.freelanceIncome = Number(app.dataset.monthlyIncome || "0");
   PARAMS.monthlyExpense = Number(app.dataset.monthlyExpense || "0");
   document.getElementById("input-currentAge").value = PARAMS.currentAge;

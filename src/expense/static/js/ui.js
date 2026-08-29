@@ -96,7 +96,7 @@ export function initExpenseForm() {
   // ロード時の初期値に対しても適用
   handleShortcutExpansion(typeSelect.value);
 
-  typeSelect.addEventListener("change", function() {
+  typeSelect.addEventListener("change", function () {
     handleShortcutExpansion(this.value);
   });
 }
@@ -205,9 +205,9 @@ export function initCollapsibleSections() {
     const key = trigger.dataset.key;
     if (!key) return;
 
-    const container = trigger.closest(".card")?.querySelector(
-      ".collapsible-content",
-    );
+    const container = trigger
+      .closest(".card")
+      ?.querySelector(".collapsible-content");
     const isCollapsed = localStorage.getItem(`${key}Collapsed`) === "true";
     const openClass = `${key}-open`;
     const collapsedClass = `${key}-collapsed`;
@@ -221,9 +221,8 @@ export function initCollapsibleSections() {
     setCollapsed(isCollapsed);
 
     trigger.addEventListener("click", () => {
-      const collapsed = !document.documentElement.classList.contains(
-        collapsedClass,
-      );
+      const collapsed =
+        !document.documentElement.classList.contains(collapsedClass);
       setCollapsed(collapsed);
       localStorage.setItem(`${key}Collapsed`, String(collapsed));
 
@@ -242,9 +241,7 @@ export function initCardReordering() {
   const pageKey = location.pathname === "/asset_management" ? "asset" : "home";
   const storageKey = `expense.cardOrder.${pageKey}`;
   const cardByKey = new Map(
-    cards
-      .map((card) => [card.dataset.cardKey, card])
-      .filter(([key]) => key),
+    cards.map((card) => [card.dataset.cardKey, card]).filter(([key]) => key),
   );
 
   try {
@@ -288,7 +285,10 @@ export function initCardReordering() {
         content?.classList.toggle("is-open", !collapsed);
         if (key) {
           document.documentElement.classList.toggle(`${key}-open`, !collapsed);
-          document.documentElement.classList.toggle(`${key}-collapsed`, collapsed);
+          document.documentElement.classList.toggle(
+            `${key}-collapsed`,
+            collapsed,
+          );
         }
       });
     };
@@ -423,12 +423,19 @@ export function initCardReordering() {
         event.preventDefault();
         touchPreview.style.left = `${event.clientX - touchOffset.x}px`;
         touchPreview.style.top = `${event.clientY - touchOffset.y}px`;
-        const tilt = Math.max(-4, Math.min(4, (event.clientX - touchStart.x) / 8));
+        const tilt = Math.max(
+          -4,
+          Math.min(4, (event.clientX - touchStart.x) / 8),
+        );
         touchPreview.style.transform = `rotate(${tilt}deg)`;
         const target = document
           .elementFromPoint(event.clientX, event.clientY)
           ?.closest(".card");
-        if (!target || !cardByKey.has(target.dataset.cardKey) || target === card) {
+        if (
+          !target ||
+          !cardByKey.has(target.dataset.cardKey) ||
+          target === card
+        ) {
           return;
         }
 
@@ -503,7 +510,10 @@ export function initCardReordering() {
       if (!draggedCard || draggedCard === card) return;
       const rect = card.getBoundingClientRect();
       const insertBefore = event.clientY < rect.top + rect.height / 2;
-      container.insertBefore(draggedCard, insertBefore ? card : card.nextSibling);
+      container.insertBefore(
+        draggedCard,
+        insertBefore ? card : card.nextSibling,
+      );
       saveOrder();
     });
   });
@@ -580,7 +590,7 @@ export function initRecordEditor() {
     });
   }
 
-  overlay.addEventListener("click", function(e) {
+  overlay.addEventListener("click", function (e) {
     if (dialog && !dialog.contains(e.target)) {
       overlay.style.display = "none";
     }
@@ -592,7 +602,9 @@ export function initAssetAllocationLongPress() {
   const dialog = document.getElementById("allocation-tickers-dialog");
   const list = document.getElementById("allocation-tickers-list");
   const closeBtn = document.getElementById("allocation-tickers-close-btn");
-  const rows = document.querySelectorAll("#asset-allocation-container tbody tr");
+  const rows = document.querySelectorAll(
+    "#asset-allocation-container tbody tr",
+  );
   if (!overlay || !dialog || !list || !closeBtn || !rows.length) return;
 
   let pressTimer;
@@ -667,12 +679,12 @@ export function initMemoAutocomplete() {
       isComposing = true;
     });
 
-    input.addEventListener("compositionend", function() {
+    input.addEventListener("compositionend", function () {
       isComposing = false;
       updateList(this);
     });
 
-    input.addEventListener("input", function() {
+    input.addEventListener("input", function () {
       updateList(this);
     });
   });
