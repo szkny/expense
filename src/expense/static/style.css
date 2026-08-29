@@ -154,6 +154,10 @@ hr {
 .card-drop-placeholder {
   margin: 16px 0;
   border: 2px dashed #93c5fd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   border-radius: 28px;
   background: rgba(219, 234, 254, 0.35);
 }

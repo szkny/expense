@@ -353,6 +353,7 @@ export function initCardReordering() {
       touchPlaceholder = document.createElement("div");
       touchPlaceholder.className = "card-drop-placeholder";
       touchPlaceholder.style.height = `${rect.height}px`;
+      touchPlaceholder.textContent = "ドラッグ＆ドロップで並び替え";
       touchOriginalStyle = card.getAttribute("style");
       container.insertBefore(touchPlaceholder, card);
       card.style.position = "fixed";
