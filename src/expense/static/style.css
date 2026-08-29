@@ -151,11 +151,6 @@ hr {
   opacity: 0.45;
 }
 
-.card.drop-target {
-  outline: 0px dashed #2563eb;
-  outline-offset: 4px;
-}
-
 .card-drop-placeholder {
   margin: 16px 0;
   border: 2px dashed #93c5fd;

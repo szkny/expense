@@ -328,7 +328,6 @@ export function initCardReordering() {
       restoreCollapsedCards?.();
       restoreCollapsedCards = null;
       card.classList.remove("is-dragging");
-      cards.forEach((item) => item.classList.remove("drop-target"));
       draggedCard = null;
       touchPreview = null;
       touchPlaceholder = null;
@@ -384,7 +383,6 @@ export function initCardReordering() {
       restoreCollapsedCards = null;
       card.classList.remove("is-dragging");
       draggedCard = null;
-      cards.forEach((item) => item.classList.remove("drop-target"));
     });
 
     handle.addEventListener("pointerdown", (event) => {
@@ -434,8 +432,6 @@ export function initCardReordering() {
           return;
         }
 
-        cards.forEach((item) => item.classList.remove("drop-target"));
-        target.classList.add("drop-target");
         const rect = target.getBoundingClientRect();
         const insertBefore = event.clientY < rect.top + rect.height / 2;
 
@@ -501,17 +497,13 @@ export function initCardReordering() {
     card.addEventListener("dragover", (event) => {
       if (!draggedCard || draggedCard === card) return;
       event.preventDefault();
-      cards.forEach((item) => item.classList.remove("drop-target"));
-      card.classList.add("drop-target");
     });
-    card.addEventListener("dragleave", () => card.classList.remove("drop-target"));
     card.addEventListener("drop", (event) => {
       event.preventDefault();
       if (!draggedCard || draggedCard === card) return;
       const rect = card.getBoundingClientRect();
       const insertBefore = event.clientY < rect.top + rect.height / 2;
       container.insertBefore(draggedCard, insertBefore ? card : card.nextSibling);
-      card.classList.remove("drop-target");
       saveOrder();
     });
   });
