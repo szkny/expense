@@ -1334,6 +1334,132 @@ class GraphGenerator(Base):
         log.info("end 'generate_annual_fiscal_report_chart' method")
         return graph_html, available_year_strings
 
+    def _add_fiscal_forecast_traces(
+        self,
+        fig: go.Figure,
+        daily: pd.DataFrame,
+        df_history: pd.DataFrame,
+        actual_end: pd.Timestamp,
+        fiscal_end: pd.Timestamp,
+        colors: list[str],
+    ) -> list[np.ndarray]:
+        """年度末までの予測トレースを追加し、予測値を返す。"""
+        forecast_dates = pd.date_range(
+            actual_end + pd.Timedelta(days=1), fiscal_end
+        )
+        history_daily = (
+            df_history.groupby("date")[["income", "expense"]]
+            .sum()
+            .reindex(
+                pd.date_range(df_history["date"].min(), actual_end, freq="D"),
+                fill_value=0,
+            )
+        )
+        # 月による季節変動は使わず、直近ほど重くした日番号ごとの
+        # 典型的な1か月を作る。
+        age_days = (actual_end - history_daily.index).days.to_numpy()
+        pattern_weights = np.exp(
+            -np.log(2) * age_days / self._FORECAST_HALF_LIFE_DAYS
+        )
+        weighted_values = history_daily[["income", "expense"]].mul(
+            pattern_weights, axis=0
+        )
+        pattern_days = history_daily.index.day
+        weight_totals = (
+            pd.Series(pattern_weights, index=history_daily.index)
+            .groupby(pattern_days)
+            .sum()
+        )
+        daily_pattern = (
+            weighted_values.groupby(pattern_days)
+            .sum()
+            .div(weight_totals, axis=0)
+        )
+        overall_pattern = history_daily[["income", "expense"]].mean()
+        monthly_income, monthly_expense = (
+            self._calculate_weighted_monthly_totals(df_history, actual_end)
+        )
+
+        # 月額を先に決めてから日番号パターンへ配分する。これにより、
+        # 給料日・家賃日以外の日々の実績で年度末予測が動かない。
+        forecast_increments: dict[str, np.ndarray] = {}
+        pattern_index = forecast_dates.day
+        actual_month = actual_end.to_period("M")
+        actual_month_totals = history_daily.loc[
+            history_daily.index.to_period("M") == actual_month,
+            ["income", "expense"],
+        ].sum()
+        monthly_totals = {"income": monthly_income, "expense": monthly_expense}
+        for daily_column in ["income", "expense"]:
+            increments = np.zeros(len(forecast_dates), dtype=float)
+            for month in forecast_dates.to_period("M").unique():
+                positions = np.flatnonzero(
+                    forecast_dates.to_period("M") == month
+                )
+                pattern_values = daily_pattern.reindex(
+                    pattern_index[positions]
+                )[daily_column].to_numpy(dtype=float)
+                pattern_values = np.nan_to_num(
+                    pattern_values, nan=float(overall_pattern[daily_column])
+                )
+                target_total = monthly_totals[daily_column]
+                if month == actual_month:
+                    target_total -= actual_month_totals[daily_column]
+                pattern_total = pattern_values.sum()
+                if pattern_total:
+                    increments[positions] = (
+                        pattern_values * target_total / pattern_total
+                    )
+                elif len(positions):
+                    increments[positions] = target_total / len(positions)
+            forecast_increments[daily_column] = increments
+
+        forecast_y_values: list[np.ndarray] = []
+        for column, daily_column, name, color in zip(
+            ["income_cumulative", "expense_cumulative", "balance"],
+            ["income", "expense", "cash_flow"],
+            ["収入", "支出", "ｷｬｯｼｭﾌﾛｰ"],
+            colors,
+        ):
+            if daily_column == "cash_flow":
+                increments = (
+                    forecast_increments["income"]
+                    - forecast_increments["expense"]
+                )
+            else:
+                increments = forecast_increments[daily_column]
+            forecast_values = daily[column].iloc[-1] + np.cumsum(increments)
+            forecast_y_values.append(forecast_values)
+            customdata = None
+            if daily_column == "cash_flow":
+                customdata = [
+                    self._format_savings_rate(cash_flow, income)
+                    for cash_flow, income in zip(
+                        forecast_values, forecast_y_values[0]
+                    )
+                ]
+            fig.add_trace(
+                go.Scatter(
+                    x=forecast_dates,
+                    y=forecast_values,
+                    customdata=customdata,
+                    mode="lines",
+                    name=f"{name}（予測）",
+                    line=dict(color=color, dash="dot", shape="hv", width=1.5),
+                    hovertemplate=(
+                        "%{x|%-Y年%-m月%-d日}<br>"
+                        f"{name}（予測）: ¥%{{y:,.0f}}"
+                        + (
+                            " (%{customdata})"
+                            if daily_column == "cash_flow"
+                            else ""
+                        )
+                        + "<extra></extra>"
+                    ),
+                )
+            )
+        return forecast_y_values
+
     def generate_fiscal_asset_history_chart(
         self,
         df: pd.DataFrame,
@@ -1450,133 +1576,9 @@ class GraphGenerator(Base):
             )
 
         if fiscal_year == current_fiscal_year and actual_end < fiscal_end:
-            forecast_dates = pd.date_range(
-                actual_end + pd.Timedelta(days=1), fiscal_end
+            forecast_y_values = self._add_fiscal_forecast_traces(
+                fig, daily, df_history, actual_end, fiscal_end, colors
             )
-            history_daily = (
-                df_history.groupby("date")[["income", "expense"]]
-                .sum()
-                .reindex(
-                    pd.date_range(
-                        df_history["date"].min(), actual_end, freq="D"
-                    ),
-                    fill_value=0,
-                )
-            )
-            # 月による季節変動は使わず、直近ほど重くした日番号ごとの
-            # 典型的な1か月を作る。
-            age_days = (actual_end - history_daily.index).days.to_numpy()
-            pattern_weights = np.exp(
-                -np.log(2) * age_days / self._FORECAST_HALF_LIFE_DAYS
-            )
-            weighted_values = history_daily[["income", "expense"]].mul(
-                pattern_weights, axis=0
-            )
-            pattern_days = history_daily.index.day
-            weight_totals = (
-                pd.Series(pattern_weights, index=history_daily.index)
-                .groupby(pattern_days)
-                .sum()
-            )
-            daily_pattern = (
-                weighted_values.groupby(pattern_days)
-                .sum()
-                .div(
-                    weight_totals,
-                    axis=0,
-                )
-            )
-            overall_pattern = history_daily[["income", "expense"]].mean()
-            monthly_income, monthly_expense = (
-                self._calculate_weighted_monthly_totals(df_history, actual_end)
-            )
-
-            # 月額を先に決めてから日番号パターンへ配分する。これにより、
-            # 給料日・家賃日以外の日々の実績で年度末予測が動かない。
-            forecast_increments: dict[str, np.ndarray] = {}
-            pattern_index = forecast_dates.day
-            actual_month = actual_end.to_period("M")
-            actual_month_totals = history_daily.loc[
-                history_daily.index.to_period("M") == actual_month,
-                ["income", "expense"],
-            ].sum()
-            monthly_totals = {
-                "income": monthly_income,
-                "expense": monthly_expense,
-            }
-            for daily_column in ["income", "expense"]:
-                increments = np.zeros(len(forecast_dates), dtype=float)
-                for month in forecast_dates.to_period("M").unique():
-                    positions = np.flatnonzero(
-                        forecast_dates.to_period("M") == month
-                    )
-                    pattern_values = daily_pattern.reindex(
-                        pattern_index[positions]
-                    )[daily_column].to_numpy(dtype=float)
-                    pattern_values = np.nan_to_num(
-                        pattern_values,
-                        nan=float(overall_pattern[daily_column]),
-                    )
-                    target_total = monthly_totals[daily_column]
-                    if month == actual_month:
-                        target_total -= actual_month_totals[daily_column]
-                    pattern_total = pattern_values.sum()
-                    if pattern_total:
-                        increments[positions] = (
-                            pattern_values * target_total / pattern_total
-                        )
-                    elif len(positions):
-                        increments[positions] = target_total / len(positions)
-                forecast_increments[daily_column] = increments
-
-            for column, daily_column, name, color in zip(
-                ["income_cumulative", "expense_cumulative", "balance"],
-                ["income", "expense", "cash_flow"],
-                ["収入", "支出", "ｷｬｯｼｭﾌﾛｰ"],
-                colors,
-            ):
-                if daily_column == "cash_flow":
-                    increments = (
-                        forecast_increments["income"]
-                        - forecast_increments["expense"]
-                    )
-                else:
-                    increments = forecast_increments[daily_column]
-                forecast_values = daily[column].iloc[-1] + np.cumsum(increments)
-                forecast_y_values.append(forecast_values)
-                customdata = None
-                if daily_column == "cash_flow":
-                    customdata = [
-                        self._format_savings_rate(cash_flow, income)
-                        for cash_flow, income in zip(
-                            forecast_values, forecast_y_values[0]
-                        )
-                    ]
-                fig.add_trace(
-                    go.Scatter(
-                        x=forecast_dates,
-                        y=forecast_values,
-                        customdata=customdata,
-                        mode="lines",
-                        name=f"{name}（予測）",
-                        line=dict(
-                            color=color,
-                            dash="dot",
-                            shape="hv",
-                            width=1.5,
-                        ),
-                        hovertemplate=(
-                            "%{x|%-Y年%-m月%-d日}<br>"
-                            f"{name}（予測）: ¥%{{y:,.0f}}"
-                            + (
-                                " (%{customdata})"
-                                if daily_column == "cash_flow"
-                                else ""
-                            )
-                            + "<extra></extra>"
-                        ),
-                    )
-                )
 
         y_values = daily[
             [
