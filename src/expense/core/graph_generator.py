@@ -90,6 +90,13 @@ class GraphGenerator(Base):
             for column in ["income", "expense"]
         )
 
+    @staticmethod
+    def _format_savings_rate(cash_flow: float, income: float) -> str:
+        """キャッシュフローの収入に対する割合を表示用に整形する。"""
+        if income == 0:
+            return "-"
+        return f"{cash_flow / income * 100:.1f}%"
+
     def generate_monthly_df(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         月別のDataFrameを生成
@@ -861,6 +868,12 @@ class GraphGenerator(Base):
         df_cf["cf_text"] = df_cf["cf"].apply(
             lambda x: f"-¥{abs(x):,.0f}" if x < 0 else f"+¥{x:,.0f}"
         )
+        df_cf["savings_rate"] = df_cf.apply(
+            lambda row: self._format_savings_rate(
+                row["cf"], row["income_amount"]
+            ),
+            axis=1,
+        )
 
         ymax = 0
         if not df_graph.empty:
@@ -921,8 +934,11 @@ class GraphGenerator(Base):
                 offsetgroup="expense",
                 name="ｷｬｯｼｭﾌﾛｰ",
                 marker_color="#baa44b" if theme == "dark" else "#eecc55",
-                customdata=df_cf["cf_text"],
-                hovertemplate="%{x|%-Y年%-m月}<br>ｷｬｯｼｭﾌﾛｰ: %{customdata}<extra></extra>",
+                customdata=df_cf[["cf_text", "savings_rate"]],
+                hovertemplate=(
+                    "%{x|%-Y年%-m月}<br>ｷｬｯｼｭﾌﾛｰ: %{customdata[0]} "
+                    "(%{customdata[1]})<extra></extra>"
+                ),
                 text=df_cf["cf_positive_label"],
                 texttemplate="%{text}",
                 textposition="inside",
@@ -938,8 +954,11 @@ class GraphGenerator(Base):
                 offsetgroup="income",
                 name="ｷｬｯｼｭﾌﾛｰ",
                 marker_color="#bb3333" if theme == "dark" else "#ee5555",
-                customdata=df_cf["cf_text"],
-                hovertemplate="%{x|%-Y年%-m月}<br>ｷｬｯｼｭﾌﾛｰ: %{customdata}<extra></extra>",
+                customdata=df_cf[["cf_text", "savings_rate"]],
+                hovertemplate=(
+                    "%{x|%-Y年%-m月}<br>ｷｬｯｼｭﾌﾛｰ: %{customdata[0]} "
+                    "(%{customdata[1]})<extra></extra>"
+                ),
                 text=df_cf["cf_negative_label"],
                 texttemplate="%{text}",
                 textposition="inside",
@@ -1153,6 +1172,14 @@ class GraphGenerator(Base):
         def amount_label(label: str, amount: int, prefix: str = "") -> str:
             return f"{prefix}{label}<br>{signed_amount(amount)}"
 
+        actual_savings_rate = self._format_savings_rate(cash_flow, income)
+        forecast_savings_rate = self._format_savings_rate(
+            forecast_total[2], forecast_total[0]
+        )
+        remaining_savings_rate = self._format_savings_rate(
+            forecast[2], forecast[0]
+        )
+
         fig = go.Figure()
         fig.add_trace(
             go.Bar(
@@ -1173,7 +1200,13 @@ class GraphGenerator(Base):
                 ),
                 constraintext="none",
                 hovertemplate=[
-                    f"{label}<br>実績: {signed_amount(amount)}<extra></extra>"
+                    (
+                        f"{label}<br>実績: {signed_amount(amount)} "
+                        f"({actual_savings_rate})"
+                        if label == "ｷｬｯｼｭﾌﾛｰ"
+                        else f"{label}<br>実績: {signed_amount(amount)}"
+                    )
+                    + "<extra></extra>"
                     for label, amount in zip(labels, actual)
                 ],
                 name="実績",
@@ -1199,8 +1232,16 @@ class GraphGenerator(Base):
                 ),
                 constraintext="none",
                 hovertemplate=[
-                    f"{label}<br>年間予測: {signed_amount(total)}"
-                    f"<br>残り予測: {signed_amount(amount)}<extra></extra>"
+                    (
+                        f"{label}<br>年間予測: {signed_amount(total)} "
+                        f"({forecast_savings_rate})"
+                        f"<br>残り予測: {signed_amount(amount)} "
+                        f"({remaining_savings_rate})"
+                        if label == "ｷｬｯｼｭﾌﾛｰ"
+                        else f"{label}<br>年間予測: {signed_amount(total)}"
+                        f"<br>残り予測: {signed_amount(amount)}"
+                    )
+                    + "<extra></extra>"
                     for label, total, amount in zip(
                         labels, forecast_total, forecast
                     )
@@ -1335,16 +1376,27 @@ class GraphGenerator(Base):
             ["収入", "支出", "ｷｬｯｼｭﾌﾛｰ"],
             colors,
         ):
+            customdata = None
+            if column == "balance":
+                customdata = [
+                    self._format_savings_rate(cash_flow, income)
+                    for cash_flow, income in zip(
+                        daily["balance"], daily["income_cumulative"]
+                    )
+                ]
             fig.add_trace(
                 go.Scatter(
                     x=daily.index,
                     y=daily[column],
+                    customdata=customdata,
                     mode="lines",
                     name=name,
                     line=dict(color=color, shape="hv", width=2),
                     hovertemplate=(
                         "%{x|%-Y年%-m月%-d日}<br>"
-                        f"{name}: ¥%{{y:,.0f}}<extra></extra>"
+                        f"{name}: ¥%{{y:,.0f}}"
+                        + (" (%{customdata})" if column == "balance" else "")
+                        + "<extra></extra>"
                     ),
                 )
             )
@@ -1429,10 +1481,19 @@ class GraphGenerator(Base):
                     increments = forecast_increments[daily_column]
                 forecast_values = daily[column].iloc[-1] + np.cumsum(increments)
                 forecast_y_values.append(forecast_values)
+                customdata = None
+                if daily_column == "cash_flow":
+                    customdata = [
+                        self._format_savings_rate(cash_flow, income)
+                        for cash_flow, income in zip(
+                            forecast_values, forecast_y_values[0]
+                        )
+                    ]
                 fig.add_trace(
                     go.Scatter(
                         x=forecast_dates,
                         y=forecast_values,
+                        customdata=customdata,
                         mode="lines",
                         name=f"{name}（予測）",
                         line=dict(
@@ -1443,7 +1504,13 @@ class GraphGenerator(Base):
                         ),
                         hovertemplate=(
                             "%{x|%-Y年%-m月%-d日}<br>"
-                            f"{name}（予測）: ¥%{{y:,.0f}}<extra></extra>"
+                            f"{name}（予測）: ¥%{{y:,.0f}}"
+                            + (
+                                " (%{customdata})"
+                                if daily_column == "cash_flow"
+                                else ""
+                            )
+                            + "<extra></extra>"
                         ),
                     )
                 )

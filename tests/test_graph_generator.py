@@ -56,3 +56,14 @@ class GraphGeneratorForecastTest(unittest.TestCase):
         unweighted_rate = 300 / len(pd.date_range("2024-01-01", "2026-01-01"))
         self.assertGreater(income_rate, unweighted_rate)
         self.assertEqual(expense_rate, 0)
+
+
+class GraphGeneratorSavingsRateTest(unittest.TestCase):
+    def test_savings_rate_is_cash_flow_as_percentage_of_income(self) -> None:
+        self.assertEqual(GraphGenerator._format_savings_rate(30, 100), "30.0%")
+        self.assertEqual(
+            GraphGenerator._format_savings_rate(-30, 100), "-30.0%"
+        )
+
+    def test_savings_rate_is_dash_when_income_is_zero(self) -> None:
+        self.assertEqual(GraphGenerator._format_savings_rate(30, 0), "-")
