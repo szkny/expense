@@ -57,6 +57,26 @@ class GraphGeneratorForecastTest(unittest.TestCase):
         self.assertGreater(income_rate, unweighted_rate)
         self.assertEqual(expense_rate, 0)
 
+    def test_monthly_forecast_ignores_partial_current_month(self) -> None:
+        df = pd.DataFrame(
+            {
+                "date": pd.to_datetime(
+                    ["2026-01-25", "2026-02-25", "2026-03-01"]
+                ),
+                "income": [300_000, 310_000, 999_999],
+                "expense": [100_000, 110_000, 1],
+            }
+        )
+
+        income_total, expense_total = (
+            GraphGenerator._calculate_weighted_monthly_totals(
+                df, pd.Timestamp("2026-03-15")
+            )
+        )
+
+        self.assertAlmostEqual(income_total, 305_594, delta=1)
+        self.assertAlmostEqual(expense_total, 105_594, delta=1)
+
 
 class GraphGeneratorSavingsRateTest(unittest.TestCase):
     def test_savings_rate_is_cash_flow_as_percentage_of_income(self) -> None:

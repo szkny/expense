@@ -90,6 +90,64 @@ class GraphGenerator(Base):
             for column in ["income", "expense"]
         )
 
+    @classmethod
+    def _calculate_weighted_monthly_totals(
+        cls, df: pd.DataFrame, end_date: pd.Timestamp
+    ) -> tuple[float, float]:
+        """直近ほど重くした、完了済み月の収入・支出月額を計算する。"""
+        history = df.loc[df["date"] <= end_date]
+        if history.empty:
+            return 0.0, 0.0
+        monthly = history.groupby(history["date"].dt.to_period("M"))[
+            ["income", "expense"]
+        ].sum()
+        current_month = end_date.to_period("M")
+        completed = monthly.loc[monthly.index < current_month]
+        if completed.empty:
+            completed = monthly
+        month_starts = completed.index.to_timestamp()
+        age_days = (end_date - month_starts).days.to_numpy()
+        weights = np.exp(-np.log(2) * age_days / cls._FORECAST_HALF_LIFE_DAYS)
+        return tuple(
+            float(np.average(completed[column], weights=weights))
+            for column in ["income", "expense"]
+        )
+
+    @classmethod
+    def _calculate_monthly_forecast_totals(
+        cls,
+        df: pd.DataFrame,
+        start_date: pd.Timestamp,
+        end_date: pd.Timestamp,
+    ) -> tuple[float, float]:
+        """指定期間に見込む収入・支出を月額予測から計算する。"""
+        if start_date > end_date:
+            return 0.0, 0.0
+        actual_end = start_date - pd.Timedelta(days=1)
+        monthly_income, monthly_expense = (
+            cls._calculate_weighted_monthly_totals(df, actual_end)
+        )
+        actual_month = actual_end.to_period("M")
+        actual_month_totals = df.loc[
+            (df["date"] <= actual_end)
+            & (df["date"].dt.to_period("M") == actual_month),
+            ["income", "expense"],
+        ].sum()
+        monthly_totals = {
+            "income": monthly_income,
+            "expense": monthly_expense,
+        }
+        forecast_dates = pd.date_range(start_date, end_date)
+        forecast_totals = {"income": 0.0, "expense": 0.0}
+        for month in forecast_dates.to_period("M").unique():
+            target_total = dict(monthly_totals)
+            if month == actual_month:
+                for column in target_total:
+                    target_total[column] -= actual_month_totals[column]
+            for column in forecast_totals:
+                forecast_totals[column] += target_total[column]
+        return forecast_totals["income"], forecast_totals["expense"]
+
     @staticmethod
     def _format_savings_rate(cash_flow: float, income: float) -> str:
         """キャッシュフローの収入に対する割合を表示用に整形する。"""
@@ -1087,18 +1145,7 @@ class GraphGenerator(Base):
             (df_annual["date"] >= fiscal_start)
             & (df_annual["date"] <= fiscal_end)
         ]
-        if fiscal_year == current_fiscal_year:
-            df_completed = df_annual
-            elapsed_days = max(1, (today - fiscal_start).days + 1)
-            fiscal_days = (
-                pd.Timestamp(fiscal_year + 1, 4, 1) - fiscal_start
-            ).days
-        else:
-            df_completed = df_annual
-            fiscal_days = (
-                pd.Timestamp(fiscal_year + 1, 4, 1) - fiscal_start
-            ).days
-            elapsed_days = fiscal_days
+        df_completed = df_annual
 
         income = int(
             df_completed.loc[
@@ -1121,19 +1168,20 @@ class GraphGenerator(Base):
         actual.append(actual[0] + actual[1])
         labels = ["収入", "支出", "ｷｬｯｼｭﾌﾛｰ"]
 
-        # 全履歴から算出した加重日平均で、明日以降を予測する。
-        weighted_income, weighted_expense = (
-            self._calculate_weighted_daily_rates(df_history, today)
+        df_history = df_history.loc[df_history["date"] <= today]
+        forecast_income, forecast_expense = (
+            self._calculate_monthly_forecast_totals(
+                df_history,
+                today + pd.Timedelta(days=1),
+                pd.Timestamp(fiscal_year + 1, 3, 31),
+            )
+            if fiscal_year == current_fiscal_year
+            else (0.0, 0.0)
         )
-        remaining_days = fiscal_days - elapsed_days
         forecast_total = [
-            int(actual[0] + weighted_income * remaining_days),
-            int(actual[1] - weighted_expense * remaining_days),
-            int(
-                actual[0]
-                + actual[1]
-                + (weighted_income - weighted_expense) * remaining_days
-            ),
+            int(actual[0] + forecast_income),
+            int(actual[1] - forecast_expense),
+            int(actual[0] + actual[1] + forecast_income - forecast_expense),
         ]
         forecast = [
             total - amount for total, amount in zip(forecast_total, actual)
@@ -1439,32 +1487,47 @@ class GraphGenerator(Base):
                 )
             )
             overall_pattern = history_daily[["income", "expense"]].mean()
-            weighted_income, weighted_expense = (
-                self._calculate_weighted_daily_rates(df_history, actual_end)
+            monthly_income, monthly_expense = (
+                self._calculate_weighted_monthly_totals(df_history, actual_end)
             )
 
-            # 周期パターンの合計を従来の線形予測の合計へ合わせ、年度末を固定する。
+            # 月額を先に決めてから日番号パターンへ配分する。これにより、
+            # 給料日・家賃日以外の日々の実績で年度末予測が動かない。
             forecast_increments: dict[str, np.ndarray] = {}
             pattern_index = forecast_dates.day
+            actual_month = actual_end.to_period("M")
+            actual_month_totals = history_daily.loc[
+                history_daily.index.to_period("M") == actual_month,
+                ["income", "expense"],
+            ].sum()
+            monthly_totals = {
+                "income": monthly_income,
+                "expense": monthly_expense,
+            }
             for daily_column in ["income", "expense"]:
-                pattern_values = daily_pattern.reindex(pattern_index)[
-                    daily_column
-                ].to_numpy(dtype=float)
-                pattern_values = np.nan_to_num(
-                    pattern_values, nan=float(overall_pattern[daily_column])
-                )
-                weighted_rate = (
-                    weighted_income
-                    if daily_column == "income"
-                    else weighted_expense
-                )
-                target_total = weighted_rate * len(forecast_dates)
-                pattern_total = pattern_values.sum()
-                if pattern_total:
-                    pattern_values *= target_total / pattern_total
-                else:
-                    pattern_values.fill(target_total / len(forecast_dates))
-                forecast_increments[daily_column] = pattern_values
+                increments = np.zeros(len(forecast_dates), dtype=float)
+                for month in forecast_dates.to_period("M").unique():
+                    positions = np.flatnonzero(
+                        forecast_dates.to_period("M") == month
+                    )
+                    pattern_values = daily_pattern.reindex(
+                        pattern_index[positions]
+                    )[daily_column].to_numpy(dtype=float)
+                    pattern_values = np.nan_to_num(
+                        pattern_values,
+                        nan=float(overall_pattern[daily_column]),
+                    )
+                    target_total = monthly_totals[daily_column]
+                    if month == actual_month:
+                        target_total -= actual_month_totals[daily_column]
+                    pattern_total = pattern_values.sum()
+                    if pattern_total:
+                        increments[positions] = (
+                            pattern_values * target_total / pattern_total
+                        )
+                    elif len(positions):
+                        increments[positions] = target_total / len(positions)
+                forecast_increments[daily_column] = increments
 
             for column, daily_column, name, color in zip(
                 ["income_cumulative", "expense_cumulative", "balance"],
