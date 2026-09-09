@@ -1920,6 +1920,25 @@ class GraphGenerator(Base):
         fig.add_trace(
             go.Scatter(
                 x=df_graph["date"],
+                y=df_graph["invest_amount"],
+                name="投資額",
+                hovertext=[
+                    f"投資額 ¥{y:,.0f}" for y in df_graph["invest_amount"]
+                ],
+                hoverinfo="text",
+                mode="lines",
+                line=dict(width=1.5, color="rgba(16, 185, 169, 0.6)"),
+                fill="tonexty",
+                fillcolor=(
+                    "rgba(16, 185, 169, 0.3)"
+                    if theme == "dark"
+                    else "rgba(16, 185, 169, 0.3)"
+                ),
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=df_graph["date"],
                 y=df_graph["valuation"],
                 name="評価額",
                 hovertext=[
@@ -1939,28 +1958,7 @@ class GraphGenerator(Base):
                 hoverinfo="text",
                 mode="lines",
                 line=dict(
-                    width=1.5, color="#3355bb" if theme == "dark" else "#4466cc"
-                ),
-                fill="tozeroy",
-                fillcolor=(
-                    "rgba(120, 160, 255, 0.6)"
-                    if theme == "dark"
-                    else "rgba(50, 80, 200, 0.6)"
-                ),
-            )
-        )
-        fig.add_trace(
-            go.Scatter(
-                x=df_graph["date"],
-                y=df_graph["invest_amount"],
-                name="投資額",
-                hovertext=[
-                    f"投資額 ¥{y:,.0f}" for y in df_graph["invest_amount"]
-                ],
-                hoverinfo="text",
-                mode="lines",
-                line=dict(
-                    width=3, color="#bb4433" if theme == "dark" else "#dd6644"
+                    width=3, color="#4466cc" if theme == "dark" else "#3355bb"
                 ),
             )
         )
@@ -2014,7 +2012,9 @@ class GraphGenerator(Base):
                         x=sim_dates,
                         y=lower_values,
                         mode="lines",
-                        line=dict(width=0, color="rgba(16, 185, 129, 0)"),
+                        line=dict(
+                            width=0, color="#4466cc" if theme == "dark" else "#3355bb"
+                        ),
                         hoverinfo="skip",
                         showlegend=False,
                         legendgroup="simulation",
@@ -2026,12 +2026,12 @@ class GraphGenerator(Base):
                         y=upper_values,
                         mode="lines",
                         name="シミュレーションのリスク範囲（±1σ）",
-                        line=dict(width=0, color="rgba(16, 185, 129, 0)"),
+                        line=dict(width=0, color="#4466cc" if theme == "dark" else "#3355bb"),
                         fill="tonexty",
                         fillcolor=(
-                            "rgba(16, 185, 129, 0.18)"
+                            "rgba(120, 160, 255, 0.18)"
                             if theme == "dark"
-                            else "rgba(16, 185, 129, 0.12)"
+                            else "rgba(50, 80, 200, 0.12)"
                         ),
                         hoverinfo="skip",
                         showlegend=False,
@@ -2046,9 +2046,9 @@ class GraphGenerator(Base):
                     name="シミュレーション（±1σ）",
                     legendgroup="simulation",
                     line=dict(
-                        width=2,
+                        width=3,
                         dash="dash",
-                        color="#10b981",
+                        color="#4466cc" if theme == "dark" else "#3355bb"
                     ),
                     hovertext=[
                         f"シミュレーション<br>  ({x.strftime('%Y年%-m月%-d日')} ¥{y:,.0f})"
