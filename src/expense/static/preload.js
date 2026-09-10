@@ -1,3 +1,31 @@
+const lastPageStorageKey = "expense.lastPage";
+const pagePaths = ["/", "/asset_management", "/simulator"];
+
+try {
+  const currentPath = location.pathname;
+  const lastPage = localStorage.getItem(lastPageStorageKey);
+
+  // ルートへの再訪時だけ、前回開いていたページへ戻す。
+  if (currentPath === "/" && pagePaths.includes(lastPage) && lastPage !== "/") {
+    location.replace(lastPage);
+  } else if (pagePaths.includes(currentPath)) {
+    localStorage.setItem(lastPageStorageKey, currentPath);
+  }
+
+  // メニューのフォーム遷移では、リダイレクト前に遷移先を保存する。
+  document.addEventListener("click", (event) => {
+    const form = event.target.closest("form");
+    if (!form) return;
+
+    const targetPath = new URL(form.action, location.href).pathname;
+    if (pagePaths.includes(targetPath)) {
+      localStorage.setItem(lastPageStorageKey, targetPath);
+    }
+  });
+} catch {
+  // localStorageが利用できない環境でもページ自体は表示する。
+}
+
 if (localStorage.getItem("theme") === "dark")
   document.documentElement.classList.add("dark");
 
