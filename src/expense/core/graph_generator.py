@@ -2030,7 +2030,6 @@ class GraphGenerator(Base):
                         ),
                         hoverinfo="skip",
                         showlegend=False,
-                        legendgroup="simulation",
                     )
                 )
                 fig.add_trace(
@@ -2047,8 +2046,7 @@ class GraphGenerator(Base):
                             else "rgba(50, 80, 200, 0.12)"
                         ),
                         hoverinfo="skip",
-                        showlegend=False,
-                        legendgroup="simulation",
+                        showlegend=True,
                     )
                 )
             fig.add_trace(
@@ -2056,7 +2054,7 @@ class GraphGenerator(Base):
                     x=sim_dates,
                     y=sim_values,
                     mode="lines",
-                    name="評価額シミュレーション（±1σ）",
+                    name="評価額シミュレーション",
                     legendgroup="simulation",
                     line=dict(
                         width=3,
