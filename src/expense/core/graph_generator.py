@@ -1968,6 +1968,7 @@ class GraphGenerator(Base):
             latest_row = df_graph.iloc[-1]
             latest_date = pd.to_datetime(latest_row["date"])
             latest_valuation = latest_row["valuation"]
+            latest_invest_amount = latest_row["invest_amount"]
 
             n_simulation_months = int(simulation_years * 12)
             sim_dates = [
@@ -1988,6 +1989,18 @@ class GraphGenerator(Base):
                 return values
 
             sim_values = project_values(simulation_annual_yield)
+            sim_invest_amounts = [latest_invest_amount]
+            sim_invest_amounts.extend(
+                latest_invest_amount + simulation_monthly_investment * i
+                for i in range(1, n_simulation_months + 1)
+            )
+
+            def simulation_profit_text(value: float, investment: float) -> str:
+                profit = value - investment
+                profit_sign = "+" if profit >= 0 else "-"
+                profit_text = f"{profit_sign}¥{abs(profit):,.0f}"
+                roi_text = f"{profit / investment * 100:+.2f}%" if investment else "-"
+                return f"(含み益 {profit_text} ／ 損益率 {roi_text})"
 
             # Assume contributions are made at the beginning of each month.
             # invest_amount is cumulative, so its difference is the contribution.
@@ -2004,7 +2017,7 @@ class GraphGenerator(Base):
             upper_values = project_values(
                 simulation_annual_yield + annual_volatility
             )
-            ymax = max(ymax, max(upper_values))
+            ymax = max(ymax, max(upper_values), max(sim_invest_amounts))
 
             if annual_volatility > 0:
                 fig.add_trace(
@@ -2043,16 +2056,45 @@ class GraphGenerator(Base):
                     x=sim_dates,
                     y=sim_values,
                     mode="lines",
-                    name="シミュレーション（±1σ）",
+                    name="評価額シミュレーション（±1σ）",
                     legendgroup="simulation",
                     line=dict(
                         width=3,
-                        dash="dash",
+                        dash="dot",
                         color="#4466cc" if theme == "dark" else "#3355bb"
                     ),
                     hovertext=[
-                        f"シミュレーション<br>  ({x.strftime('%Y年%-m月%-d日')} ¥{y:,.0f})"
-                        for x, y in zip(sim_dates, sim_values)
+                        f"{x.strftime('%Y年%-m月%-d日')}<br>"
+                        f"<b>評価額シミュレーション ¥{y:,.0f}</b><br>"
+                        f"  {simulation_profit_text(y, investment)}"
+                        for x, y, investment in zip(
+                            sim_dates, sim_values, sim_invest_amounts
+                        )
+                    ],
+                    hoverinfo="text",
+                )
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=sim_dates,
+                    y=sim_invest_amounts,
+                    mode="lines",
+                    name="投資額シミュレーション",
+                    legendgroup="simulation",
+                    line=dict(
+                        width=1.5,
+                        dash="dot",
+                        color="rgba(16, 185, 169, 0.3)",
+                    ),
+                    fill="tozeroy",
+                    fillcolor=(
+                        "rgba(16, 185, 169, 0.1)"
+                        if theme == "dark"
+                        else "rgba(16, 185, 169, 0.1)"
+                    ),
+                    hovertext=[
+                        f"投資額シミュレーション ¥{y:,.0f}"
+                        for x, y in zip(sim_dates, sim_invest_amounts)
                     ],
                     hoverinfo="text",
                 )
