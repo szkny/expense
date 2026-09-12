@@ -27,6 +27,9 @@ class GraphGenerator(Base):
         income_types: list[str],
         exclude_types: list[str],
         graph_config: dict[str, dict[str, str]],
+        irregular_income_types: list[str] | None = None,
+        investment_income_types: list[str] | None = None,
+        capital_gain_types: list[str] | None = None,
     ):
         super().__init__()
         self.expense_types = expense_types
@@ -34,6 +37,18 @@ class GraphGenerator(Base):
         self.variable_types = variable_types
         self.exclude_types = exclude_types
         self.income_types = income_types
+        self.irregular_income_types = irregular_income_types or []
+        self.investment_income_types = investment_income_types or []
+        self.capital_gain_types = capital_gain_types or []
+        self.all_income_types = (
+            self.income_types
+            + self.irregular_income_types
+            + self.investment_income_types
+            + self.capital_gain_types
+        )
+        self.forecast_income_types = (
+            self.income_types + self.investment_income_types
+        )
         self.graph_color = graph_config.get("color", {})
         self.asset_management_config = self.config.get("asset_management", {})
         self.fitting_duration_multiplier = self.asset_management_config.get(
@@ -886,7 +901,7 @@ class GraphGenerator(Base):
         df_graph["month"] = pd.to_datetime(df_graph["month"], format="%Y-%m")
 
         # 収入を月ごとに集計
-        df_income = df.query("expense_type in @self.income_types").copy()
+        df_income = df.query("expense_type in @self.all_income_types").copy()
         df_income["month"] = pd.to_datetime(df_income["month"], format="%Y-%m")
         df_income = (
             df_income.groupby("month", as_index=False)["expense_amount"]
@@ -1106,14 +1121,14 @@ class GraphGenerator(Base):
         df_annual["date"] = df_annual["date"].dt.normalize()
         df_annual = df_annual.loc[
             df_annual["expense_type"].isin(
-                self.income_types + self.fixed_types + self.variable_types
+                self.all_income_types + self.fixed_types + self.variable_types
             )
         ].copy()
         if df_annual.empty:
             return "", []
 
         df_annual["income"] = df_annual["expense_amount"].where(
-            df_annual["expense_type"].isin(self.income_types), 0
+            df_annual["expense_type"].isin(self.forecast_income_types), 0
         )
         df_annual["expense"] = df_annual["expense_amount"].where(
             df_annual["expense_type"].isin(
@@ -1149,7 +1164,7 @@ class GraphGenerator(Base):
 
         income = int(
             df_completed.loc[
-                df_completed["expense_type"].isin(self.income_types),
+                df_completed["expense_type"].isin(self.all_income_types),
                 "expense_amount",
             ].sum()
         )
@@ -1347,9 +1362,17 @@ class GraphGenerator(Base):
         forecast_dates = pd.date_range(
             actual_end + pd.Timedelta(days=1), fiscal_end
         )
+        income_column = (
+            "forecast_income"
+            if "forecast_income" in df_history.columns
+            else "income"
+        )
+        forecast_history = df_history.copy()
+        forecast_history["income"] = forecast_history[income_column]
         history_daily = (
-            df_history.groupby("date")[["income", "expense"]]
+            df_history.groupby("date")[[income_column, "expense"]]
             .sum()
+            .rename(columns={income_column: "income"})
             .reindex(
                 pd.date_range(df_history["date"].min(), actual_end, freq="D"),
                 fill_value=0,
@@ -1377,7 +1400,9 @@ class GraphGenerator(Base):
         )
         overall_pattern = history_daily[["income", "expense"]].mean()
         monthly_income, monthly_expense = (
-            self._calculate_weighted_monthly_totals(df_history, actual_end)
+            self._calculate_weighted_monthly_totals(
+                forecast_history, actual_end
+            )
         )
 
         # 月額を先に決めてから日番号パターンへ配分する。これにより、
@@ -1482,7 +1507,7 @@ class GraphGenerator(Base):
         df_graph.dropna(subset=["date", "expense_amount"], inplace=True)
         df_graph = df_graph.loc[
             df_graph["expense_type"].isin(
-                self.income_types + self.fixed_types + self.variable_types
+                self.all_income_types + self.fixed_types + self.variable_types
             )
         ].copy()
         if df_graph.empty:
@@ -1491,7 +1516,10 @@ class GraphGenerator(Base):
 
         df_graph["date"] = df_graph["date"].dt.normalize()
         df_graph["income"] = df_graph["expense_amount"].where(
-            df_graph["expense_type"].isin(self.income_types), 0
+            df_graph["expense_type"].isin(self.all_income_types), 0
+        )
+        df_graph["forecast_income"] = df_graph["expense_amount"].where(
+            df_graph["expense_type"].isin(self.forecast_income_types), 0
         )
         df_graph["expense"] = df_graph["expense_amount"].where(
             df_graph["expense_type"].isin(
@@ -2025,9 +2053,7 @@ class GraphGenerator(Base):
                         x=sim_dates,
                         y=lower_values,
                         mode="lines",
-                        line=dict(
-                            width=0, color="#4466cc" if theme == "dark" else "#3355bb"
-                        ),
+                        line=dict(width=0, color="#4466cc" if theme == "dark" else "#3355bb"),
                         hoverinfo="skip",
                         showlegend=False,
                     )

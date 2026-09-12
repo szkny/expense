@@ -29,12 +29,35 @@ class ServerTools(Base):
             "expense_types", {}
         )
         self.income_types: list[str] = expense_types_all.get("income", [])
+        self.irregular_income_types: list[str] = expense_types_all.get(
+            "irregular_income", []
+        )
+        self.investment_income_types: list[str] = expense_types_all.get(
+            "investment_income", []
+        )
+        self.capital_gain_types: list[str] = expense_types_all.get(
+            "capital_gain", []
+        )
+        self.all_income_types: list[str] = (
+            self.income_types
+            + self.irregular_income_types
+            + self.investment_income_types
+            + self.capital_gain_types
+        )
+        self.simulation_income_types: list[str] = (
+            self.income_types + self.investment_income_types
+        )
         self.fixed_types: list[str] = expense_types_all.get("fixed", [])
         self.variable_types: list[str] = expense_types_all.get("variable", [])
         self.expense_types: list[str] = (
-            self.income_types + self.fixed_types + self.variable_types
+            self.all_income_types + self.fixed_types + self.variable_types
         )
         self.exclude_types: list[str] = expense_config.get("exclude_types", [])
+        self.simulation_exclude_types: list[str] = (
+            self.exclude_types
+            + self.irregular_income_types
+            + self.capital_gain_types
+        )
         webui_config: dict[str, Any] = self.config.get("web_ui", {})
         self.icons: dict[str, str] = webui_config.get("icons", {})
         self.icons = self.icons | expense_config.get("icons", {})
@@ -52,6 +75,9 @@ class ServerTools(Base):
             income_types=self.income_types,
             exclude_types=self.exclude_types,
             graph_config=graph_config,
+            irregular_income_types=self.irregular_income_types,
+            investment_income_types=self.investment_income_types,
+            capital_gain_types=self.capital_gain_types,
         )
 
         # setup FastAPI
@@ -252,7 +278,7 @@ class ServerTools(Base):
         df_records = pd.DataFrame(recent_expenses)
         if not df_records.empty:
             df_records = df_records.query(
-                "expense_type not in @self.income_types and expense_type not in @self.exclude_types"
+                "expense_type not in @self.all_income_types and expense_type not in @self.exclude_types"
             )
             df_records.loc[:, "date"] = pd.to_datetime(
                 df_records.loc[:, "date"].map(

@@ -6,7 +6,11 @@ import tempfile
 from pathlib import Path
 import pandas as pd
 from unittest.mock import patch
-from src.expense.core.expense import get_fiscal_year, Expense
+from src.expense.core.expense import (
+    get_fiscal_year,
+    get_local_only_expense_types,
+    Expense,
+)
 from src.expense.core.ocr import Ocr
 from src.expense.core.asset_manager import AssetManager
 from src.expense.core.termux_api import TermuxAPI
@@ -54,6 +58,21 @@ class TestMain(unittest.TestCase):
             # Test case 4: Month is December (start of fiscal year)
             mock_datetime.date.today.return_value = datetime.date(2023, 12, 31)
             self.assertEqual(get_fiscal_year(), 2023)
+
+    def test_get_local_only_expense_types(self) -> None:
+        config = {
+            "expense": {
+                "expense_types": {
+                    "irregular_income": ["賞与"],
+                    "investment_income": ["配当"],
+                    "capital_gain": ["譲渡益"],
+                }
+            }
+        }
+
+        self.assertEqual(
+            get_local_only_expense_types(config), ["賞与", "配当", "譲渡益"]
+        )
 
     def test_filter_duplicates(self) -> None:
         expense = Expense()

@@ -87,3 +87,38 @@ class GraphGeneratorSavingsRateTest(unittest.TestCase):
 
     def test_savings_rate_is_dash_when_income_is_zero(self) -> None:
         self.assertEqual(GraphGenerator._format_savings_rate(30, 0), "-")
+
+
+class GraphGeneratorFiscalForecastTest(unittest.TestCase):
+    def test_forecast_starts_after_irregular_income_in_actual_balance(self) -> None:
+        generator = GraphGenerator.__new__(GraphGenerator)
+        daily = pd.DataFrame(
+            {
+                "income": [1_000_000],
+                "expense": [300_000],
+                "income_cumulative": [1_000_000],
+                "expense_cumulative": [300_000],
+                "balance": [700_000],
+                "cash_flow": [700_000],
+            },
+            index=pd.to_datetime(["2026-08-31"]),
+        )
+        df_history = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2026-08-01", "2026-08-31"]),
+                "income": [300_000, 700_000],
+                "forecast_income": [300_000, 0],
+                "expense": [0, 300_000],
+            }
+        )
+
+        forecast = generator._add_fiscal_forecast_traces(
+            go.Figure(),
+            daily,
+            df_history,
+            pd.Timestamp("2026-08-31"),
+            pd.Timestamp("2026-09-02"),
+            ["#111111", "#222222", "#333333"],
+        )
+
+        self.assertEqual(forecast[0][0], 1_000_000 + 300_000)

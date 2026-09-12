@@ -414,6 +414,15 @@ def get_simulation_averages(
     )
 
 
+def _is_local_only_type(server_tools: ServerTools, expense_type: str) -> bool:
+    """スプレッドシート未対応の収入タイプか判定する。"""
+    return expense_type in (
+        server_tools.irregular_income_types
+        + server_tools.investment_income_types
+        + server_tools.capital_gain_types
+    )
+
+
 @app.get("/simulator", response_class=HTMLResponse)
 def simulator(
     request: Request,
@@ -439,8 +448,8 @@ def simulator(
         average_surplus_man_yen,
     ) = get_simulation_averages(
         commons["records"],
-        server_tools.income_types,
-        server_tools.exclude_types,
+        server_tools.simulation_income_types,
+        server_tools.simulation_exclude_types,
         dt.date.today(),
         average_months,
     )
@@ -779,9 +788,13 @@ def register(
             except Exception:
                 log.info("Toast notification failed.")
             try:
-                server_tools.gspread_handler.register_expense(
-                    expense_type, expense_amount_num, expense_memo, expense_date
-                )
+                if not _is_local_only_type(server_tools, expense_type):
+                    server_tools.gspread_handler.register_expense(
+                        expense_type,
+                        expense_amount_num,
+                        expense_memo,
+                        expense_date,
+                    )
                 server_tools.expense_handler.store_expense(
                     expense_type, expense_memo, expense_amount_num, expense_date
                 )
@@ -872,9 +885,13 @@ def ocr_process(
                 except Exception:
                     log.info("Toast notification failed.")
                 try:
-                    server_tools.gspread_handler.register_expense(
-                        expense_type, expense_amount, expense_memo, expense_date
-                    )
+                    if not _is_local_only_type(server_tools, expense_type):
+                        server_tools.gspread_handler.register_expense(
+                            expense_type,
+                            expense_amount,
+                            expense_memo,
+                            expense_date,
+                        )
                     json.dump(
                         ocr_data,
                         open(server_tools.cache_path / "ocr_data.json", "w"),
@@ -941,13 +958,14 @@ def delete_process(
 
         if status:
             try:
-                if not server_tools.gspread_handler.delete_expense(
-                    expense_date,
-                    expense_type,
-                    expense_amount,
-                    expense_memo,
-                ):
-                    status = False
+                if not _is_local_only_type(server_tools, expense_type):
+                    if not server_tools.gspread_handler.delete_expense(
+                        expense_date,
+                        expense_type,
+                        expense_amount,
+                        expense_memo,
+                    ):
+                        status = False
                 if status and not server_tools.expense_handler.delete_expense(
                     expense_date, expense_type, expense_amount, expense_memo
                 ):
@@ -1038,9 +1056,16 @@ def edit_process(
                 expense_memo=new_expense_memo,
             )
             try:
-                if status and not server_tools.gspread_handler.edit_expense(
-                    target_expense=target_expense,
-                    new_expense=new_expense,
+                if (
+                    status
+                    and not (
+                        _is_local_only_type(server_tools, target_type)
+                        or _is_local_only_type(server_tools, new_expense_type)
+                    )
+                    and not server_tools.gspread_handler.edit_expense(
+                        target_expense=target_expense,
+                        new_expense=new_expense,
+                    )
                 ):
                     status = False
                 if status and not server_tools.expense_handler.edit_expense(

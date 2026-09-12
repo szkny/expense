@@ -18,6 +18,16 @@ logging.getLogger("asyncio").setLevel(logging.WARNING)
 log: logging.Logger = logging.getLogger("expense")
 
 
+def get_local_only_expense_types(config: dict[str, Any]) -> list[str]:
+    """Google Sheets未対応の収入タイプを設定から取得する。"""
+    expense_types = config.get("expense", {}).get("expense_types", {})
+    return (
+        expense_types.get("irregular_income", [])
+        + expense_types.get("investment_income", [])
+        + expense_types.get("capital_gain", [])
+    )
+
+
 def get_fiscal_year() -> int:
     """
     get fiscal year
@@ -168,8 +178,11 @@ class Expense(Base):
             loop.run_in_executor(
                 None, lambda: self.termux_api.toast("登録中..")
             )
-            handler = GspreadHandler(bookname)
-            handler.register_expense(expense_type, expense_amount, expense_memo)
+            if expense_type not in get_local_only_expense_types(self.config):
+                handler = GspreadHandler(bookname)
+                handler.register_expense(
+                    expense_type, expense_amount, expense_memo
+                )
             self.store_expense(expense_type, expense_memo, expense_amount)
             self.termux_api.notify(
                 "家計簿への登録が完了しました。",

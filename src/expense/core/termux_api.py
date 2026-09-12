@@ -19,10 +19,24 @@ class TermuxAPI(Base):
             "expense_types", {}
         )
         income_types: list[str] = expense_types_all.get("income", [])
+        irregular_income_types: list[str] = expense_types_all.get(
+            "irregular_income", []
+        )
+        investment_income_types: list[str] = expense_types_all.get(
+            "investment_income", []
+        )
+        capital_gain_types: list[str] = expense_types_all.get(
+            "capital_gain", []
+        )
         fixed_types: list[str] = expense_types_all.get("fixed", [])
         variable_types: list[str] = expense_types_all.get("variable", [])
         self.expense_types: list[str] = (
-            variable_types + fixed_types + income_types
+            variable_types
+            + fixed_types
+            + income_types
+            + irregular_income_types
+            + investment_income_types
+            + capital_gain_types
         )
 
     def exec_command(

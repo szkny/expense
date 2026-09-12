@@ -62,6 +62,9 @@
     },
     "expense_types": {
       "income": ["給与", "雑所得"],
+      "irregular_income": ["賞与"],
+      "investment_income": ["配当"],
+      "capital_gain": ["譲渡益"],
       "fixed": ["家賃", "光熱費", "通信費", "養育費", "特別経費"],
       "variable": ["食費", "交通費", "医療費", "書籍費", "遊興費", "雑費"]
     },

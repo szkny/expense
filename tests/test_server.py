@@ -11,6 +11,8 @@ from src.expense.api.server import (
     _clear_record_cache,
     _df_cache_record,
     _get_cached_graph,
+    _is_local_only_type,
+    get_simulation_averages,
 )
 from src.expense.api.server_tools import ServerTools
 
@@ -141,6 +143,60 @@ class TestReportSummary(unittest.TestCase):
         self.assertEqual(result["today_total"], 500)
         self.assertEqual(result["monthly_total"], 600)
         self.assertEqual(result["prev_monthly_total"], 400)
+
+
+class TestSimulationAverages(unittest.TestCase):
+    def test_uses_regular_and_investment_income_only(self) -> None:
+        records = [
+            {
+                "date": "2026-07-10",
+                "expense_type": "給与",
+                "expense_amount": 300_000,
+            },
+            {
+                "date": "2026-07-15",
+                "expense_type": "配当",
+                "expense_amount": 50_000,
+            },
+            {
+                "date": "2026-07-20",
+                "expense_type": "賞与",
+                "expense_amount": 1_000_000,
+            },
+            {
+                "date": "2026-07-25",
+                "expense_type": "譲渡益",
+                "expense_amount": 2_000_000,
+            },
+            {
+                "date": "2026-07-25",
+                "expense_type": "生活防衛資金",
+                "expense_amount": 100_000,
+            },
+        ]
+
+        result = get_simulation_averages(
+            records,
+            ["給与", "配当"],
+            ["生活防衛資金", "賞与", "譲渡益"],
+            dt.date(2026, 8, 25),
+            1,
+        )
+
+        self.assertEqual(result, (35, 0, 35))
+
+
+class TestLocalOnlyExpenseTypes(unittest.TestCase):
+    def test_salary_is_not_local_only(self) -> None:
+        server_tools = Mock(
+            irregular_income_types=["賞与"],
+            investment_income_types=["配当"],
+            capital_gain_types=["譲渡益"],
+        )
+
+        self.assertFalse(_is_local_only_type(server_tools, "給与"))
+        self.assertFalse(_is_local_only_type(server_tools, "雑所得"))
+        self.assertTrue(_is_local_only_type(server_tools, "賞与"))
 
 
 if __name__ == "__main__":

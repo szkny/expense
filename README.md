@@ -127,7 +127,7 @@ The application's behavior can be customized through the `~/.config/expense/conf
       <td><code>expense_types</code></td>
       <td><code>object</code></td>
       <td><code>See config.json</code></td>
-      <td>Categorization of income, fixed costs, and variable costs.</td>
+      <td>Categorization of regular income, irregular income, investment income, capital gains, fixed costs, and variable costs.</td>
     </tr>
     <tr>
       <td><code>exclude_types</code></td>
