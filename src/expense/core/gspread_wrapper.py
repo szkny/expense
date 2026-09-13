@@ -41,6 +41,11 @@ class GspreadHandler(Base):
         self.expense_types: list[str] = (
             self.income_types + self.fixed_types + self.variable_types
         )
+        self.monthly_income_cells: dict[str, str] = {
+            "賞与": "E6",
+            "譲渡益": "E25",
+            "配当": "E26",
+        }
         self.exclude_types: list[str] = expense_config.get("exclude_types", [])
         credentials = service_account.Credentials.from_service_account_file(
             self.config_path / "credentials.json",
@@ -116,6 +121,10 @@ class GspreadHandler(Base):
         log.info("end 'get_row' method")
         return row
 
+    def get_monthly_income_cell(self, expense_type: str) -> str | None:
+        """月次合計で管理する収入タイプのセルを返す。"""
+        return self.monthly_income_cells.get(expense_type)
+
     @retry(stop=stop_after_attempt(3))
     def add_amount_data(self, label: str, amount: int) -> None:
         log.info("start 'add_amount_data' method")
@@ -184,6 +193,10 @@ class GspreadHandler(Base):
         log.info("start 'register_expense' method")
         try:
             self.load_sheet(date_str)
+            monthly_cell = self.get_monthly_income_cell(expense_type)
+            if monthly_cell:
+                self.add_amount_data(monthly_cell, amount)
+                return
             column = self.get_column(date_str)
             row = self.get_row(expense_type)
             label = f"{column}{row}"
@@ -279,17 +292,23 @@ class GspreadHandler(Base):
         log.info("start 'delete_amount' method")
         row = self.get_row(target_type)
         address = f"{column}{row}"
+        return self.delete_amount_at_label(address, target_amount)
+
+    @retry(stop=stop_after_attempt(3))
+    def delete_amount_at_label(self, label: str, target_amount: int) -> bool:
+        """指定セルから金額を1件分削除する。"""
+        log.info("start 'delete_amount_at_label' method")
         cell = self.sheet.acell(
-            address,
+            label,
             value_render_option=gspread.worksheet.ValueRenderOption.formula,
         )
 
         if isinstance(cell.value, int):
             if cell.value == target_amount:
                 log.debug(
-                    f"Deleting amount: `{target_amount}` of {address} in {self.sheetname}"
+                    f"Deleting amount: `{target_amount}` of {label} in {self.sheetname}"
                 )
-                self.sheet.update_acell(address, 0)
+                self.sheet.update_acell(label, 0)
             else:
                 log.debug(
                     f"Deleting amount failed: target not found. (target_amount={target_amount}, cell.value={cell.value})"
@@ -317,11 +336,11 @@ class GspreadHandler(Base):
             if cell.value != new_value:
                 log.debug(
                     (
-                        f"Deleting amount: `{target_amount}` of {address} in {self.sheetname}\n"
+                        f"Deleting amount: `{target_amount}` of {label} in {self.sheetname}\n"
                         f"\tBefore: '{cell.value}'\n\tAfter : '{new_value}'"
                     )
                 )
-                self.sheet.update_acell(address, new_value)
+                self.sheet.update_acell(label, new_value)
             else:
                 log.debug(
                     f"Deleting amount failed: target not found in the cell formula. (target_amount={target_amount}, cell.value={cell.value})"
@@ -419,6 +438,9 @@ class GspreadHandler(Base):
             target_amount = int(re.sub(r"[^\d]", "", str(target_amount)))
 
             self.load_sheet(target_date)
+            monthly_cell = self.get_monthly_income_cell(target_type)
+            if monthly_cell:
+                return self.delete_amount_at_label(monthly_cell, target_amount)
             column = self.get_column(target_date)
             if not self.delete_amount(column, target_type, target_amount):
                 return False
@@ -446,19 +468,29 @@ class GspreadHandler(Base):
         )
         row = self.get_row(target_type)
         address = f"{column}{row}"
+        return self.edit_amount_at_label(
+            address, target_amount, new_expense_amount
+        )
+
+    @retry(stop=stop_after_attempt(3))
+    def edit_amount_at_label(
+        self, label: str, target_amount: int, new_expense_amount: int
+    ) -> bool:
+        """指定セル内の金額を1件分置換する。"""
+        log.info("start 'edit_amount_at_label' method")
         cell = self.sheet.acell(
-            address,
+            label,
             value_render_option=gspread.worksheet.ValueRenderOption.formula,
         )
         log.debug(
-            f"call.value='{cell.value}', address='{address}', sheetname='{self.sheetname}'"
+            f"call.value='{cell.value}', address='{label}', sheetname='{self.sheetname}'"
         )
         if isinstance(cell.value, int):
             if cell.value == target_amount:
                 log.debug(
                     f"Editing amount: `{target_amount}` to `{new_expense_amount}`"
                 )
-                self.sheet.update_acell(address, new_expense_amount)
+                self.sheet.update_acell(label, new_expense_amount)
             else:
                 log.debug(
                     f"Editing amount failed: target not found. (target_amount={target_amount}, cell.value={cell.value})"
@@ -487,11 +519,11 @@ class GspreadHandler(Base):
             if cell.value != new_value:
                 log.debug(
                     (
-                        f"Editing amount: `{target_amount}` of {address} in {self.sheetname}\n"
+                        f"Editing amount: `{target_amount}` of {label} in {self.sheetname}\n"
                         f"\tBefore: '{cell.value}'\n\tAfter : '{new_value}'"
                     )
                 )
-                self.sheet.update_acell(address, new_value)
+                self.sheet.update_acell(label, new_value)
             else:
                 log.debug(
                     f"Editing amount failed: target not found in the cell formula. (target_amount={target_amount}, cell.value={cell.value})"
@@ -499,7 +531,7 @@ class GspreadHandler(Base):
                 return False
         else:
             log.debug(
-                f"Editing amount failed: cell.value is invalid. (call.value={cell.value} at address='{address}')"
+                f"Editing amount failed: cell.value is invalid. (call.value={cell.value} at address='{label}')"
             )
             return False
         log.info("end 'edit_amount' method")
@@ -638,6 +670,33 @@ class GspreadHandler(Base):
             ):
                 log.debug("Nothing to do.")
                 return False
+
+            target_monthly_cell = self.get_monthly_income_cell(target_type)
+            new_monthly_cell = self.get_monthly_income_cell(new_expense_type)
+            if target_monthly_cell or new_monthly_cell:
+                # 固定セルは発生日を保持しないため、対象月の合計を更新する。
+                if (
+                    target_monthly_cell
+                    and new_monthly_cell
+                    and target_type == new_expense_type
+                    and str(target_date)[:7] == str(new_expense_date)[:7]
+                    and target_amount == new_expense_amount
+                ):
+                    return True
+                if not self.delete_expense(
+                    target_date,
+                    target_type,
+                    target_amount,
+                    target_memo if not target_monthly_cell else "",
+                ):
+                    return False
+                self.register_expense(
+                    new_expense_type,
+                    new_expense_amount,
+                    new_expense_memo if not new_monthly_cell else "",
+                    new_expense_date,
+                )
+                return True
 
             self.load_sheet(target_date)
             column = self.get_column(target_date)

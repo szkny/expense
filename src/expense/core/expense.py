@@ -178,11 +178,8 @@ class Expense(Base):
             loop.run_in_executor(
                 None, lambda: self.termux_api.toast("登録中..")
             )
-            if expense_type not in get_local_only_expense_types(self.config):
-                handler = GspreadHandler(bookname)
-                handler.register_expense(
-                    expense_type, expense_amount, expense_memo
-                )
+            handler = GspreadHandler(bookname)
+            handler.register_expense(expense_type, expense_amount, expense_memo)
             self.store_expense(expense_type, expense_memo, expense_amount)
             self.termux_api.notify(
                 "家計簿への登録が完了しました。",
