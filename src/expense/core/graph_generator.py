@@ -669,6 +669,11 @@ class GraphGenerator(Base):
             uniformtext=uniformtext,
         )
 
+    @staticmethod
+    def _plotly_yaxis_autoscale_script() -> str:
+        """外部JSで表示範囲変更時のY軸自動調整を有効にする。"""
+        return "window.attachPlotlyYAxisAutoscale('{plot_id}');"
+
     def generate_daily_chart(
         self,
         df_org: pd.DataFrame,
@@ -746,8 +751,10 @@ class GraphGenerator(Base):
         self._update_layout(fig, theme)
         fig.update_layout(
             barmode="stack",
+            dragmode="pan",
             yaxis=dict(fixedrange=True),
         )
+        fig.update_xaxes(fixedrange=False)
 
         graph_html: str = fig.to_html(
             full_html=False,
@@ -755,7 +762,9 @@ class GraphGenerator(Base):
             config=dict(
                 responsive=True,
                 displayModeBar=False,
+                scrollZoom=True,
             ),
+            post_script=self._plotly_yaxis_autoscale_script(),
         )
         graph_html = f'<div style="-webkit-tap-highlight-color: transparent;">{graph_html}</div>'
         log.info("end 'generate_daily_chart' method")
@@ -841,20 +850,18 @@ class GraphGenerator(Base):
             insidetextorientation="horizontal",
             showlegend=False,
         )
-        fig.add_trace(
-            go.Scatter(
-                x=[0.5],
-                y=[0.5],
-                text=[f"合計<br>¥{total_amount: ,.0f}<br>({int(n_records)}件)"],
-                mode="text",
-                textposition="middle center",
-                textfont=dict(
-                    size=20,
-                    color="#ffffff" if theme == "dark" else "#000000",
-                ),
-                showlegend=False,
-                hoverinfo="skip",
-            )
+        fig.add_annotation(
+            x=0.5,
+            y=0.5,
+            xref="paper",
+            yref="paper",
+            text=f"合計<br>¥{total_amount: ,.0f}<br>({int(n_records)}件)",
+            showarrow=False,
+            align="center",
+            font=dict(
+                size=20,
+                color="#ffffff" if theme == "dark" else "#000000",
+            ),
         )
 
         self._update_layout(fig, theme)
@@ -1091,7 +1098,9 @@ class GraphGenerator(Base):
             config=dict(
                 responsive=True,
                 displayModeBar=False,
+                scrollZoom=True,
             ),
+            post_script=self._plotly_yaxis_autoscale_script(),
         )
         log.info("end 'generate_monthly_bar_chart' method")
         return graph_html
@@ -1643,6 +1652,7 @@ class GraphGenerator(Base):
             full_html=False,
             include_plotlyjs=include_plotlyjs,
             config=dict(responsive=True, displayModeBar=False),
+            post_script=self._plotly_yaxis_autoscale_script(),
         )
         log.info("end 'generate_fiscal_asset_history_chart' method")
         return graph_html, available_year_strings
@@ -2256,6 +2266,7 @@ class GraphGenerator(Base):
                 responsive=True,
                 displayModeBar=False,
             ),
+            post_script=self._plotly_yaxis_autoscale_script(),
         )
         log.info("end 'generate_asset_monthly_history_chart' method")
         return graph_html

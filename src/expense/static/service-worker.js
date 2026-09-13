@@ -5,6 +5,7 @@ const urlsToCache = [
   "/static/style.css",
   "/static/js/main.js",
   "/static/js/chart.js",
+  "/static/js/plotly_yaxis_autoscale.js",
   "/static/js/ui.js",
   "/static/js/table.js",
   "/static/preload.js",
