@@ -1,3 +1,4 @@
+import math
 import re
 import gspread
 import logging
@@ -39,6 +40,7 @@ class AssetManager(Base):
         df_items: pd.DataFrame,
         target_weights: dict[str, Any],
         tolerance_percent: float = 0.0,
+        df_summary: pd.DataFrame | None = None,
     ) -> list[dict[str, Any]]:
         """Build target allocation and trade suggestions for configured tickers."""
         log.info("start 'build_asset_allocation' method")
@@ -52,61 +54,287 @@ class AssetManager(Base):
 
             current_valuations = df_items.groupby("ticker")["valuation"].sum()
             tolerance = max(float(tolerance_percent), 0.0)
-            missing_weight_count, specified_weight_total = (
+            drawdown = AssetManager._get_drawdown(df_summary)
+            adjusted_target_weights = AssetManager._adjust_cash_target(
+                target_weights, drawdown
+            )
+            missing_weight_count, _ = (
                 AssetManager._get_weight_summary(
-                    target_weights, total_valuation
+                    adjusted_target_weights, total_valuation
                 )
             )
-            allocation: list[dict[str, Any]] = []
-            for ticker, configured_target in target_weights.items():
-                parsed_target = AssetManager._parse_target(configured_target)
-                if parsed_target is None:
-                    continue
-                target, target_tickers, target_amount = parsed_target
-                if target_amount is None:
-                    if target is None:
-                        if missing_weight_count != 1:
-                            continue
-                        target = 100 - specified_weight_total
-                    target_percent = AssetManager._parse_percent(target)
-                    if target_percent is None:
-                        continue
-                else:
-                    target_percent = target_amount / total_valuation * 100
-                current_value = AssetManager._get_current_value(
-                    current_valuations, ticker, target_tickers
-                )
-                if current_value is None:
-                    continue
-                current_percent = current_value / total_valuation * 100
-                if target_amount is not None:
-                    target_value = target_amount
-                    target_percent = target_value / total_valuation * 100
-                else:
-                    target_value = total_valuation * target_percent / 100
-                difference_percent = target_percent - current_percent
-                trade_value = target_value - current_value
-                within_tolerance = abs(difference_percent) <= tolerance
-                allocation.append(
-                    {
-                        "ticker": ticker,
-                        "tickers": target_tickers,
-                        "target_weight": target_percent,
-                        "current_weight": current_percent,
-                        "target_value": target_value,
-                        "current_value": current_value,
-                        "difference_weight": difference_percent,
-                        "trade_value": 0 if within_tolerance else trade_value,
-                        "action": (
-                            "調整不要"
-                            if within_tolerance
-                            else ("買い" if trade_value > 0 else "売り")
-                        ),
-                    }
-                )
+            allocation, missing_tickers = AssetManager._build_allocations(
+                adjusted_target_weights,
+                current_valuations,
+                total_valuation,
+                missing_weight_count,
+                drawdown,
+                tolerance,
+            )
+            AssetManager._apply_missing_weights(
+                allocation, missing_tickers, total_valuation, tolerance
+            )
+            AssetManager._adjust_non_cash_weights(
+                allocation, drawdown, total_valuation, tolerance
+            )
+            AssetManager._balance_allocations(
+                allocation, total_valuation, tolerance
+            )
             return allocation
         finally:
             log.info("end 'build_asset_allocation' method")
+
+    @staticmethod
+    def _get_drawdown(df_summary: pd.DataFrame | None) -> float | None:
+        if df_summary is None or df_summary.empty or "drawdown" not in df_summary:
+            return None
+        try:
+            drawdown = float(df_summary["drawdown"].iloc[0])
+        except (IndexError, TypeError, ValueError):
+            return None
+        return drawdown if math.isfinite(drawdown) else None
+
+    @staticmethod
+    def _adjust_cash_target(
+        target_weights: dict[str, Any], drawdown: float | None
+    ) -> dict[str, Any]:
+        adjusted = target_weights.copy()
+        if drawdown is None or "現金" not in adjusted:
+            return adjusted
+        cash_target = adjusted["現金"]
+        if isinstance(cash_target, dict):
+            if cash_target.get("target_amount") is not None:
+                return adjusted
+            try:
+                cash_target = cash_target.copy()
+                cash_target["weight"] = max(
+                    float(cash_target.get("weight", 0)) + drawdown, 0.0
+                )
+            except (TypeError, ValueError):
+                return adjusted
+            adjusted["現金"] = cash_target
+            return adjusted
+        try:
+            adjusted["現金"] = max(float(cash_target) + drawdown, 0.0)
+        except (TypeError, ValueError):
+            pass
+        return adjusted
+
+    @staticmethod
+    def _build_allocations(
+        target_weights: dict[str, Any],
+        current_valuations: pd.Series,
+        total_valuation: float,
+        missing_weight_count: int,
+        drawdown: float | None,
+        tolerance: float,
+    ) -> tuple[list[dict[str, Any]], set[str]]:
+        missing_tickers = {
+            ticker
+            for ticker, configured_target in target_weights.items()
+            if (
+                (parsed_target := AssetManager._parse_target(configured_target))
+                is not None
+                and parsed_target[0] is None
+                and parsed_target[2] is None
+            )
+        }
+        allocation = []
+        for ticker, configured_target in target_weights.items():
+            item = AssetManager._build_allocation_item(
+                ticker,
+                configured_target,
+                current_valuations,
+                total_valuation,
+                missing_weight_count,
+                drawdown,
+                tolerance,
+            )
+            if item is not None:
+                allocation.append(item)
+        return allocation, missing_tickers
+
+    @staticmethod
+    def _build_allocation_item(
+        ticker: str,
+        configured_target: Any,
+        current_valuations: pd.Series,
+        total_valuation: float,
+        missing_weight_count: int,
+        drawdown: float | None,
+        tolerance: float,
+    ) -> dict[str, Any] | None:
+        parsed_target = AssetManager._parse_target(configured_target)
+        if parsed_target is None:
+            return None
+        target, target_tickers, target_amount = parsed_target
+        if target_amount is None:
+            if target is None:
+                if missing_weight_count == 0:
+                    return None
+                target = 0.0
+            target_percent = AssetManager._parse_percent(target)
+            if target_percent is None:
+                return None
+        else:
+            target_percent = target_amount / total_valuation * 100
+        current_value = AssetManager._get_current_value(
+            current_valuations, ticker, target_tickers
+        )
+        if current_value is None:
+            return None
+        if target_amount is not None and ticker == "現金" and drawdown is not None:
+            target_percent = max(target_percent + drawdown, 0.0)
+        target_value = (
+            target_amount
+            if target_amount is not None and not (
+                ticker == "現金" and drawdown is not None
+            )
+            else total_valuation * target_percent / 100
+        )
+        current_percent = current_value / total_valuation * 100
+        return AssetManager._allocation_record(
+            ticker,
+            target_tickers,
+            target_percent,
+            target_value,
+            current_value,
+            current_percent,
+            tolerance,
+        )
+
+    @staticmethod
+    def _allocation_record(
+        ticker: str,
+        target_tickers: list[str] | None,
+        target_percent: float,
+        target_value: float,
+        current_value: float,
+        current_percent: float,
+        tolerance: float,
+    ) -> dict[str, Any]:
+        difference_percent = target_percent - current_percent
+        trade_value = target_value - current_value
+        within_tolerance = abs(difference_percent) <= tolerance
+        return {
+            "ticker": ticker,
+            "tickers": target_tickers,
+            "target_weight": target_percent,
+            "current_weight": current_percent,
+            "target_value": target_value,
+            "current_value": current_value,
+            "difference_weight": difference_percent,
+            "trade_value": 0 if within_tolerance else trade_value,
+            "action": (
+                "調整不要"
+                if within_tolerance
+                else ("買い" if trade_value > 0 else "売り")
+            ),
+        }
+
+    @staticmethod
+    def _apply_missing_weights(
+        allocation: list[dict[str, Any]],
+        missing_tickers: set[str],
+        total_valuation: float,
+        tolerance: float,
+    ) -> None:
+        missing = [
+            item for item in allocation if item["ticker"] in missing_tickers
+        ]
+        if not missing:
+            return
+        remaining = max(
+            100
+            - sum(
+                item["target_weight"]
+                for item in allocation
+                if item["ticker"] not in missing_tickers
+            ),
+            0.0,
+        )
+        targets = AssetManager._allocate_missing_weights(
+            [item["current_weight"] for item in missing], remaining
+        )
+        for item, target in zip(missing, targets):
+            item.update(
+                AssetManager._allocation_record(
+                    item["ticker"],
+                    item["tickers"],
+                    target,
+                    total_valuation * target / 100,
+                    item["current_value"],
+                    item["current_weight"],
+                    tolerance,
+                )
+            )
+
+    @staticmethod
+    def _adjust_non_cash_weights(
+        allocation: list[dict[str, Any]],
+        drawdown: float | None,
+        total_valuation: float,
+        tolerance: float,
+    ) -> None:
+        if drawdown is None:
+            return
+        cash = next(
+            (item for item in allocation if item["ticker"] == "現金"), None
+        )
+        non_cash = [item for item in allocation if item["ticker"] != "現金"]
+        non_cash_total = sum(item["target_weight"] for item in non_cash)
+        target_total = sum(item["target_weight"] for item in allocation)
+        if cash is None or non_cash_total <= 0 or math.isclose(target_total, 100):
+            return
+        scale = (100 - cash["target_weight"]) / non_cash_total
+        for item in non_cash:
+            target = item["target_weight"] * scale
+            item.update(
+                AssetManager._allocation_record(
+                    item["ticker"],
+                    item["tickers"],
+                    target,
+                    total_valuation * target / 100,
+                    item["current_value"],
+                    item["current_weight"],
+                    tolerance,
+                )
+            )
+
+    @staticmethod
+    def _balance_allocations(
+        allocation: list[dict[str, Any]],
+        total_valuation: float,
+        tolerance: float,
+    ) -> None:
+        locked = [
+            item
+            for item in allocation
+            if abs(item["difference_weight"]) <= tolerance
+        ]
+        adjustable = [item for item in allocation if item not in locked]
+        target_total = sum(item["target_weight"] for item in adjustable)
+        if not adjustable or target_total <= 0:
+            return
+        locked_total = sum(item["current_weight"] for item in locked)
+        scale = (100 - locked_total) / target_total
+        for item in locked:
+            item["target_weight"] = item["current_weight"]
+        for item in adjustable:
+            item["target_weight"] *= scale
+        for item in allocation:
+            target = item["target_weight"]
+            item.update(
+                AssetManager._allocation_record(
+                    item["ticker"],
+                    item["tickers"],
+                    target,
+                    total_valuation * target / 100,
+                    item["current_value"],
+                    item["current_weight"],
+                    tolerance,
+                )
+            )
 
     @staticmethod
     def _parse_target(
@@ -154,6 +382,32 @@ class AssetManager(Base):
                 if target_percent is not None:
                     specified_total += target_percent
         return missing_count, specified_total
+
+    @staticmethod
+    def _allocate_missing_weights(
+        current_weights: list[float], target_total: float
+    ) -> list[float]:
+        """Allocate a missing target while minimizing changes from current weights."""
+        if not current_weights:
+            return []
+        current_total = sum(current_weights)
+        if current_total <= target_total:
+            increase = (target_total - current_total) / len(current_weights)
+            return [weight + increase for weight in current_weights]
+
+        target_weights = current_weights.copy()
+        reduction = current_total - target_total
+        active = list(range(len(target_weights)))
+        while active and reduction > 0:
+            amount = reduction / len(active)
+            decrements = [
+                min(target_weights[index], amount) for index in active
+            ]
+            reduction -= sum(decrements)
+            for index, decrement in zip(active, decrements):
+                target_weights[index] -= decrement
+            active = [index for index in active if target_weights[index] > 0]
+        return [max(weight, 0.0) for weight in target_weights]
 
     @staticmethod
     def _get_current_value(

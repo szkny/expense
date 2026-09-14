@@ -298,6 +298,42 @@ class TestMain(unittest.TestCase):
         self.assertEqual(result[1]["action"], "買い")
         self.assertEqual(result[1]["trade_value"], 10000)
 
+        drawdown_adjusted = AssetManager.build_asset_allocation(
+            df_items,
+            {"AAA": 90, "現金": {"tickers": ["BBB"], "weight": 10}},
+            df_summary=pd.DataFrame({"drawdown": [-5.12]}),
+        )
+        self.assertEqual(drawdown_adjusted[1]["target_weight"], 4.88)
+        self.assertEqual(drawdown_adjusted[1]["trade_value"], -35120)
+        self.assertAlmostEqual(
+            sum(item["target_weight"] for item in drawdown_adjusted), 100
+        )
+        self.assertAlmostEqual(
+            sum(item["trade_value"] for item in drawdown_adjusted), 0
+        )
+
+        drawdown_floor = AssetManager.build_asset_allocation(
+            df_items,
+            {"AAA": 90, "現金": {"tickers": ["BBB"], "weight": 10}},
+            df_summary=pd.DataFrame({"drawdown": [-20]}),
+        )
+        self.assertEqual(drawdown_floor[1]["target_weight"], 0)
+
+        amount_drawdown_adjusted = AssetManager.build_asset_allocation(
+            df_items,
+            {
+                "AAA": 90,
+                "現金": {
+                    "tickers": ["BBB"],
+                    "weight": 10,
+                    "target_amount": 10000,
+                },
+            },
+            df_summary=pd.DataFrame({"drawdown": [-5.12]}),
+        )
+        self.assertEqual(amount_drawdown_adjusted[1]["target_weight"], 4.88)
+        self.assertEqual(amount_drawdown_adjusted[1]["target_value"], 4880)
+
         within_tolerance = AssetManager.build_asset_allocation(
             df_items, {"AAA": 61, "BBB": 39}, tolerance_percent=2
         )
@@ -330,10 +366,10 @@ class TestMain(unittest.TestCase):
                 "BBB": 50,
             },
         )
-        self.assertEqual(amount_target[0]["target_value"], 75000)
-        self.assertEqual(amount_target[0]["target_weight"], 75)
-        self.assertEqual(amount_target[0]["trade_value"], 15000)
-        self.assertEqual(amount_target[0]["action"], "買い")
+        self.assertEqual(amount_target[0]["target_value"], 60000)
+        self.assertEqual(amount_target[0]["target_weight"], 60)
+        self.assertEqual(amount_target[0]["trade_value"], 0)
+        self.assertEqual(amount_target[0]["action"], "調整不要")
 
         inferred_weight = AssetManager.build_asset_allocation(
             df_items, {"AAA": 60, "BBB": {"weight": None}}
@@ -356,8 +392,11 @@ class TestMain(unittest.TestCase):
             {"AAA": 60, "BBB": {"weight": None}, "CCC": {"weight": None}},
         )
         self.assertEqual(
-            [item["ticker"] for item in multiple_missing_weights], ["AAA"]
+            [item["ticker"] for item in multiple_missing_weights],
+            ["AAA", "BBB", "CCC"],
         )
+        self.assertEqual(multiple_missing_weights[1]["target_weight"], 40)
+        self.assertEqual(multiple_missing_weights[2]["target_weight"], 0)
 
 
 if __name__ == "__main__":

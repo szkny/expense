@@ -335,7 +335,7 @@ def asset_management(
     target_weights = allocation_config.get("target_weights", {})
     tolerance_percent = allocation_config.get("tolerance_percent", 0.0)
     asset_allocation = asset_manager.build_asset_allocation(
-        df_items, target_weights, tolerance_percent
+        df_items, target_weights, tolerance_percent, df_summary
     )
     allocation_adjustments = [
         allocation["ticker"]
