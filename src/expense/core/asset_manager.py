@@ -224,7 +224,7 @@ class AssetManager(Base):
             "target_value": target_value,
             "current_value": current_value,
             "difference_weight": difference_percent,
-            "trade_value": 0 if within_tolerance else trade_value,
+            "trade_value": trade_value,
             "action": (
                 "調整不要"
                 if within_tolerance
