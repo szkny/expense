@@ -2259,6 +2259,7 @@ class GraphGenerator(Base):
             ),
             updatemenus=[updatemenu],
         )
+        fig.update_yaxes(fixedrange=True)
         graph_html: str = fig.to_html(
             full_html=False,
             include_plotlyjs=include_plotlyjs,
@@ -2267,6 +2268,11 @@ class GraphGenerator(Base):
                 displayModeBar=False,
             ),
             post_script=self._plotly_yaxis_autoscale_script(),
+        )
+        graph_html = (
+            '<div style="-webkit-tap-highlight-color: transparent; '
+            'user-select: none;">'
+            f"{graph_html}</div>"
         )
         log.info("end 'generate_asset_monthly_history_chart' method")
         return graph_html
