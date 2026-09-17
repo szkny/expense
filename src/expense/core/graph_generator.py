@@ -2037,7 +2037,9 @@ class GraphGenerator(Base):
                 profit = value - investment
                 profit_sign = "+" if profit >= 0 else "-"
                 profit_text = f"{profit_sign}¥{abs(profit):,.0f}"
-                roi_text = f"{profit / investment * 100:+.2f}%" if investment else "-"
+                roi_text = (
+                    f"{profit / investment * 100:+.2f}%" if investment else "-"
+                )
                 return f"(含み益 {profit_text} ／ 損益率 {roi_text})"
 
             # Assume contributions are made at the beginning of each month.
@@ -2063,7 +2065,10 @@ class GraphGenerator(Base):
                         x=sim_dates,
                         y=lower_values,
                         mode="lines",
-                        line=dict(width=0, color="#4466cc" if theme == "dark" else "#3355bb"),
+                        line=dict(
+                            width=0,
+                            color="#4466cc" if theme == "dark" else "#3355bb",
+                        ),
                         hoverinfo="skip",
                         showlegend=False,
                     )
@@ -2074,7 +2079,10 @@ class GraphGenerator(Base):
                         y=upper_values,
                         mode="lines",
                         name="シミュレーションのリスク範囲（±1σ）",
-                        line=dict(width=0, color="#4466cc" if theme == "dark" else "#3355bb"),
+                        line=dict(
+                            width=0,
+                            color="#4466cc" if theme == "dark" else "#3355bb",
+                        ),
                         fill="tonexty",
                         fillcolor=(
                             "rgba(120, 160, 255, 0.18)"
@@ -2095,7 +2103,7 @@ class GraphGenerator(Base):
                     line=dict(
                         width=3,
                         dash="dot",
-                        color="#4466cc" if theme == "dark" else "#3355bb"
+                        color="#4466cc" if theme == "dark" else "#3355bb",
                     ),
                     hovertext=[
                         f"{x.strftime('%Y年%-m月%-d日')}<br>"
