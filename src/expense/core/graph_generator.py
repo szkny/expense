@@ -2257,7 +2257,6 @@ class GraphGenerator(Base):
 
         fig.update_layout(
             title="資産推移",
-            hovermode="x unified",
             xaxis=dict(
                 showspikes=True,
                 spikemode="across",
