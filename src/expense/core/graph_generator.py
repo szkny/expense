@@ -2091,6 +2091,7 @@ class GraphGenerator(Base):
                         ),
                         hoverinfo="skip",
                         showlegend=True,
+                        visible="legendonly",
                     )
                 )
             fig.add_trace(
