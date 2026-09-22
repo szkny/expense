@@ -1056,7 +1056,7 @@ class GraphGenerator(Base):
                 mode="lines+markers",
                 name="支出",
                 line=dict(
-                    color="#bb8877" if theme == "dark" else "#996655",
+                    color="#cccccc" if theme == "dark" else "#666666",
                     dash="dot",
                     width=1.0,
                 ),
