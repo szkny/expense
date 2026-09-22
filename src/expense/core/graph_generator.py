@@ -170,6 +170,28 @@ class GraphGenerator(Base):
             return "-"
         return f"{cash_flow / income * 100:.1f}%"
 
+    @staticmethod
+    def _create_income_hover_summary(df_income: pd.DataFrame) -> pd.Series:
+        """月ごとの収入費目とメモをホバー表示用にまとめる。"""
+        income_details = (
+            df_income.groupby(["month", "expense_type"], as_index=False)
+            .agg(
+                income_amount=("expense_amount", "sum"),
+                expense_memo=("expense_memo", "first"),
+            )
+            .sort_values(["month", "income_amount"], ascending=[True, False])
+        )
+        income_details["summary"] = income_details.apply(
+            lambda row: (
+                f"■ {row['expense_type']}: ¥{row['income_amount']:,.0f}"
+                f"{row['expense_memo']}"
+            ),
+            axis=1,
+        )
+        return income_details.groupby("month")["summary"].apply(
+            lambda summaries: "<br>-----<br>" + "<br>".join(summaries)
+        )
+
     def generate_monthly_df(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         月別のDataFrameを生成
@@ -910,10 +932,14 @@ class GraphGenerator(Base):
         # 収入を月ごとに集計
         df_income = df.query("expense_type in @self.all_income_types").copy()
         df_income["month"] = pd.to_datetime(df_income["month"], format="%Y-%m")
+        income_hover_summary = self._create_income_hover_summary(df_income)
         df_income = (
             df_income.groupby("month", as_index=False)["expense_amount"]
             .sum()
             .rename(columns={"expense_amount": "income_amount"})
+        )
+        df_income["income_hover_summary"] = df_income["month"].map(
+            income_hover_summary
         )
         df_income["label"] = df_income["income_amount"].map(
             lambda x: f"収入<br>¥{x:,.0f}"
@@ -1001,7 +1027,11 @@ class GraphGenerator(Base):
                 texttemplate="%{text}",
                 textposition="inside",
                 textangle=0,
-                hovertemplate="%{x|%-Y年%-m月}<br>税引後収入: ¥%{y:,.0f}<extra></extra>",
+                customdata=df_income[["income_hover_summary"]],
+                hovertemplate=(
+                    "%{x|%-Y年%-m月}<br>税引後収入: ¥%{y:,.0f}"
+                    "%{customdata[0]}<extra></extra>"
+                ),
             )
         )
 

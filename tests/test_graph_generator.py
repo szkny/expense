@@ -89,8 +89,32 @@ class GraphGeneratorSavingsRateTest(unittest.TestCase):
         self.assertEqual(GraphGenerator._format_savings_rate(30, 0), "-")
 
 
+class GraphGeneratorIncomeHoverTest(unittest.TestCase):
+    def test_income_hover_summary_contains_type_amount_and_memo(self) -> None:
+        df_income = pd.DataFrame(
+            {
+                "month": pd.to_datetime(["2026-01-01", "2026-01-01"]),
+                "expense_type": ["給与", "副業"],
+                "expense_amount": [300_000, 50_000],
+                "expense_memo": ["<br>本業", "<br>記事"],
+            }
+        )
+
+        summary = GraphGenerator._create_income_hover_summary(df_income)
+        mapped_summary = pd.Series(pd.to_datetime(["2026-01-01"])).map(summary)
+
+        self.assertEqual(
+            summary.iloc[0],
+            "<br>-----<br>■ 給与: ¥300,000<br>本業"
+            "<br>■ 副業: ¥50,000<br>記事",
+        )
+        self.assertFalse(mapped_summary.isna().any())
+
+
 class GraphGeneratorFiscalForecastTest(unittest.TestCase):
-    def test_forecast_starts_after_irregular_income_in_actual_balance(self) -> None:
+    def test_forecast_starts_after_irregular_income_in_actual_balance(
+        self,
+    ) -> None:
         generator = GraphGenerator.__new__(GraphGenerator)
         daily = pd.DataFrame(
             {
