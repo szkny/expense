@@ -60,7 +60,7 @@ function initAssetAdvisor() {
       const result = await response.json();
       if (!response.ok)
         throw new Error(result.error || `HTTP ${response.status}`);
-      content.textContent = result.advice;
+      content.innerHTML = result.advice_html;
       content.hidden = false;
       status.textContent = result.cached
         ? "本日生成済みのアドバイスです。"

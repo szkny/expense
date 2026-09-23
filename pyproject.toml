@@ -30,7 +30,8 @@ dependencies = [
     "plotly>=6.3.0",
     "yahoo-fin>=0.8.0",
     "requests_html>=0.10.0",
-    "lxml_html_clean>=0.4.0"
+    "lxml_html_clean>=0.4.0",
+    "markdown-it-py>=3.0.0"
 ]
 
 [project.optional-dependencies]

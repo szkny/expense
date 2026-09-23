@@ -24,6 +24,7 @@ from .asset_advisor import (
     AssetAdviceRequestError,
     DEFAULT_MODEL,
     get_daily_asset_advice,
+    render_asset_advice,
 )
 from ..core.expense import get_fiscal_year
 from ..core.asset_manager import AssetManager
@@ -442,7 +443,12 @@ def get_asset_advice() -> JSONResponse:
             },
         )
 
-    return JSONResponse(content={"advice": advice, "cached": cached})
+    return JSONResponse(
+        content={
+            "advice_html": render_asset_advice(advice),
+            "cached": cached,
+        }
+    )
 
 
 def get_simulation_averages(

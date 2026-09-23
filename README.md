@@ -58,10 +58,10 @@ The Asset Management page can optionally request one AI-generated investment
 comment per day. Set `OPENAI_API_KEY` in the server environment to enable it.
 When the card is first viewed, the current portfolio, allocation, market
 indicators, and monthly asset history are sent to OpenAI. Household expense
-records are not included. Only the generated comment is cached locally for the
-day and model; it is displayed as text, not interpreted as HTML. The model is
-configured with `asset_management.ai_advisor.model` and defaults to
-`gpt-5-nano`. OpenAI API usage may incur charges.
+records are not included. Only the generated Markdown comment is cached
+locally for the day and model. Markdown is rendered with raw HTML and images
+disabled. The model is configured with `asset_management.ai_advisor.model` and
+defaults to `gpt-5-nano`. OpenAI API usage may incur charges.
 
 <table>
   <thead>

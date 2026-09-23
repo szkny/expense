@@ -147,15 +147,41 @@ hr {
   max-height: min(24rem, 50vh);
   overflow-y: auto;
   overscroll-behavior: contain;
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font: inherit;
   line-height: 1.7;
   margin: 0;
 }
 
+.asset-advice-content > :first-child {
+  margin-top: 0;
+}
+
+.asset-advice-content > :last-child {
+  margin-bottom: 0;
+}
+
+.asset-advice-content pre,
+.asset-advice-content table {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.asset-advice-content pre {
+  padding: 10px;
+  border-radius: 8px;
+  background: #f3f4f6;
+}
+
+.asset-advice-content a {
+  color: #2563eb;
+}
+
 .dark .asset-advice-notice {
   color: #9ca3af;
+}
+
+.dark .asset-advice-content pre {
+  background: #1f2937;
 }
 
 .card-drag-handle {

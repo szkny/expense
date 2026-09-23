@@ -12,6 +12,7 @@ from src.expense.api.asset_advisor import (
     AssetAdviceConfigurationError,
     AssetAdviceRequestError,
     get_daily_asset_advice,
+    render_asset_advice,
 )
 from src.expense.api import server
 
@@ -161,6 +162,19 @@ class TestDailyAssetAdvice(unittest.TestCase):
 
         self.assertFalse((self.cache_path / "asset_advice.json").exists())
 
+    def test_renders_markdown_and_sanitizes_unsafe_content(self) -> None:
+        rendered = render_asset_advice(
+            "## Summary\n\n**Bold** and [unsafe](javascript:alert(1))."
+            "\n\n<script>alert(1)</script>\n\n"
+            "![tracking pixel](https://example.test/pixel.png)"
+        )
+
+        self.assertIn("<h2>Summary</h2>", rendered)
+        self.assertIn("<strong>Bold</strong>", rendered)
+        self.assertNotIn("<script>", rendered)
+        self.assertNotIn("<img", rendered)
+        self.assertNotIn('<a href="javascript:', rendered)
+
     def test_requires_an_api_key_when_no_daily_cache_exists(self) -> None:
         with self.assertRaises(AssetAdviceConfigurationError):
             get_daily_asset_advice(
@@ -224,4 +238,4 @@ class TestAssetAdviceEndpoint(unittest.TestCase):
             payload["market_indicators"][0]["change_pct_monthly"], 2.0
         )
         self.assertEqual(get_advice.call_args.kwargs["model"], "gpt-5-nano")
-        self.assertEqual(json.loads(response.body)["advice"], "今日の助言")
+        self.assertIn("今日の助言", json.loads(response.body)["advice_html"])

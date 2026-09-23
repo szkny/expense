@@ -7,11 +7,14 @@ import urllib.error
 import urllib.request
 from typing import Any
 
+from markdown_it import MarkdownIt
+
 
 _OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 DEFAULT_MODEL = "gpt-5-nano"
 _MAX_OUTPUT_TOKENS = 2000
 _cache_lock = threading.Lock()
+_ADVICE_MARKDOWN = MarkdownIt("js-default", {"html": False}).disable("image")
 
 
 class AssetAdviceConfigurationError(Exception):
@@ -20,6 +23,11 @@ class AssetAdviceConfigurationError(Exception):
 
 class AssetAdviceRequestError(Exception):
     pass
+
+
+def render_asset_advice(markdown: str) -> str:
+    """Render Markdown with raw HTML and images disabled."""
+    return _ADVICE_MARKDOWN.render(markdown)
 
 
 def _to_json_value(value: Any) -> Any:
