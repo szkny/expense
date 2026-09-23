@@ -152,6 +152,18 @@ hr {
   margin: 0;
 }
 
+.asset-advice-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.asset-advice-status-row p {
+  flex: 1;
+  margin: 1em 0;
+}
+
 .asset-advice-content > :first-child {
   margin-top: 0;
 }

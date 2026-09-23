@@ -62,6 +62,7 @@ function initAssetAdvisor() {
         throw new Error(result.error || `HTTP ${response.status}`);
       content.innerHTML = result.advice_html;
       content.hidden = false;
+      retryButton.hidden = false;
       status.textContent = result.cached
         ? "本日生成済みのアドバイスです。"
         : "本日のアドバイスです。";

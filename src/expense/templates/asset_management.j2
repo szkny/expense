@@ -39,16 +39,21 @@
 
     <div class="card asset-advice-card" data-card-key="asset-advice">
       <h3 class="collapsible-trigger" data-key="asset-advice">
-        <span>{{ icons.get("asset_advice", "💡") }} 今日の資産アドバイス</span>
+        <span>{{ icons.get("asset_advice", "🧠") }} 今日の資産アドバイス</span>
         <span class="collapsible-toggle"></span>
       </h3>
       <div id="asset-advice-container" class="collapsible-content">
         <p class="asset-advice-notice">
-          保有明細・配分・株価指標・月次資産推移をOpenAI APIへ送信します。家計簿の支出履歴は送信しません。
+          保有明細・配分・株価指標・月次資産推移に基づく分析を行います。
         </p>
-        <p id="asset-advice-status" role="status" aria-live="polite">カードが表示されるとアドバイスを読み込みます。</p>
+        <div class="asset-advice-status-row">
+          <p id="asset-advice-status" role="status" aria-live="polite">カードが表示されるとアドバイスを読み込みます。</p>
+          <button id="asset-advice-retry" type="button" class="btn-reload" title="資産アドバイスをリロード"
+            aria-label="資産アドバイスをリロード" hidden>
+            {{ icons.get("reload", "↻") }}
+          </button>
+        </div>
         <div id="asset-advice-content" class="asset-advice-content" hidden></div>
-        <button id="asset-advice-retry" class="btn" type="button" hidden>再試行</button>
       </div>
     </div>
 

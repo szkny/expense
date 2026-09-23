@@ -1,5 +1,5 @@
 {
-  "log_level": "DEBUG",
+  "log_level": "INFO",
   "termux_api": {
     "toast": true,
     "notify": true
@@ -26,6 +26,7 @@
       "search": "🔍️",
       "asset_management": "📈",
       "asset_summary": "📊",
+      "asset_advice": "🧠",
       "asset_chart": "📈",
       "asset_allocation": "🎯",
       "asset_list": "📝",
