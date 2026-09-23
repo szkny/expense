@@ -653,10 +653,7 @@ export function initAssetAllocationLongPress() {
 }
 
 export function initMemoAutocomplete() {
-  const memoInputs = [
-    document.getElementById("expense-memo"),
-    document.getElementById("new-expense-memo"),
-  ];
+  const memoInputs = [document.getElementById("new-expense-memo")];
 
   memoInputs.forEach((input) => {
     if (!input) return;
