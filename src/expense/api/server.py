@@ -19,6 +19,12 @@ from fastapi.responses import (
 )
 
 from .server_tools import ServerTools
+from .asset_advisor import (
+    AssetAdviceConfigurationError,
+    AssetAdviceRequestError,
+    DEFAULT_MODEL,
+    get_daily_asset_advice,
+)
 from ..core.expense import get_fiscal_year
 from ..core.asset_manager import AssetManager
 from ..core.ocr import Ocr, get_latest_screenshot
@@ -368,6 +374,75 @@ def asset_management(
             "plotlyjs": plotlyjs,
         },
     )
+
+
+@app.post("/api/asset_advice", response_class=JSONResponse)
+def get_asset_advice() -> JSONResponse:
+    """資産情報をもとに当日分のAIアドバイスを取得する。"""
+    df_summary, df_items, df_records, df_stock = get_cached_asset_table(
+        asset_manager
+    )
+    allocation_config = asset_manager.config.get("asset_management", {}).get(
+        "allocation", {}
+    )
+    advisor_config = asset_manager.config.get("asset_management", {}).get(
+        "ai_advisor", {}
+    )
+    configured_model = advisor_config.get("model", DEFAULT_MODEL)
+    model = (
+        configured_model.strip()
+        if isinstance(configured_model, str) and configured_model.strip()
+        else DEFAULT_MODEL
+    )
+    allocations = asset_manager.build_asset_allocation(
+        df_items,
+        allocation_config.get("target_weights", {}),
+        allocation_config.get("tolerance_percent", 0.0),
+        df_summary,
+    )
+    payload = {
+        "as_of": dt.date.today().isoformat(),
+        "portfolio_summary": json.loads(
+            df_summary.to_json(orient="records", date_format="iso")
+        ),
+        "holdings": json.loads(
+            df_items.to_json(orient="records", date_format="iso")
+        ),
+        "allocation_tolerance_percent": allocation_config.get(
+            "tolerance_percent", 0.0
+        ),
+        "allocation_targets_and_actions": allocations,
+        "market_indicators": json.loads(
+            df_stock.to_json(orient="records", date_format="iso")
+        ),
+        "monthly_asset_history": json.loads(
+            df_records.to_json(orient="records", date_format="iso")
+        ),
+    }
+
+    try:
+        advice, cached = get_daily_asset_advice(
+            payload,
+            asset_manager.cache_path,
+            os.getenv("OPENAI_API_KEY"),
+            model=model,
+        )
+    except AssetAdviceConfigurationError as error:
+        return JSONResponse(
+            status_code=503,
+            content={"error": str(error), "code": "missing_api_key"},
+        )
+    except AssetAdviceRequestError:
+        log.exception("Failed to generate asset advice.")
+        return JSONResponse(
+            status_code=502,
+            content={
+                "error": "OpenAIからアドバイスを取得できませんでした。",
+                "code": "openai_unavailable",
+            },
+        )
+
+    return JSONResponse(content={"advice": advice, "cached": cached})
 
 
 def get_simulation_averages(

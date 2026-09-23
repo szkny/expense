@@ -84,6 +84,9 @@
   },
   "asset_management": {
     "fitting_duration_multiplier": 1.0,
+    "ai_advisor": {
+      "model": "gpt-5-nano"
+    },
     "allocation": {
       "tolerance_percent": 2.0,
       "target_weights": {

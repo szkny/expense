@@ -37,6 +37,16 @@
     </div>
     {% endif %}
 
+    <div class="card asset-advice-card" data-card-key="asset-advice">
+      <h3>{{ icons.get("asset_advice", "💡") }} 今日の資産アドバイス</h3>
+      <p class="asset-advice-notice">
+        保有明細・配分・株価指標・月次資産推移をOpenAI APIへ送信します。家計簿の支出履歴は送信しません。
+      </p>
+      <p id="asset-advice-status" role="status" aria-live="polite">カードが表示されるとアドバイスを読み込みます。</p>
+      <pre id="asset-advice-content" class="asset-advice-content" hidden></pre>
+      <button id="asset-advice-retry" class="btn" type="button" hidden>再試行</button>
+    </div>
+
     <div class="card" data-card-key="asset-report">
       <div class="asset-chart-header">
         <h3 class="collapsible-trigger" data-key="asset-report">

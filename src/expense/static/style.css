@@ -138,6 +138,23 @@ hr {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
+.asset-advice-notice {
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.asset-advice-content {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.dark .asset-advice-notice {
+  color: #9ca3af;
+}
+
 .card-drag-handle {
   cursor: grab;
   touch-action: none;

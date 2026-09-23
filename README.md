@@ -54,6 +54,15 @@ It features receipt scanning via OCR, a web-based user interface, and integratio
 
 The application's behavior can be customized through the `~/.config/expense/config.json` file.
 
+The Asset Management page can optionally request one AI-generated investment
+comment per day. Set `OPENAI_API_KEY` in the server environment to enable it.
+When the card is first viewed, the current portfolio, allocation, market
+indicators, and monthly asset history are sent to OpenAI. Household expense
+records are not included. Only the generated comment is cached locally for the
+day and model; it is displayed as text, not interpreted as HTML. The model is
+configured with `asset_management.ai_advisor.model` and defaults to
+`gpt-5-nano`. OpenAI API usage may incur charges.
+
 <table>
   <thead>
     <tr>
@@ -116,6 +125,13 @@ The application's behavior can be customized through the `~/.config/expense/conf
       <td><code>object</code></td>
       <td><code>{}</code></td>
       <td>Target allocation percentage (%) for each ticker. <code>target_amount</code> (target amount in yen) is optional and takes precedence over <code>weight</code> when specified. Specify a combined allocation for multiple tickers like <code>{"US stocks": {"tickers": ["QQQ", "VTI"], "weight": 50, "target_amount": 100000}}</code>.</td>
+    </tr>
+    <tr>
+      <td><code>asset_management.ai_advisor</code></td>
+      <td><code>model</code></td>
+      <td><code>string</code></td>
+      <td><code>"gpt-5-nano"</code></td>
+      <td>OpenAI model ID used for the daily asset advice.</td>
     </tr>
     <tr>
       <td rowspan="4"><code>expense</code></td>
