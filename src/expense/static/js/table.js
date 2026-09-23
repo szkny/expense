@@ -54,7 +54,7 @@ function updateMemoSuggestions() {
     const rowType = cells[1].textContent.trim();
     const rowAmount = cells[2].textContent.replace(/[^\d-]/g, "");
     const memo = cells[3].textContent.trim();
-    if (rowType === type && rowAmount === amount && memo) {
+    if (type && rowType === type && (!amount || rowAmount === amount) && memo) {
       memoCounts.set(memo, (memoCounts.get(memo) || 0) + 1);
     }
   }
