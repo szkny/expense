@@ -144,6 +144,9 @@ hr {
 }
 
 .asset-advice-content {
+  max-height: min(24rem, 50vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font: inherit;
