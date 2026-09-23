@@ -108,6 +108,8 @@ def get_daily_asset_advice(
                 "holdingsのnumは保有数量、acquisition/price/valuation/profit/"
                 "invest_amountは円、price_dollarは米ドル、weight/roiはパーセントです。"
                 "monthly_asset_historyは月次の資産推移です。"
+                "直近の評価額変動が順調であれば「その調子を維持しましょう」のような感じで後押しし、"
+                "下落局面ではコーチとして狼狽売りしないようにメンタルケアのコメントをしてください。"
                 "データにない市場ニュースやユーザー属性を推測せず、将来の利益を保証せず、"
                 "断定的な売買指示を避けてください。重要な偏りや推移を具体的な数値で示し、"
                 "最後に投資判断はユーザー自身が行う旨を短く添えてください。"
