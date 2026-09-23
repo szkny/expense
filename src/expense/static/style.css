@@ -543,6 +543,40 @@ tr:nth-child(even) {
   text-align: right;
 }
 
+.memo-suggestions {
+  position: fixed;
+  z-index: 1000;
+  max-height: 220px;
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.memo-suggestions button {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  overflow: hidden;
+  color: #374151;
+  font: inherit;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: transparent;
+  border: 0;
+}
+
+.memo-suggestions button:hover,
+.memo-suggestions button:focus {
+  background: #f3f4f6;
+  outline: none;
+}
+
 /* 確認ダイアログ */
 .confirm {
   background: #f9fafb;
@@ -668,6 +702,20 @@ tr:nth-child(even) {
 .dark select:focus {
   border-color: #60a5fa;
   box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
+}
+
+.dark .memo-suggestions {
+  background: #1f2937;
+  border-color: #4b5563;
+}
+
+.dark .memo-suggestions button {
+  color: #f3f4f6;
+}
+
+.dark .memo-suggestions button:hover,
+.dark .memo-suggestions button:focus {
+  background: #374151;
 }
 
 .dark table {

@@ -38,9 +38,15 @@ function updateMemoSuggestions() {
   const memoInput = document.getElementById("expense-memo");
   const typeInput = document.getElementById("expense-type");
   const amountInput = document.getElementById("expense-amount");
-  const memoList = document.getElementById("memo-list");
   const table = document.querySelector("table tbody");
-  if (!memoInput || !typeInput || !amountInput || !memoList || !table) return;
+  const suggestionList = document.getElementById("memo-suggestions");
+  if (!memoInput || !typeInput || !amountInput || !suggestionList || !table) {
+    return;
+  }
+  if (document.activeElement !== memoInput) {
+    hideMemoSuggestions(suggestionList);
+    return;
+  }
 
   const type = typeInput.value.trim();
   const amount = amountInput.value.trim();
@@ -64,27 +70,47 @@ function updateMemoSuggestions() {
     .sort(([, countA], [, countB]) => countB - countA)
     .map(([memo]) => memo);
 
-  memoList.replaceChildren(
+  suggestionList.replaceChildren(
     ...suggestions.map((memo) => {
-      const option = document.createElement("option");
-      option.value = memo;
-      return option;
+      const item = document.createElement("li");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = memo;
+      button.addEventListener("mousedown", (event) => event.preventDefault());
+      button.addEventListener("click", () => {
+        memoInput.value = memo;
+        hideMemoSuggestions(suggestionList);
+      });
+      item.appendChild(button);
+      return item;
     }),
   );
 
   if (suggestions.length > 0) {
-    memoInput.setAttribute("list", "memo-list");
+    const rect = memoInput.getBoundingClientRect();
+    suggestionList.style.left = `${rect.left}px`;
+    suggestionList.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+    suggestionList.style.width = `${rect.width}px`;
+    suggestionList.hidden = false;
   } else {
-    memoInput.removeAttribute("list");
+    hideMemoSuggestions(suggestionList);
   }
+}
+
+function hideMemoSuggestions(suggestionList) {
+  suggestionList.hidden = true;
 }
 
 function initializeMemoSuggestions() {
   const memoInput = document.getElementById("expense-memo");
-  if (!memoInput) return;
+  const suggestionList = document.getElementById("memo-suggestions");
+  if (!memoInput || !suggestionList) return;
 
   memoInput.addEventListener("focus", updateMemoSuggestions);
   memoInput.addEventListener("input", updateMemoSuggestions);
+  memoInput.addEventListener("blur", () => {
+    setTimeout(() => hideMemoSuggestions(suggestionList), 0);
+  });
   document
     .getElementById("expense-type")
     ?.addEventListener("change", updateMemoSuggestions);

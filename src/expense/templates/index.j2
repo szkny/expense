@@ -67,6 +67,7 @@
             placeholder="{{ icons.get('input_amount', '💴') }} 金額を入力" required />
           <input type="text" id="expense-memo" name="expense_memo" value=""
             placeholder="{{ icons.get('input_memo', '✏️') }} メモを入力" />
+          <ul id="memo-suggestions" class="memo-suggestions" hidden></ul>
           <datalist id="memo-list">
             {% for memo in records | map(attribute='expense_memo') | unique | reject('equalto', '') %}
             <option value="{{ memo }}"></option>
