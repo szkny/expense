@@ -77,6 +77,7 @@ def get_daily_asset_advice(
     api_key: str | None,
     today: dt.date | None = None,
     model: str = DEFAULT_MODEL,
+    force: bool = False,
 ) -> tuple[str, bool]:
     """Return today's cached advice or request a new response from OpenAI."""
     advice_date = (today or dt.date.today()).isoformat()
@@ -85,7 +86,7 @@ def get_daily_asset_advice(
     with _cache_lock:
         try:
             cached = json.loads(cache_file.read_text(encoding="utf-8"))
-            if (
+            if not force and (
                 cached.get("date") == advice_date
                 and cached.get("model") == model
                 and isinstance(cached.get("advice"), str)
@@ -103,15 +104,25 @@ def get_daily_asset_advice(
         request_body = {
             "model": model,
             "instructions": (
-                "あなたは日本語で回答する資産管理アシスタントです。"
-                "入力された資産データだけを根拠に、Markdownで簡潔に助言してください。"
+                "あなたはプロフェッショナルな資産管理アドバイザーです。"
+                "入力された資産データだけを根拠に、日本語、Markdownで簡潔にアドバイスしてください。"
+                "Markdownはトピックごとに見出しを分け、箇条書き、太字、表などを使った分かりやすい表現を心がけてください。"
+                "\n\n"
                 "holdingsのnumは保有数量、acquisition/price/valuation/profit/"
                 "invest_amountは円、price_dollarは米ドル、weight/roiはパーセントです。"
                 "monthly_asset_historyは月次の資産推移です。"
-                "直近の評価額変動が順調であれば「その調子を維持しましょう」のような感じで後押しし、"
+                "\n\n"
+                "資産総額や純利益、ドローダウン、資産配分など、与えられたデータは、"
+                "あなたのアドバイスを掲載するアプリ上にすでに整理されているため、"
+                "資産概況や要点を整理しなおしたり、出力しないでください。"
+                "インサイトやアドバイスを中心に出力してください。"
+                "\n\n"
+                "直近の評価額変動が順調であれば、その調子を維持しましょう、のような感じで後押しし、"
                 "下落局面ではコーチとして狼狽売りしないようにメンタルケアのコメントをしてください。"
+                "\n\n"
                 "データにない市場ニュースやユーザー属性を推測せず、将来の利益を保証せず、"
-                "断定的な売買指示を避けてください。重要な偏りや推移を具体的な数値で示し、"
+                "断定的な売買指示を避けてください。"
+                "重要な偏りや推移が確認された場合はアラートとしてユーザーに報告してください。"
                 "最後に投資判断はユーザー自身が行う旨を短く添えてください。"
             ),
             "input": json.dumps(data, ensure_ascii=False, allow_nan=False),

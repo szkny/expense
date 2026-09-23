@@ -138,6 +138,45 @@ class TestDailyAssetAdvice(unittest.TestCase):
         self.assertFalse(cached)
         urlopen.assert_called_once()
 
+    def test_force_requests_a_new_comment_when_daily_cache_exists(self) -> None:
+        self.cache_path.joinpath("asset_advice.json").write_text(
+            json.dumps(
+                {
+                    "date": self.today.isoformat(),
+                    "model": "gpt-5-nano",
+                    "advice": "キャッシュ済み",
+                }
+            ),
+            encoding="utf-8",
+        )
+        response_body = {
+            "output": [
+                {
+                    "type": "message",
+                    "content": [{"type": "output_text", "text": "再生成結果"}],
+                }
+            ]
+        }
+        with patch(
+            "src.expense.api.asset_advisor.urllib.request.urlopen",
+            return_value=io.BytesIO(json.dumps(response_body).encode()),
+        ) as urlopen:
+            advice, cached = get_daily_asset_advice(
+                self.payload,
+                self.cache_path,
+                "test-key",
+                today=self.today,
+                force=True,
+            )
+
+        self.assertEqual(advice, "再生成結果")
+        self.assertFalse(cached)
+        urlopen.assert_called_once()
+        cached_data = json.loads(
+            (self.cache_path / "asset_advice.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(cached_data["advice"], "再生成結果")
+
     def test_incomplete_response_reports_the_reason_without_caching(
         self,
     ) -> None:

@@ -50,13 +50,16 @@ function initAssetAdvisor() {
   if (!card || !status || !content || !retryButton) return;
 
   let loading = false;
-  const loadAdvice = async () => {
+  const loadAdvice = async (force = false) => {
     if (loading) return;
     loading = true;
     retryButton.hidden = true;
-    status.textContent = "資産データをもとにアドバイスを生成しています...";
+    status.textContent = "資産データをもとに分析中...";
     try {
-      const response = await fetch("/api/asset_advice", { method: "POST" });
+      const endpoint = force
+        ? "/api/asset_advice?force=true"
+        : "/api/asset_advice";
+      const response = await fetch(endpoint, { method: "POST" });
       const result = await response.json();
       if (!response.ok)
         throw new Error(result.error || `HTTP ${response.status}`);
@@ -64,8 +67,8 @@ function initAssetAdvisor() {
       content.hidden = false;
       retryButton.hidden = false;
       status.textContent = result.cached
-        ? "本日生成済みのアドバイスです。"
-        : "本日のアドバイスです。";
+        ? "生成済みの分析結果を再提示しています。"
+        : "今日の分析結果です。";
     } catch (error) {
       status.textContent = error.message;
       retryButton.hidden = false;
@@ -74,7 +77,7 @@ function initAssetAdvisor() {
     }
   };
 
-  retryButton.addEventListener("click", loadAdvice);
+  retryButton.addEventListener("click", () => loadAdvice(true));
   if ("IntersectionObserver" in window) {
     const observer = new IntersectionObserver(
       (entries) => {

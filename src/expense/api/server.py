@@ -378,7 +378,7 @@ def asset_management(
 
 
 @app.post("/api/asset_advice", response_class=JSONResponse)
-def get_asset_advice() -> JSONResponse:
+def get_asset_advice(force: bool = False) -> JSONResponse:
     """資産情報をもとに当日分のAIアドバイスを取得する。"""
     df_summary, df_items, df_records, df_stock = get_cached_asset_table(
         asset_manager
@@ -427,6 +427,7 @@ def get_asset_advice() -> JSONResponse:
             asset_manager.cache_path,
             os.getenv("OPENAI_API_KEY"),
             model=model,
+            force=force,
         )
     except AssetAdviceConfigurationError as error:
         return JSONResponse(
@@ -438,7 +439,7 @@ def get_asset_advice() -> JSONResponse:
         return JSONResponse(
             status_code=502,
             content={
-                "error": "OpenAIからアドバイスを取得できませんでした。",
+                "error": "OpenAIから分析結果を取得できませんでした。",
                 "code": "openai_unavailable",
             },
         )
