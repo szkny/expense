@@ -160,6 +160,7 @@ export function initOcrReload() {
   const screenshot = document.getElementById("screenshot");
   const submitButton = document.getElementById("ocr-submit-btn");
   const submitLabel = document.getElementById("ocr-submit-label");
+  const completeButton = document.getElementById("ocr-complete-btn");
   if (
     !reloadButton ||
     !screenshotName ||
@@ -181,6 +182,7 @@ export function initOcrReload() {
       screenshot.src = `data:image/png;base64,${data.screenshot_base64}`;
       screenshot.alt = data.screenshot_name;
       submitButton.disabled = data.disable_ocr;
+      if (completeButton) completeButton.hidden = data.disable_ocr;
       submitLabel.textContent = data.disable_ocr ? "登録済" : "読取実行";
     } catch (error) {
       console.error("OCR画像のリロードに失敗しました。", error);

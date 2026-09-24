@@ -1008,6 +1008,40 @@ def ocr_process(
     )
 
 
+@app.post("/ocr/complete")
+def ocr_complete() -> RedirectResponse:
+    """手動登録済みのOCR画像を登録済みとして扱う。"""
+    log.info("start 'ocr_complete' method")
+    status = True
+    msg = ""
+    try:
+        screenshot_name = os.path.basename(get_latest_screenshot())
+        if not screenshot_name:
+            status = False
+            msg = "🚫 OCR対象画像が見つかりません。"
+        else:
+            server_tools = ServerTools(app, gspread_handler)
+            with open(
+                server_tools.cache_path / "ocr_data.json", "w"
+            ) as cache_file:
+                json.dump(
+                    {"screenshot_name": screenshot_name},
+                    cache_file,
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            msg = "✅ OCR画像を登録済みにしました。"
+    except Exception:
+        log.exception("Error occurred")
+        status = False
+        msg = "🚫 OCR画像を登録済みにできませんでした。"
+    finally:
+        log.info("end 'ocr_complete' method")
+    return RedirectResponse(
+        url=f"/?status={status}&msg={msg}&info=", status_code=303
+    )
+
+
 @app.post("/delete")
 def delete_process(
     request: Request,

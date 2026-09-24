@@ -80,7 +80,8 @@
 
     {% if screenshot_name %}
     <div class="card" data-card-key="ocr">
-      <form method="post" action="/ocr">
+      <form id="ocr-complete-form" method="post" action="/ocr/complete"></form>
+      <form id="ocr-form" method="post" action="/ocr">
         <h3 class="collapsible-trigger" data-key="ocr">
           <span> {{ icons.get("ocr", "📷") }} QR決済の画像から支払情報を取得 </span>
           <span class="collapsible-toggle"></span>
@@ -99,9 +100,16 @@
               {{ icons.get("reload", "↻") }}
             </button>
           </div>
-          <button id="ocr-submit-btn" type="submit" class="btn secondary" {% if disable_ocr %} disabled {% endif %}>
-            <span id="ocr-submit-label">{% if disable_ocr %}登録済{% else %}読取実行{% endif %}</span>
-          </button>
+          <div class="ocr-button-container">
+            <button id="ocr-submit-btn" type="submit" class="btn secondary" {% if disable_ocr %} disabled {% endif %}>
+              <span id="ocr-submit-label">{% if disable_ocr %}登録済{% else %}読取実行{% endif %}</span>
+            </button>
+            {% if not disable_ocr %}
+            <button id="ocr-complete-btn" form="ocr-complete-form" type="submit" class="btn">
+              登録済にする
+            </button>
+            {% endif %}
+          </div>
         </div>
       </form>
     </div>
