@@ -1479,6 +1479,7 @@ class GraphGenerator(Base):
             forecast_increments[daily_column] = increments
 
         forecast_y_values: list[np.ndarray] = []
+        trace_dates = pd.DatetimeIndex([actual_end]).append(forecast_dates)
         for column, daily_column, name, color in zip(
             ["income_cumulative", "expense_cumulative", "balance"],
             ["income", "expense", "cash_flow"],
@@ -1494,18 +1495,27 @@ class GraphGenerator(Base):
                 increments = forecast_increments[daily_column]
             forecast_values = daily[column].iloc[-1] + np.cumsum(increments)
             forecast_y_values.append(forecast_values)
+            trace_values = np.concatenate(
+                ([daily[column].iloc[-1]], forecast_values)
+            )
             customdata = None
             if daily_column == "cash_flow":
                 customdata = [
                     self._format_savings_rate(cash_flow, income)
                     for cash_flow, income in zip(
-                        forecast_values, forecast_y_values[0]
+                        trace_values,
+                        np.concatenate(
+                            (
+                                [daily["income_cumulative"].iloc[-1]],
+                                forecast_y_values[0],
+                            )
+                        ),
                     )
                 ]
             fig.add_trace(
                 go.Scatter(
-                    x=forecast_dates,
-                    y=forecast_values,
+                    x=trace_dates,
+                    y=trace_values,
                     customdata=customdata,
                     mode="lines",
                     name=f"{name}（予測）",

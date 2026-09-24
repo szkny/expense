@@ -136,8 +136,9 @@ class GraphGeneratorFiscalForecastTest(unittest.TestCase):
             }
         )
 
+        figure = go.Figure()
         forecast = generator._add_fiscal_forecast_traces(
-            go.Figure(),
+            figure,
             daily,
             df_history,
             pd.Timestamp("2026-08-31"),
@@ -146,3 +147,14 @@ class GraphGeneratorFiscalForecastTest(unittest.TestCase):
         )
 
         self.assertEqual(forecast[0][0], 1_000_000 + 300_000)
+        self.assertEqual(
+            list(figure.data[0].x),
+            [
+                pd.Timestamp("2026-08-31"),
+                pd.Timestamp("2026-09-01"),
+                pd.Timestamp("2026-09-02"),
+            ],
+        )
+        self.assertEqual(
+            list(figure.data[0].y), [1_000_000, 1_300_000, 1_300_000]
+        )
