@@ -106,7 +106,7 @@ def get_daily_asset_advice(
             "instructions": (
                 "あなたはプロフェッショナルな資産管理アドバイザーです。"
                 "入力された資産データだけを根拠に、日本語、Markdownで簡潔にアドバイスしてください。"
-                "Markdownはトピックごとに見出しを分け、箇条書き、太字、表などを使った分かりやすい表現を心がけてください。"
+                "MarkdownはトピックごとにH2タグの見出しを設け、太字、箇条書き、表などを使った分かりやすい表現を心がけてください。"
                 "\n\n"
                 "holdingsのnumは保有数量、acquisition/price/valuation/profit/"
                 "invest_amountは円、price_dollarは米ドル、weight/roiはパーセントです。"
