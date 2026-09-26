@@ -159,6 +159,7 @@ class GraphGenerator(Base):
             if month == actual_month:
                 for column in target_total:
                     target_total[column] -= actual_month_totals[column]
+            target_total["income"] = max(target_total["income"], 0.0)
             for column in forecast_totals:
                 forecast_totals[column] += target_total[column]
         return forecast_totals["income"], forecast_totals["expense"]
@@ -1469,6 +1470,8 @@ class GraphGenerator(Base):
                 target_total = monthly_totals[daily_column]
                 if month == actual_month:
                     target_total -= actual_month_totals[daily_column]
+                if daily_column == "income":
+                    target_total = max(target_total, 0.0)
                 pattern_total = pattern_values.sum()
                 if pattern_total:
                     increments[positions] = (
@@ -1476,6 +1479,8 @@ class GraphGenerator(Base):
                     )
                 elif len(positions):
                     increments[positions] = target_total / len(positions)
+            if daily_column == "income":
+                increments = np.maximum(increments, 0)
             forecast_increments[daily_column] = increments
 
         forecast_y_values: list[np.ndarray] = []

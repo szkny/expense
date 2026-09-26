@@ -158,3 +158,41 @@ class GraphGeneratorFiscalForecastTest(unittest.TestCase):
         self.assertEqual(
             list(figure.data[0].y), [1_000_000, 1_300_000, 1_300_000]
         )
+
+    def test_income_forecast_does_not_decrease_after_large_actual_income(
+        self,
+    ) -> None:
+        generator = GraphGenerator.__new__(GraphGenerator)
+        daily = pd.DataFrame(
+            {
+                "income": [1_000_000],
+                "expense": [0],
+                "income_cumulative": [1_000_000],
+                "expense_cumulative": [0],
+                "balance": [1_000_000],
+                "cash_flow": [1_000_000],
+            },
+            index=pd.to_datetime(["2026-08-15"]),
+        )
+        df_history = pd.DataFrame(
+            {
+                "date": pd.to_datetime(
+                    ["2026-07-15", "2026-08-01", "2026-08-15"]
+                ),
+                "income": [100, 300_000, 700_000],
+                "forecast_income": [100, 300_000, 700_000],
+                "expense": [0, 0, 0],
+            }
+        )
+
+        figure = go.Figure()
+        forecast = generator._add_fiscal_forecast_traces(
+            figure,
+            daily,
+            df_history,
+            pd.Timestamp("2026-08-15"),
+            pd.Timestamp("2026-08-17"),
+            ["#111111", "#222222", "#333333"],
+        )
+
+        self.assertEqual(list(forecast[0]), [1_000_000, 1_000_000])
