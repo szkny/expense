@@ -56,10 +56,12 @@ function getAxisTickSettings(ymin, ymax) {
 
 function getVisibleYRange(graphDiv, xRangeOverride) {
   const xaxis = graphDiv._fullLayout?.xaxis || graphDiv.layout?.xaxis;
+  const yaxis = graphDiv._fullLayout?.yaxis || graphDiv.layout?.yaxis;
+  const isLog = yaxis?.type === "log";
   const rawXRange = xRangeOverride || xaxis?.range;
   const xRange = rawXRange?.map((value) => new Date(value).getTime());
   const hasXRange = xRange?.length === 2 && xRange.every(Number.isFinite);
-  let ymin = 0;
+  let ymin = isLog ? Infinity : 0;
   let ymax = 0;
   let hasValue = false;
 
@@ -92,6 +94,16 @@ function getVisibleYRange(graphDiv, xRangeOverride) {
         ? getNumericValue(trace.base[index])
         : getNumericValue(trace.base);
       const endpoint = base === null ? value : base + value;
+      if (isLog) {
+        const positiveValues = [value, base, endpoint].filter(
+          (item) => item !== null && item > 0,
+        );
+        if (positiveValues.length === 0) continue;
+        ymin = Math.min(ymin, ...positiveValues);
+        ymax = Math.max(ymax, ...positiveValues);
+        hasValue = true;
+        continue;
+      }
       ymin = Math.min(ymin, base ?? 0, endpoint);
       ymax = Math.max(ymax, base ?? 0, endpoint);
       hasValue = true;
@@ -99,6 +111,9 @@ function getVisibleYRange(graphDiv, xRangeOverride) {
   }
 
   if (!hasValue) return null;
+  if (isLog) {
+    return [Math.log10(ymin / 1.2), Math.log10(ymax * 1.2)];
+  }
   const margin = Math.max(Math.abs(ymin), Math.abs(ymax), 1) * 0.2;
   return [ymin - (ymin < 0 ? margin : 0), ymax + margin];
 }
@@ -107,10 +122,14 @@ function updateYaxis(graphDiv, xRange) {
   const range = getVisibleYRange(graphDiv, xRange);
   if (!range) return;
   const [ymin, ymax] = range;
+  const isLog =
+    (graphDiv._fullLayout?.yaxis || graphDiv.layout?.yaxis)?.type === "log";
+  const tickYmin = isLog ? 10 ** ymin : ymin;
+  const tickYmax = isLog ? 10 ** ymax : ymax;
   Plotly.relayout(graphDiv, {
     "yaxis.range": range,
     "yaxis.autorange": false,
-    ...getAxisTickSettings(ymin, ymax),
+    ...getAxisTickSettings(tickYmin, tickYmax),
   });
 }
 

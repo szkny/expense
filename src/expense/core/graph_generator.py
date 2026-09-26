@@ -2283,12 +2283,22 @@ class GraphGenerator(Base):
                     dict(
                         label="Linear",
                         method="relayout",
-                        args=[{"yaxis.type": "linear"}],
+                        args=[
+                            {
+                                "yaxis.type": "linear",
+                                "yaxis.autorange": True,
+                            }
+                        ],
                     ),
                     dict(
                         label="Log",
                         method="relayout",
-                        args=[{"yaxis.type": "log"}],
+                        args=[
+                            {
+                                "yaxis.type": "log",
+                                "yaxis.autorange": True,
+                            }
+                        ],
                     ),
                 ]
             ),
