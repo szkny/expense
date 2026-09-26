@@ -30,13 +30,13 @@ webui:
 
 test:
 	@echo "Running tests..."
-	LOG_LEVEL=DEBUG python -m unittest tests/test_*.py
+	LOG_LEVEL=DEBUG PYTHONPATH=src python -m unittest discover -s tests -p "test_*.py"
 	@echo
 
 coverage:
 	@echo "Running tests with coverage..."
 	coverage erase
-	LOG_LEVEL=DEBUG coverage run --source=src/expense --omit="$(UNIT_COVERAGE_OMIT)" -m unittest discover -s tests -p "test_*.py"
+	LOG_LEVEL=DEBUG PYTHONPATH=src coverage run --source=src/expense --omit="$(UNIT_COVERAGE_OMIT)" -m unittest discover -s tests -p "test_*.py"
 	coverage report -m --fail-under=70
 	coverage html
 	@echo

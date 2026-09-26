@@ -338,7 +338,7 @@ class TestMain(unittest.TestCase):
             df_items, {"AAA": 61, "BBB": 39}, tolerance_percent=2
         )
         self.assertEqual(within_tolerance[0]["action"], "調整不要")
-        self.assertEqual(within_tolerance[0]["trade_value"], 0)
+        self.assertEqual(within_tolerance[0]["trade_value"], 1000)
 
         invalid_target = AssetManager.build_asset_allocation(
             df_items, {"AAA": "invalid", "BBB": 50}

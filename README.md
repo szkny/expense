@@ -50,6 +50,17 @@ It features receipt scanning via OCR, a web-based user interface, and integratio
     make webui
     ```
 
+## Development
+
+Run the unit tests with:
+
+```bash
+make test
+```
+
+The test command uses the source tree directly and does not access external
+services. To generate a coverage report, run `make coverage`.
+
 ## Configuration
 
 The application's behavior can be customized through the `~/.config/expense/config.json` file.

@@ -73,10 +73,10 @@
 make test
 ```
 
-これは `LOG_LEVEL=DEBUG python -m unittest tests/test_*.py` を実行する。個別に確認する場合は次を使う。
+これは `LOG_LEVEL=DEBUG PYTHONPATH=src python -m unittest discover -s tests -p "test_*.py"` を実行する。個別に確認する場合は次を使う。
 
 ```bash
-python -m unittest tests/test_main.py
+PYTHONPATH=src python -m unittest tests/test_main.py
 python -m mypy src tests
 ruff check .
 black --check .
