@@ -4,6 +4,7 @@ import datetime as dt
 from unittest.mock import Mock, patch, mock_open
 
 import pandas as pd
+from fastapi.testclient import TestClient
 
 from src.expense.api.server import (
     _RECORD_CACHE_TTL,
@@ -12,9 +13,21 @@ from src.expense.api.server import (
     _df_cache_record,
     _get_cached_graph,
     _is_local_only_type,
+    app,
     get_simulation_averages,
 )
 from src.expense.api.server_tools import ServerTools
+
+
+class TestServiceWorkerRoute(unittest.TestCase):
+    def test_service_worker_is_served_from_root_scope(self) -> None:
+        response = TestClient(app).get("/service-worker.js")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            "application/javascript", response.headers["content-type"]
+        )
+        self.assertIn('const CACHE_NAME = "expense-cache-v3"', response.text)
 
 
 class TestLazyGspreadHandler(unittest.TestCase):

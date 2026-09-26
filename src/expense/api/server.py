@@ -30,6 +30,7 @@ from ..core.expense import get_fiscal_year
 from ..core.asset_manager import AssetManager
 from ..core.ocr import Ocr, get_latest_screenshot
 from ..core.gspread_wrapper import GspreadHandler
+from ..core.notification import NotificationManager
 
 app: FastAPI = FastAPI()
 log: logging.Logger = logging.getLogger("expense")
@@ -74,6 +75,7 @@ class _LazyGspreadHandler:
 
 gspread_handler: Any = _LazyGspreadHandler(f"CF ({get_fiscal_year()}年度)")
 asset_manager: AssetManager = AssetManager()
+notification_manager: NotificationManager = NotificationManager()
 _df_cache_record: dict = {}
 _df_cache_record_lock = threading.Lock()
 _RECORD_CACHE_TTL = 300
@@ -229,13 +231,26 @@ async def no_cache_middleware(request: Request, call_next: Callable):
     /static/のキャッシュを無効化
     """
     response: Response = await call_next(request)
-    if request.url.path.startswith("/static/"):
+    if (
+        request.url.path.startswith("/static/")
+        or request.url.path == "/service-worker.js"
+    ):
         response.headers["Cache-Control"] = (
             "no-store, no-cache, must-revalidate, max-age=0"
         )
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
     return response
+
+
+@app.get("/service-worker.js")
+async def service_worker() -> FileResponse:
+    """Serve the worker from the origin root so its default scope is "/"."""
+    return FileResponse(
+        "src/expense/static/service-worker.js",
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-cache"},
+    )
 
 
 @app.get("/manifest.json")
@@ -245,6 +260,41 @@ async def manifest() -> FileResponse:
     """
     log.info("Serving manifest.json")
     return FileResponse("static/manifest.json")
+
+
+@app.get("/api/notifications/config", response_class=JSONResponse)
+def notification_config() -> JSONResponse:
+    try:
+        config = notification_manager.get_public_config()
+        return JSONResponse(config)
+    except ValueError as error:
+        return JSONResponse({"error": str(error)}, status_code=400)
+
+
+@app.post("/api/notifications/subscription", response_class=JSONResponse)
+async def save_notification_subscription(request: Request) -> JSONResponse:
+    subscription = await request.json()
+    if not isinstance(subscription, dict):
+        return JSONResponse({"error": "Invalid subscription."}, status_code=400)
+    try:
+        notification_manager.save_subscription(subscription)
+    except ValueError as error:
+        return JSONResponse({"error": str(error)}, status_code=400)
+    return JSONResponse({"status": "ok"})
+
+
+@app.delete("/api/notifications/subscription", response_class=JSONResponse)
+async def delete_notification_subscription(request: Request) -> JSONResponse:
+    subscription = await request.json()
+    endpoint = (
+        subscription.get("endpoint") if isinstance(subscription, dict) else None
+    )
+    if not isinstance(endpoint, str) or not endpoint:
+        return JSONResponse(
+            {"error": "Invalid subscription endpoint."}, status_code=400
+        )
+    notification_manager.delete_subscription(endpoint)
+    return JSONResponse({"status": "ok"})
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -889,7 +939,7 @@ def register(
                 f"{' -  '+expense_memo if expense_memo else ''}"
             )
             try:
-                server_tools.termux_api.notify(
+                server_tools.notification.notify(
                     msg,
                     info,
                 )
@@ -945,7 +995,7 @@ def ocr_process(
                 f"{' -  '+expense_memo if expense_memo else ''}"
             )
             try:
-                server_tools.termux_api.notify(msg, info)
+                server_tools.notification.notify(msg, info)
             except Exception:
                 log.info("Notification failed.")
         else:
@@ -991,7 +1041,7 @@ def ocr_process(
                     f"{' -  '+expense_memo if expense_memo else ''}"
                 )
                 try:
-                    server_tools.termux_api.notify(
+                    server_tools.notification.notify(
                         msg,
                         info,
                     )
@@ -1096,7 +1146,7 @@ def delete_process(
             f"{' -  '+expense_memo if expense_memo else ''}"
         )
         try:
-            server_tools.termux_api.notify(msg, info)
+            server_tools.notification.notify(msg, info)
         except Exception:
             log.info("Notification failed.")
     except Exception:
@@ -1200,7 +1250,7 @@ def edit_process(
                 f"{' -  '+new_expense_memo if new_expense_memo else ''}"
             )
             try:
-                server_tools.termux_api.notify(msg, info)
+                server_tools.notification.notify(msg, info)
             except Exception:
                 log.info("Notification failed.")
         else:

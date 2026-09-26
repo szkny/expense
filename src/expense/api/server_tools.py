@@ -16,6 +16,7 @@ from ..core.expense import Expense, get_fiscal_year
 from ..core.gspread_wrapper import GspreadHandler
 from ..core.ocr import get_latest_screenshot
 from ..core.termux_api import TermuxAPI
+from ..core.notification import NotificationManager
 from ..core.graph_generator import GraphGenerator
 
 log: logging.Logger = logging.getLogger("expense")
@@ -67,6 +68,7 @@ class ServerTools(Base):
         self.gspread_handler: GspreadHandler = gspread_handler
         self.gspread_url: str = self.gspread_handler.get_spreadsheet_url()
         self.termux_api: TermuxAPI = TermuxAPI()
+        self.notification: NotificationManager = NotificationManager()
 
         self.graph_generator = GraphGenerator(
             expense_types=self.expense_types,

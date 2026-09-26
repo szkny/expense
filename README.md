@@ -95,6 +95,19 @@ defaults to `gpt-5-nano`. OpenAI API usage may incur charges.
       <td>Enable/disable system notifications on Termux.</td>
     </tr>
     <tr>
+      <td rowspan="2"><code>notification</code></td>
+      <td><code>channel</code></td>
+      <td><code>string</code></td>
+      <td><code>"termux"</code></td>
+      <td>Notification delivery channel. Set to <code>"web_push"</code> to use browser notifications.</td>
+    </tr>
+    <tr>
+      <td><code>web_push</code></td>
+      <td><code>object</code></td>
+      <td><code>See config.json</code></td>
+      <td>Web Push VAPID public key, private-key environment variable name, and subject.</td>
+    </tr>
+    <tr>
       <td rowspan="3"><code>web_ui</code></td>
       <td><code>icons</code></td>
       <td><code>object</code></td>
@@ -179,6 +192,27 @@ defaults to `gpt-5-nano`. OpenAI API usage may incur charges.
     </tr>
   </tbody>
 </table>
+
+When using <code>web_push</code>, generate a VAPID key pair in the Expense
+configuration directory. Set the application server key printed by the second
+command as <code>vapid_public_key</code>. Do not use the contents of
+<code>public_key.pem</code> directly; PEM and the complete output line are also
+accepted and converted automatically.
+
+<pre><code>cd ~/.config/expense
+vapid --gen
+vapid --applicationServerKey --private-key ~/.config/expense/private_key.pem</code></pre>
+
+Keep the private key outside <code>config.json</code>. In the project-root
+<code>.env</code>, point the variable to the generated PEM file:
+
+<pre><code>EXPENSE_VAPID_PRIVATE_KEY=${HOME}/.config/expense/private_key.pem</code></pre>
+
+The variable name can be changed with
+<code>notification.web_push.vapid_private_key_env</code>. The <code>.env</code>
+file is ignored by Git. A PEM key can also be supplied directly as a quoted
+multiline environment value. Open the web UI once in each browser and allow
+notifications to register its Push subscription.
 
 The simulator initializes the current assets from Asset Management and the
 average monthly income, expenses, and surplus from the previous

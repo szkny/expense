@@ -692,11 +692,14 @@ export function initMemoAutocomplete() {
 
 export function initPwaInstall() {
   const installBtn = document.getElementById("install-btn");
-  if (!installBtn) return;
-
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/static/service-worker.js");
+    navigator.serviceWorker
+      .register("/service-worker.js")
+      .catch((error) =>
+        console.error("Service Worker registration failed", error),
+      );
   }
+  if (!installBtn) return;
 
   let deferredPrompt;
   window.addEventListener("beforeinstallprompt", (e) => {

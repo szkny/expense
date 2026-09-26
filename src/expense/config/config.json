@@ -4,6 +4,14 @@
     "toast": true,
     "notify": true
   },
+  "notification": {
+    "channel": "web_push",
+    "web_push": {
+      "vapid_public_key": "",
+      "vapid_private_key_env": "EXPENSE_VAPID_PRIVATE_KEY",
+      "vapid_subject": ""
+    }
+  },
   "web_ui": {
     "icons": {
       "title": "",

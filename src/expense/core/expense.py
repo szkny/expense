@@ -11,6 +11,7 @@ from collections import Counter
 
 from .base import Base
 from .termux_api import TermuxAPI
+from .notification import NotificationManager
 from .ocr import Ocr, get_latest_screenshot
 from .gspread_wrapper import GspreadHandler
 
@@ -45,6 +46,7 @@ class Expense(Base):
     def __init__(self) -> None:
         super().__init__()
         self.termux_api: TermuxAPI = TermuxAPI()
+        self.notification: NotificationManager = NotificationManager()
 
     async def expense_main(self, args: argparse.Namespace) -> None:
         """
@@ -63,7 +65,7 @@ class Expense(Base):
                 todays_expenses = handler.get_todays_expenses()
                 t = datetime.datetime.today()
                 today_str = t.date().isoformat()
-                self.termux_api.notify(
+                self.notification.notify(
                     "家計簿の取得が完了しました。",
                     f"🗓️{today_str}\n{todays_expenses}",
                 )
@@ -84,7 +86,7 @@ class Expense(Base):
                     expense_type = latest_ocr_data["expense_type"]
                     expense_amount = int(latest_ocr_data["expense_amount"])
                     expense_memo = latest_ocr_data.get("expense_memo", "")
-                    self.termux_api.notify(
+                    self.notification.notify(
                         "OCRデータは登録済のためスキップされました。",
                         f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
                     )
@@ -181,13 +183,13 @@ class Expense(Base):
             handler = GspreadHandler(bookname)
             handler.register_expense(expense_type, expense_amount, expense_memo)
             self.store_expense(expense_type, expense_memo, expense_amount)
-            self.termux_api.notify(
+            self.notification.notify(
                 "家計簿への登録が完了しました。",
                 f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
             )
         except Exception as e:
             log.exception("処理に失敗しました。")
-            self.termux_api.notify("🚫処理に失敗しました。", str(e))
+            self.notification.notify("🚫処理に失敗しました。", str(e))
         finally:
             log.info("end 'expense_main' method")
 

@@ -2,6 +2,7 @@
 import { initializeCharts } from "./chart.js";
 import { initializeTableFilter } from "./table.js";
 import { initSimulator } from "./simulator.js";
+import { initNotifications } from "./notifications.js";
 import {
   initMenu,
   initClosableMessages,
@@ -40,6 +41,9 @@ function onDOMContentLoaded() {
   initMemoAutocomplete();
   initSimulator();
   initAssetAllocationLongPress();
+  initNotifications().catch(() => {
+    console.error("Web Push initialization failed");
+  });
 }
 
 function initAssetAdvisor() {

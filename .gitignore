@@ -12,3 +12,6 @@ dist
 .coverage
 coverage.xml
 htmlcov/
+.env
+.env.*
+!.env.example

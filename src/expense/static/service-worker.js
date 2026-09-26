@@ -1,4 +1,4 @@
-const CACHE_NAME = "expense-cache-v1";
+const CACHE_NAME = "expense-cache-v3";
 const urlsToCache = [
   "/",
   "/asset_management",
@@ -11,6 +11,7 @@ const urlsToCache = [
   "/static/preload.js",
   "/static/manifest.json",
   "/static/icon.png",
+  "/static/js/notifications.js",
 ];
 
 // 1. インストールイベント: アプリケーションシェルをキャッシュする
@@ -46,6 +47,34 @@ self.addEventListener("activate", (event) => {
         );
       })
       .then(() => self.clients.claim()), // すべてのクライアントを制御下に置く
+  );
+});
+
+self.addEventListener("push", (event) => {
+  let data = { title: "Expense", body: "通知があります。" };
+  try {
+    data = event.data ? event.data.json() : data;
+  } catch {
+    // 不正な通知データでも既定の通知を表示する。
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title || "Expense", {
+      body: data.body || "通知があります。",
+      icon: "/static/icon.png",
+      tag: "expense-notification",
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clients) => {
+        const client = clients.find((item) => "focus" in item);
+        return client ? client.focus() : self.clients.openWindow("/");
+      }),
   );
 });
 
