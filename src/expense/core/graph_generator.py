@@ -2001,25 +2001,6 @@ class GraphGenerator(Base):
         fig.add_trace(
             go.Scatter(
                 x=df_graph["date"],
-                y=df_graph["invest_amount"],
-                name="投資額",
-                hovertext=[
-                    f"投資額 ¥{y:,.0f}" for y in df_graph["invest_amount"]
-                ],
-                hoverinfo="text",
-                mode="lines",
-                line=dict(width=1.5, color="rgba(16, 185, 169, 0.6)"),
-                fill="tonexty",
-                fillcolor=(
-                    "rgba(16, 185, 169, 0.3)"
-                    if theme == "dark"
-                    else "rgba(16, 185, 169, 0.3)"
-                ),
-            )
-        )
-        fig.add_trace(
-            go.Scatter(
-                x=df_graph["date"],
                 y=df_graph["valuation"],
                 name="評価額",
                 hovertext=[
@@ -2041,6 +2022,27 @@ class GraphGenerator(Base):
                 line=dict(
                     width=3, color="#4466cc" if theme == "dark" else "#3355bb"
                 ),
+                legendrank=7,
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=df_graph["date"],
+                y=df_graph["invest_amount"],
+                name="投資額",
+                hovertext=[
+                    f"投資額 ¥{y:,.0f}" for y in df_graph["invest_amount"]
+                ],
+                hoverinfo="text",
+                mode="lines",
+                line=dict(width=1.5, color="rgba(16, 185, 169, 0.6)"),
+                fill="tozeroy",
+                fillcolor=(
+                    "rgba(16, 185, 169, 0.3)"
+                    if theme == "dark"
+                    else "rgba(16, 185, 169, 0.3)"
+                ),
+                legendrank=6,
             )
         )
 
@@ -2101,6 +2103,54 @@ class GraphGenerator(Base):
                 simulation_annual_yield + annual_volatility
             )
             ymax = max(ymax, max(upper_values), max(sim_invest_amounts))
+            fig.add_trace(
+                go.Scatter(
+                    x=sim_dates,
+                    y=sim_values,
+                    mode="lines",
+                    name="評価額シミュレーション",
+                    line=dict(
+                        width=3,
+                        dash="dot",
+                        color="#4466cc" if theme == "dark" else "#3355bb",
+                    ),
+                    hovertext=[
+                        f"{x.strftime('%Y年%-m月%-d日')}<br>"
+                        f"<b>評価額シミュレーション ¥{y:,.0f}</b><br>"
+                        f"  {simulation_profit_text(y, investment)}"
+                        for x, y, investment in zip(
+                            sim_dates, sim_values, sim_invest_amounts
+                        )
+                    ],
+                    hoverinfo="text",
+                    legendrank=5,
+                )
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=sim_dates,
+                    y=sim_invest_amounts,
+                    mode="lines",
+                    name="投資額シミュレーション",
+                    line=dict(
+                        width=1.5,
+                        dash="dot",
+                        color="rgba(16, 185, 169, 0.3)",
+                    ),
+                    fill="tozeroy",
+                    fillcolor=(
+                        "rgba(16, 185, 169, 0.1)"
+                        if theme == "dark"
+                        else "rgba(16, 185, 169, 0.1)"
+                    ),
+                    hovertext=[
+                        f"投資額シミュレーション ¥{y:,.0f}"
+                        for x, y in zip(sim_dates, sim_invest_amounts)
+                    ],
+                    hoverinfo="text",
+                    legendrank=4,
+                )
+            )
 
             if annual_volatility > 0:
                 fig.add_trace(
@@ -2135,56 +2185,9 @@ class GraphGenerator(Base):
                         hoverinfo="skip",
                         showlegend=True,
                         visible="legendonly",
+                        legendrank=3,
                     )
                 )
-            fig.add_trace(
-                go.Scatter(
-                    x=sim_dates,
-                    y=sim_values,
-                    mode="lines",
-                    name="評価額シミュレーション",
-                    legendgroup="simulation",
-                    line=dict(
-                        width=3,
-                        dash="dot",
-                        color="#4466cc" if theme == "dark" else "#3355bb",
-                    ),
-                    hovertext=[
-                        f"{x.strftime('%Y年%-m月%-d日')}<br>"
-                        f"<b>評価額シミュレーション ¥{y:,.0f}</b><br>"
-                        f"  {simulation_profit_text(y, investment)}"
-                        for x, y, investment in zip(
-                            sim_dates, sim_values, sim_invest_amounts
-                        )
-                    ],
-                    hoverinfo="text",
-                )
-            )
-            fig.add_trace(
-                go.Scatter(
-                    x=sim_dates,
-                    y=sim_invest_amounts,
-                    mode="lines",
-                    name="投資額シミュレーション",
-                    legendgroup="simulation",
-                    line=dict(
-                        width=1.5,
-                        dash="dot",
-                        color="rgba(16, 185, 169, 0.3)",
-                    ),
-                    fill="tozeroy",
-                    fillcolor=(
-                        "rgba(16, 185, 169, 0.1)"
-                        if theme == "dark"
-                        else "rgba(16, 185, 169, 0.1)"
-                    ),
-                    hovertext=[
-                        f"投資額シミュレーション ¥{y:,.0f}"
-                        for x, y in zip(sim_dates, sim_invest_amounts)
-                    ],
-                    hoverinfo="text",
-                )
-            )
 
         # Add exponential fitting line
         if len(df_graph) > 1:
@@ -2240,6 +2243,8 @@ class GraphGenerator(Base):
                             for x, y in zip(dates_fit, y_fit)
                         ],
                         hoverinfo="text",
+                        visible="legendonly",
+                        legendrank=2,
                     )
                 )
             except RuntimeError as e:
@@ -2260,6 +2265,7 @@ class GraphGenerator(Base):
                 ),
                 showlegend=True,
                 hoverinfo="skip",
+                legendrank=1,
             )
         )
 
@@ -2311,6 +2317,7 @@ class GraphGenerator(Base):
 
         fig.update_layout(
             title="資産推移",
+            hovermode="x unified",
             xaxis=dict(
                 showspikes=True,
                 spikemode="across",
