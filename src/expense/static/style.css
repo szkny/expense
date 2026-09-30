@@ -146,7 +146,7 @@ hr {
 .asset-advice-content {
   max-height: min(24rem, 50vh);
   overflow-y: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior-y: auto;
   overflow-wrap: anywhere;
   line-height: 1.7;
   margin: 0;
