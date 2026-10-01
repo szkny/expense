@@ -66,6 +66,14 @@ function createReloadButton(onClickHandler) {
   return btn;
 }
 
+function renderChartPlaceholder(container) {
+  container.replaceChildren();
+  const placeholder = document.createElement("p");
+  placeholder.className = "chart-placeholder";
+  placeholder.textContent = "表示するデータがありません";
+  container.appendChild(placeholder);
+}
+
 export async function fetchAndRenderChart(config, params = {}, force = false) {
   if (Object.keys(params).length === 0 && config.defaultParams) {
     params = config.defaultParams();
@@ -102,12 +110,18 @@ export async function fetchAndRenderChart(config, params = {}, force = false) {
 
     if (config.hasDropdown) {
       const data = await response.json();
-      container.innerHTML = data.html || "";
+      if (data.html) {
+        container.innerHTML = data.html;
+      } else {
+        renderChartPlaceholder(container);
+      }
       setupDropdownAndReload(config, data.months || data.years || []);
     } else {
       const html = await response.text();
       if (html) {
         container.innerHTML = html;
+      } else {
+        renderChartPlaceholder(container);
       }
       setupReloadButtonOnly(config);
     }

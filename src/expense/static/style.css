@@ -540,6 +540,15 @@ img.screenshot {
   min-height: 100px;
 }
 
+.chart-placeholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100px;
+  margin: 0;
+  color: #6b7280;
+}
+
 .symbol-selector {
   margin: 0;
 }
