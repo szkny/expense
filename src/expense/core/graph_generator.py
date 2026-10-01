@@ -716,12 +716,15 @@ class GraphGenerator(Base):
             return "", []
 
         today = pd.Timestamp(dt.date.today())
-        df.query("expense_type in @self.variable_types", inplace=True)
         df["date"] = pd.to_datetime(df["date"])
         unique_months = sorted(
             df["date"].dt.to_period("M").unique(), reverse=True
         )
         available_months = [m.strftime("%Y-%m") for m in unique_months]
+
+        # 月の候補は固定費しかない月も含める。日次グラフ自体は従来通り
+        # 可変費だけを表示する。
+        df.query("expense_type in @self.variable_types", inplace=True)
 
         if not unique_months:
             return "", []

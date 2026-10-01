@@ -78,6 +78,26 @@ class GraphGeneratorForecastTest(unittest.TestCase):
         self.assertAlmostEqual(expense_total, 105_594, delta=1)
 
 
+class GraphGeneratorDailyChartTest(unittest.TestCase):
+    def test_months_include_months_with_only_fixed_expenses(self) -> None:
+        generator = GraphGenerator.__new__(GraphGenerator)
+        generator.variable_types = ["食費"]
+        df = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2026-10-01"]),
+                "expense_type": ["家賃"],
+                "expense_amount": [100_000],
+            }
+        )
+
+        graph_html, available_months = generator.generate_daily_chart(
+            df, target_month="2026-10", include_plotlyjs=False
+        )
+
+        self.assertEqual(graph_html, "")
+        self.assertEqual(available_months, ["2026-10"])
+
+
 class GraphGeneratorSavingsRateTest(unittest.TestCase):
     def test_savings_rate_is_cash_flow_as_percentage_of_income(self) -> None:
         self.assertEqual(GraphGenerator._format_savings_rate(30, 100), "30.0%")
