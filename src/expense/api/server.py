@@ -957,6 +957,34 @@ def get_asset_profit_history_chart(request: Request) -> HTMLResponse:
     return HTMLResponse(content=graph_html)
 
 
+@app.get("/api/asset_drawdown_history_chart", response_class=HTMLResponse)
+def get_asset_drawdown_history_chart(request: Request) -> HTMLResponse:
+    log.info("start 'get_asset_drawdown_history_chart' method")
+    server_tools: ServerTools = ServerTools(app, gspread_handler)
+    theme = request.cookies.get("theme", "light")
+    df_summary, df_items, df_records, df_stock = get_cached_asset_table(
+        asset_manager
+    )
+    _df_add = pd.DataFrame()
+    _df_add.loc[0, "date"] = dt.date.today()
+    _df_add.loc[0, "invest_amount"] = df_records["invest_amount"].iloc[-1]
+    _df_add.loc[0, "valuation"] = df_items["valuation"].sum()
+    _df_add.loc[0, "profit"] = (
+        _df_add.loc[0, "valuation"] - _df_add.loc[0, "invest_amount"]
+    )
+    df_records = pd.concat([df_records, _df_add], ignore_index=True)
+    graph_html = _get_cached_graph(
+        _df_cache_asset_table,
+        _df_cache_asset_table_lock,
+        ("asset_drawdown_history", theme, dt.date.today()),
+        lambda: server_tools.graph_generator.generate_asset_drawdown_history_chart(
+            df_records, theme=theme, include_plotlyjs=False
+        ),
+    )
+    log.info("end 'get_asset_drawdown_history_chart' method")
+    return HTMLResponse(content=graph_html)
+
+
 @app.post("/register")
 def register(
     request: Request,

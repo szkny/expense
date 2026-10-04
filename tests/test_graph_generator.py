@@ -64,6 +64,43 @@ class GraphGeneratorAssetProfitHistoryTest(unittest.TestCase):
         )
 
 
+class GraphGeneratorAssetDrawdownTest(unittest.TestCase):
+    def test_drawdown_uses_the_highest_profit_point_as_the_peak(self) -> None:
+        df = pd.DataFrame(
+            {
+                "date": pd.to_datetime(
+                    ["2026-01-01", "2026-01-02", "2026-01-03"]
+                ),
+                "invest_amount": [100, 100, 120],
+                "valuation": [110, 130, 125],
+                "profit": [10, 30, 5],
+            }
+        )
+
+        drawdown = GraphGenerator._calculate_asset_drawdown(df)
+
+        self.assertEqual(drawdown.iloc[0], 0)
+        self.assertEqual(drawdown.iloc[1], 0)
+        self.assertAlmostEqual(drawdown.iloc[2], -25 / 130)
+
+    def test_generates_drawdown_history_chart(self) -> None:
+        generator = GraphGenerator.__new__(GraphGenerator)
+        df = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2026-01-01", "2026-01-02"]),
+                "invest_amount": [100, 100],
+                "valuation": [110, 100],
+                "profit": [10, 0],
+            }
+        )
+
+        graph_html = generator.generate_asset_drawdown_history_chart(
+            df, include_plotlyjs=False
+        )
+
+        self.assertIn('"y":[0.0,-0.09090909090909094]', graph_html)
+
+
 class GraphGeneratorForecastTest(unittest.TestCase):
     def test_recent_daily_records_have_more_weight(self) -> None:
         df = pd.DataFrame(

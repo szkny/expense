@@ -2381,3 +2381,92 @@ class GraphGenerator(Base):
         )
         log.info("end 'generate_asset_profit_history_chart' method")
         return graph_html
+
+    @staticmethod
+    def _calculate_asset_drawdown(df: pd.DataFrame) -> pd.Series:
+        """含み益の最高値を基準に、日々の資産ドローダウンを計算する。"""
+        profit = pd.to_numeric(df["profit"], errors="coerce")
+        valuation = pd.to_numeric(df["valuation"], errors="coerce")
+        invest_amount = pd.to_numeric(df["invest_amount"], errors="coerce")
+        peak_profit = profit.cummax()
+        peak_rows = peak_profit.map(
+            lambda value: (
+                profit[profit == value].index[0]
+                if pd.notna(value) and not profit[profit == value].empty
+                else None
+            )
+        )
+        peak_valuation = valuation.reindex(peak_rows).to_numpy()
+        peak_invest_amount = invest_amount.reindex(peak_rows).to_numpy()
+        denominator = pd.Series(peak_valuation, index=df.index)
+        numerator = valuation - (
+            invest_amount - pd.Series(peak_invest_amount, index=df.index)
+        )
+        drawdown = numerator / denominator - 1
+        return (
+            drawdown.where(denominator.ne(0) & denominator.notna(), 0)
+            .clip(upper=0)
+            .fillna(0)
+        )
+
+    def generate_asset_drawdown_history_chart(
+        self,
+        df: pd.DataFrame,
+        theme: str = "light",
+        include_plotlyjs: bool | str = True,
+    ) -> str:
+        """ポートフォリオ全体のドローダウン推移チャートを生成する。"""
+        log.info("start 'generate_asset_drawdown_history_chart' method")
+        if df.empty:
+            return ""
+        df_graph = df.copy()
+        df_graph["date"] = pd.to_datetime(df_graph["date"], errors="coerce")
+        for column in ["invest_amount", "valuation", "profit"]:
+            df_graph[column] = pd.to_numeric(df_graph[column], errors="coerce")
+        df_graph = df_graph.dropna(
+            subset=["date", "invest_amount", "valuation", "profit"]
+        ).sort_values("date")
+        if df_graph.empty:
+            return ""
+        df_graph["drawdown"] = self._calculate_asset_drawdown(df_graph)
+
+        values = df_graph["drawdown"].tolist()
+        fig = go.Figure(
+            go.Scatter(
+                x=df_graph["date"],
+                y=values,
+                name="ドローダウン",
+                mode="lines",
+                line=dict(
+                    width=2.5,
+                    color="#bb3333" if theme == "dark" else "#cc4444",
+                ),
+                fill="tozeroy",
+                fillcolor=(
+                    "rgba(187, 51, 51, 0.25)"
+                    if theme == "dark"
+                    else "rgba(204, 68, 68, 0.18)"
+                ),
+                hovertemplate=(
+                    "%{x|%-Y年%-m月%-d日}<br>"
+                    "ドローダウン: %{y:.2%}<extra></extra>"
+                ),
+            )
+        )
+        fig.add_hline(y=0, line_width=1, line_dash="dot", line_color="#888888")
+        self._update_layout(fig, theme)
+        fig.update_layout(
+            title="資産ドローダウンの推移",
+            hovermode="x unified",
+        )
+        fig.update_yaxes(
+            fixedrange=True,
+            tickprefix="",
+            tickformat=".1%",
+            tickformatstops=[],
+        )
+        graph_html = self._figure_to_html(
+            fig, include_plotlyjs, autoscale_yaxis=True
+        )
+        log.info("end 'generate_asset_drawdown_history_chart' method")
+        return graph_html

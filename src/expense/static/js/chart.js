@@ -49,6 +49,11 @@ const allChartConfigs = {
       endpoint: "/api/asset_profit_history_chart",
       hasDropdown: false,
     },
+    {
+      id: "asset-drawdown-history",
+      endpoint: "/api/asset_drawdown_history_chart",
+      hasDropdown: false,
+    },
   ],
 };
 
