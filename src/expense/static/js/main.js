@@ -61,18 +61,40 @@ function initAssetAdvisor() {
     status.textContent = "資産データをもとに分析中...";
     try {
       const endpoint = force
-        ? "/api/asset_advice?force=true"
-        : "/api/asset_advice";
+        ? "/api/asset_advice/stream?force=true"
+        : "/api/asset_advice/stream";
       const response = await fetch(endpoint, { method: "POST" });
-      const result = await response.json();
-      if (!response.ok)
-        throw new Error(result.error || `HTTP ${response.status}`);
-      content.innerHTML = result.advice_html;
-      content.hidden = false;
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.body) throw new Error("ストリームを受信できません。");
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let completed = false;
+      while (!completed) {
+        const { value, done } = await reader.read();
+        buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+        const events = buffer.split("\n\n");
+        buffer = events.pop() || "";
+        for (const eventText of events) {
+          const dataLine = eventText
+            .split("\n")
+            .find((line) => line.startsWith("data: "));
+          if (!dataLine) continue;
+          const result = JSON.parse(dataLine.slice(6));
+          if (result.error) throw new Error(result.error);
+          content.innerHTML = result.advice_html;
+          content.hidden = false;
+          status.textContent = result.done
+            ? result.cached
+              ? "生成済みの分析結果を再提示しています。"
+              : "今日の分析結果です。"
+            : "資産データをもとに分析中...";
+          completed = result.done;
+        }
+        if (done) break;
+      }
+      if (!completed) throw new Error("分析結果の受信が途中で終了しました。");
       retryButton.hidden = false;
-      status.textContent = result.cached
-        ? "生成済みの分析結果を再提示しています。"
-        : "今日の分析結果です。";
     } catch (error) {
       status.textContent = error.message;
       retryButton.hidden = false;

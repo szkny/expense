@@ -16,6 +16,7 @@ from fastapi.responses import (
     FileResponse,
     RedirectResponse,
     JSONResponse,
+    StreamingResponse,
 )
 
 from .server_tools import ServerTools
@@ -25,6 +26,7 @@ from .asset_advisor import (
     DEFAULT_MODEL,
     get_daily_asset_advice,
     render_asset_advice,
+    stream_daily_asset_advice,
 )
 from ..core.expense import get_fiscal_year
 from ..core.asset_manager import AssetManager
@@ -427,9 +429,7 @@ def asset_management(
     )
 
 
-@app.post("/api/asset_advice", response_class=JSONResponse)
-def get_asset_advice(force: bool = False) -> JSONResponse:
-    """資産情報をもとに当日分のAIアドバイスを取得する。"""
+def _get_asset_advice_payload() -> tuple[dict[str, Any], str]:
     df_summary, df_items, df_records, df_stock = get_cached_asset_table(
         asset_manager
     )
@@ -470,6 +470,13 @@ def get_asset_advice(force: bool = False) -> JSONResponse:
             df_records.to_json(orient="records", date_format="iso")
         ),
     }
+    return payload, model
+
+
+@app.post("/api/asset_advice", response_class=JSONResponse)
+def get_asset_advice(force: bool = False) -> JSONResponse:
+    """資産情報をもとに当日分のAIアドバイスを取得する。"""
+    payload, model = _get_asset_advice_payload()
 
     try:
         advice, cached = get_daily_asset_advice(
@@ -499,6 +506,50 @@ def get_asset_advice(force: bool = False) -> JSONResponse:
             "advice_html": render_asset_advice(advice),
             "cached": cached,
         }
+    )
+
+
+@app.post("/api/asset_advice/stream")
+def stream_asset_advice(force: bool = False) -> StreamingResponse:
+    """AIアドバイスをSSEで逐次配信する。"""
+    payload, model = _get_asset_advice_payload()
+
+    def events() -> Any:
+        try:
+            for advice_html, done, cached in stream_daily_asset_advice(
+                payload,
+                asset_manager.cache_path,
+                os.getenv("OPENAI_API_KEY"),
+                model=model,
+                force=force,
+            ):
+                yield "data: " + json.dumps(
+                    {
+                        "advice_html": advice_html,
+                        "done": done,
+                        "cached": cached,
+                    },
+                    ensure_ascii=False,
+                ) + "\n\n"
+        except AssetAdviceConfigurationError as error:
+            yield "data: " + json.dumps(
+                {"error": str(error), "code": "missing_api_key"},
+                ensure_ascii=False,
+            ) + "\n\n"
+        except AssetAdviceRequestError:
+            log.exception("Failed to stream asset advice.")
+            yield "data: " + json.dumps(
+                {
+                    "error": "OpenAIから分析結果を取得できませんでした。",
+                    "code": "openai_unavailable",
+                },
+                ensure_ascii=False,
+            ) + "\n\n"
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 
