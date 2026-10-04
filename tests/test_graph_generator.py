@@ -37,6 +37,33 @@ class GraphGeneratorMonthlyReturnsTest(unittest.TestCase):
         self.assertAlmostEqual(returns.iloc[1], 0.1)
 
 
+class GraphGeneratorAssetProfitHistoryTest(unittest.TestCase):
+    def test_generates_profit_history_with_positive_and_negative_values(self) -> None:
+        generator = GraphGenerator.__new__(GraphGenerator)
+        df = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2026-01-31", "2026-02-28"]),
+                "profit": [-100, 250],
+            }
+        )
+
+        graph_html = generator.generate_asset_profit_history_chart(
+            df, include_plotlyjs=False
+        )
+
+        self.assertIn('"y":[-100,250]', graph_html)
+        self.assertIn('"range":[-150.0,300.0]', graph_html)
+        self.assertIn('"fixedrange":true', graph_html)
+        self.assertIn("user-select: none", graph_html)
+
+    def test_returns_empty_html_for_empty_data(self) -> None:
+        generator = GraphGenerator.__new__(GraphGenerator)
+
+        self.assertEqual(
+            generator.generate_asset_profit_history_chart(pd.DataFrame()), ""
+        )
+
+
 class GraphGeneratorForecastTest(unittest.TestCase):
     def test_recent_daily_records_have_more_weight(self) -> None:
         df = pd.DataFrame(

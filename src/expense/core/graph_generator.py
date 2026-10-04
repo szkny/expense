@@ -2347,3 +2347,77 @@ class GraphGenerator(Base):
         )
         log.info("end 'generate_asset_monthly_history_chart' method")
         return graph_html
+
+    def generate_asset_profit_history_chart(
+        self,
+        df: pd.DataFrame,
+        theme: str = "light",
+        include_plotlyjs: bool | str = True,
+    ) -> str:
+        """月単位の含み益推移チャートを生成"""
+        log.info("start 'generate_asset_profit_history_chart' method")
+        df_graph = df.copy()
+        if df_graph.empty:
+            return ""
+        df_graph["date"] = pd.to_datetime(df_graph["date"])
+        df_graph["profit"] = pd.to_numeric(df_graph["profit"], errors="coerce")
+        df_graph = df_graph.dropna(subset=["date", "profit"])
+        if df_graph.empty:
+            return ""
+
+        profit_values = df_graph["profit"].tolist()
+        fig = go.Figure(
+            go.Scatter(
+                x=df_graph["date"],
+                y=profit_values,
+                name="含み益",
+                mode="lines+markers",
+                line=dict(
+                    width=3, color="#22a06b" if theme == "dark" else "#16834f"
+                ),
+                marker=dict(size=6),
+                hovertext=[
+                    f"{date.strftime('%Y年%-m月%-d日')}<br>"
+                    f"<b>含み益 {value:+,.0f}円</b>"
+                    for date, value in zip(df_graph["date"], profit_values)
+                ],
+                hoverinfo="text",
+            )
+        )
+        fig.add_hline(y=0, line_width=1, line_dash="dot", line_color="#888888")
+        self._update_layout(
+            fig,
+            theme,
+            ymax_for_format=None,
+        )
+        # JavaScript側の自動調整と同じ余白を初期表示にも適用する。
+        ymin = min(0.0, min(profit_values))
+        ymax = max(0.0, max(profit_values))
+        margin = max(abs(ymin), abs(ymax), 1) * 0.2
+        y_range = [
+            ymin - (margin if ymin < 0 else 0),
+            ymax + margin,
+        ]
+        fig.update_yaxes(range=y_range, autorange=False)
+        fig.update_yaxes(**self._format_yaxis_ticks(fig))
+        fig.update_layout(
+            title="含み益の推移",
+            hovermode="x unified",
+        )
+        fig.update_yaxes(fixedrange=True)
+        graph_html: str = fig.to_html(
+            full_html=False,
+            include_plotlyjs=include_plotlyjs,
+            config=dict(
+                responsive=True,
+                displayModeBar=False,
+            ),
+            post_script=self._plotly_yaxis_autoscale_script(),
+        )
+        graph_html = (
+            '<div style="-webkit-tap-highlight-color: transparent; '
+            'user-select: none;">'
+            f"{graph_html}</div>"
+        )
+        log.info("end 'generate_asset_profit_history_chart' method")
+        return graph_html
