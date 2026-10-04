@@ -698,6 +698,35 @@ class GraphGenerator(Base):
         """外部JSで表示範囲変更時のY軸自動調整を有効にする。"""
         return "window.attachPlotlyYAxisAutoscale('{plot_id}');"
 
+    def _figure_to_html(
+        self,
+        fig: go.Figure,
+        include_plotlyjs: bool | str,
+        config: dict[str, Any] | None = None,
+        autoscale_yaxis: bool = False,
+    ) -> str:
+        """Plotlyグラフを共通の表示設定でHTMLへ変換する。"""
+        plotly_config = {
+            "responsive": True,
+            "displayModeBar": False,
+            **(config or {}),
+        }
+        graph_html = fig.to_html(
+            full_html=False,
+            include_plotlyjs=include_plotlyjs,
+            config=plotly_config,
+            post_script=(
+                self._plotly_yaxis_autoscale_script()
+                if autoscale_yaxis
+                else None
+            ),
+        )
+        return (
+            '<div style="-webkit-tap-highlight-color: transparent; '
+            'user-select: none;">'
+            f"{graph_html}</div>"
+        )
+
     def generate_daily_chart(
         self,
         df_org: pd.DataFrame,
@@ -783,17 +812,12 @@ class GraphGenerator(Base):
         )
         fig.update_xaxes(fixedrange=False)
 
-        graph_html: str = fig.to_html(
-            full_html=False,
-            include_plotlyjs=include_plotlyjs,
-            config=dict(
-                responsive=True,
-                displayModeBar=False,
-                scrollZoom=True,
-            ),
-            post_script=self._plotly_yaxis_autoscale_script(),
+        graph_html: str = self._figure_to_html(
+            fig,
+            include_plotlyjs,
+            config={"scrollZoom": True},
+            autoscale_yaxis=True,
         )
-        graph_html = f'<div style="-webkit-tap-highlight-color: transparent;">{graph_html}</div>'
         log.info("end 'generate_daily_chart' method")
         return graph_html, available_months
 
@@ -898,14 +922,7 @@ class GraphGenerator(Base):
             xaxis=dict(visible=False),
             yaxis=dict(visible=False),
         )
-        graph_html: str = fig.to_html(
-            full_html=False,
-            include_plotlyjs=include_plotlyjs,
-            config=dict(
-                responsive=True,
-                displayModeBar=False,
-            ),
-        )
+        graph_html: str = self._figure_to_html(fig, include_plotlyjs)
         log.info("end 'generate_pie_chart' method")
         return graph_html, available_months
 
@@ -1127,15 +1144,11 @@ class GraphGenerator(Base):
         fig.update_yaxes(
             fixedrange=True,
         )
-        graph_html: str = fig.to_html(
-            full_html=False,
-            include_plotlyjs=include_plotlyjs,
-            config=dict(
-                responsive=True,
-                displayModeBar=False,
-                scrollZoom=True,
-            ),
-            post_script=self._plotly_yaxis_autoscale_script(),
+        graph_html: str = self._figure_to_html(
+            fig,
+            include_plotlyjs,
+            config={"scrollZoom": True},
+            autoscale_yaxis=True,
         )
         log.info("end 'generate_monthly_bar_chart' method")
         return graph_html
@@ -1382,14 +1395,7 @@ class GraphGenerator(Base):
             ),
             margin=dict(b=0),
         )
-        graph_html: str = fig.to_html(
-            full_html=False,
-            include_plotlyjs=include_plotlyjs,
-            config=dict(
-                responsive=True,
-                displayModeBar=False,
-            ),
-        )
+        graph_html: str = self._figure_to_html(fig, include_plotlyjs)
         log.info("end 'generate_annual_fiscal_report_chart' method")
         return graph_html, available_year_strings
 
@@ -1694,11 +1700,8 @@ class GraphGenerator(Base):
         fig.update_yaxes(
             range=[y_min - y_margin, y_max + y_margin], fixedrange=True
         )
-        graph_html: str = fig.to_html(
-            full_html=False,
-            include_plotlyjs=include_plotlyjs,
-            config=dict(responsive=True, displayModeBar=False),
-            post_script=self._plotly_yaxis_autoscale_script(),
+        graph_html: str = self._figure_to_html(
+            fig, include_plotlyjs, autoscale_yaxis=True
         )
         log.info("end 'generate_fiscal_asset_history_chart' method")
         return graph_html, available_year_strings
@@ -1757,14 +1760,7 @@ class GraphGenerator(Base):
             ),
         )
         self._update_layout(fig, theme)
-        graph_html: str = fig.to_html(
-            full_html=False,
-            include_plotlyjs=include_plotlyjs,
-            config=dict(
-                responsive=True,
-                displayModeBar=False,
-            ),
-        )
+        graph_html: str = self._figure_to_html(fig, include_plotlyjs)
         log.info("end 'generate_asset_pie_chart' method")
         return graph_html
 
@@ -1874,14 +1870,7 @@ class GraphGenerator(Base):
                 ),
             ),
         )
-        graph_html: str = fig.to_html(
-            full_html=False,
-            include_plotlyjs=include_plotlyjs,
-            config=dict(
-                responsive=True,
-                displayModeBar=False,
-            ),
-        )
+        graph_html: str = self._figure_to_html(fig, include_plotlyjs)
         log.info("end 'generate_asset_heatmap_chart' method")
         return graph_html
 
@@ -1968,14 +1957,7 @@ class GraphGenerator(Base):
         fig.update_xaxes(showline=False, showticklabels=False, showgrid=False)
         self._update_layout(fig, theme, ymax_for_format=ymax)
         fig.update_layout(title="含み益 内訳", waterfallgap=0.4, height=400)
-        graph_html: str = fig.to_html(
-            full_html=False,
-            include_plotlyjs=include_plotlyjs,
-            config=dict(
-                responsive=True,
-                displayModeBar=False,
-            ),
-        )
+        graph_html: str = self._figure_to_html(fig, include_plotlyjs)
         log.info("end 'generate_asset_waterfall_chart' method")
         return graph_html
 
@@ -2331,19 +2313,8 @@ class GraphGenerator(Base):
             updatemenus=[updatemenu],
         )
         fig.update_yaxes(fixedrange=True)
-        graph_html: str = fig.to_html(
-            full_html=False,
-            include_plotlyjs=include_plotlyjs,
-            config=dict(
-                responsive=True,
-                displayModeBar=False,
-            ),
-            post_script=self._plotly_yaxis_autoscale_script(),
-        )
-        graph_html = (
-            '<div style="-webkit-tap-highlight-color: transparent; '
-            'user-select: none;">'
-            f"{graph_html}</div>"
+        graph_html: str = self._figure_to_html(
+            fig, include_plotlyjs, autoscale_yaxis=True
         )
         log.info("end 'generate_asset_monthly_history_chart' method")
         return graph_html
@@ -2405,19 +2376,8 @@ class GraphGenerator(Base):
             hovermode="x unified",
         )
         fig.update_yaxes(fixedrange=True)
-        graph_html: str = fig.to_html(
-            full_html=False,
-            include_plotlyjs=include_plotlyjs,
-            config=dict(
-                responsive=True,
-                displayModeBar=False,
-            ),
-            post_script=self._plotly_yaxis_autoscale_script(),
-        )
-        graph_html = (
-            '<div style="-webkit-tap-highlight-color: transparent; '
-            'user-select: none;">'
-            f"{graph_html}</div>"
+        graph_html: str = self._figure_to_html(
+            fig, include_plotlyjs, autoscale_yaxis=True
         )
         log.info("end 'generate_asset_profit_history_chart' method")
         return graph_html
