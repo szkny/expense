@@ -2431,10 +2431,20 @@ class GraphGenerator(Base):
         df_graph["drawdown"] = self._calculate_asset_drawdown(df_graph)
 
         values = df_graph["drawdown"].tolist()
+
+        def display_value(value: float) -> float:
+            """0%付近の変化を見やすくするため表示座標だけを変換する。"""
+            return float(np.sign(value) * np.log10(1 + abs(value) * 100))
+
+        display_values = [display_value(value) for value in values]
+        tick_percentages = [-100, -50, -20, -10, -5, -2, -1, -0.5, 0]
+        tickvals = [display_value(value / 100) for value in tick_percentages]
+        ticktext = [f"{value:g}%" for value in tick_percentages]
         fig = go.Figure(
             go.Scatter(
                 x=df_graph["date"],
-                y=values,
+                y=display_values,
+                customdata=values,
                 name="ドローダウン",
                 mode="lines",
                 line=dict(
@@ -2449,7 +2459,7 @@ class GraphGenerator(Base):
                 ),
                 hovertemplate=(
                     "%{x|%-Y年%-m月%-d日}<br>"
-                    "ドローダウン: %{y:.2%}<extra></extra>"
+                    "ドローダウン: %{customdata:.2%}<extra></extra>"
                 ),
             )
         )
@@ -2458,15 +2468,23 @@ class GraphGenerator(Base):
         fig.update_layout(
             title="資産ドローダウンの推移",
             hovermode="x unified",
+            meta={"disable_yaxis_autoscale": True},
         )
         fig.update_yaxes(
+            range=[
+                min(min(display_values), min(tickvals))
+                - max(abs(min(display_values)) * 0.2, 0.01),
+                0.01,
+            ],
             fixedrange=True,
             tickprefix="",
-            tickformat=".1%",
-            tickformatstops=[],
+            tickmode="array",
+            tickvals=tickvals,
+            ticktext=ticktext,
+            tickformat="",
         )
         graph_html = self._figure_to_html(
-            fig, include_plotlyjs, autoscale_yaxis=True
+            fig, include_plotlyjs
         )
         log.info("end 'generate_asset_drawdown_history_chart' method")
         return graph_html

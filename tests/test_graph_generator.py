@@ -98,7 +98,10 @@ class GraphGeneratorAssetDrawdownTest(unittest.TestCase):
             df, include_plotlyjs=False
         )
 
-        self.assertIn('"y":[0.0,-0.09090909090909094]', graph_html)
+        self.assertIn('"ticktext":["-100%"', graph_html)
+        self.assertIn('"tickmode":"array"', graph_html)
+        self.assertIn('"disable_yaxis_autoscale":true', graph_html)
+        self.assertIn('"customdata":[0.0,-0.09090909090909094]', graph_html)
 
 
 class GraphGeneratorForecastTest(unittest.TestCase):

@@ -136,6 +136,7 @@ function updateYaxis(graphDiv, xRange) {
 window.attachPlotlyYAxisAutoscale = function attachPlotlyYAxisAutoscale(
   graphDiv,
 ) {
+  if (graphDiv?.layout?.meta?.disable_yaxis_autoscale) return;
   if (
     !graphDiv ||
     graphDiv.__expenseYAxisAutoscaleAttached ||
