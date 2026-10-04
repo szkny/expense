@@ -191,6 +191,34 @@ def get_daily_asset_advice(
         return advice, False
 
 
+def _iter_response_deltas(response: Any) -> Iterator[str]:
+    """Yield text deltas from an OpenAI Responses API SSE stream."""
+    for raw_line in iter(response.readline, b""):
+        line = raw_line.decode("utf-8").strip()
+        if not line.startswith("data:"):
+            continue
+        event_data = line[5:].strip()
+        if event_data == "[DONE]":
+            break
+        try:
+            event = json.loads(event_data)
+        except json.JSONDecodeError:
+            continue
+        if event.get("type") == "response.output_text.delta":
+            delta = event.get("delta", "")
+            if isinstance(delta, str) and delta:
+                yield delta
+        elif event.get("type") == "response.incomplete":
+            reason = (
+                (event.get("response") or {})
+                .get("incomplete_details", {})
+                .get("reason", "unknown")
+            )
+            raise AssetAdviceRequestError(
+                f"OpenAI response incomplete ({reason})."
+            )
+
+
 def stream_daily_asset_advice(
     payload: dict[str, Any],
     cache_path: pathlib.Path,
@@ -225,33 +253,11 @@ def stream_daily_asset_advice(
         request = _make_request(payload, api_key, model, stream=True)
         try:
             with urllib.request.urlopen(request, timeout=60) as response:
-                for raw_line in iter(response.readline, b""):
-                    line = raw_line.decode("utf-8").strip()
-                    if not line.startswith("data:"):
-                        continue
-                    event_data = line[5:].strip()
-                    if event_data == "[DONE]":
-                        break
-                    try:
-                        event = json.loads(event_data)
-                    except json.JSONDecodeError:
-                        continue
-                    if event.get("type") == "response.output_text.delta":
-                        delta = event.get("delta", "")
-                        if isinstance(delta, str) and delta:
-                            advice_parts.append(delta)
-                            yield render_asset_advice(
-                                "".join(advice_parts)
-                            ), False, False
-                    elif event.get("type") == "response.incomplete":
-                        reason = (
-                            (event.get("response") or {})
-                            .get("incomplete_details", {})
-                            .get("reason", "unknown")
-                        )
-                        raise AssetAdviceRequestError(
-                            f"OpenAI response incomplete ({reason})."
-                        )
+                for delta in _iter_response_deltas(response):
+                    advice_parts.append(delta)
+                    yield render_asset_advice(
+                        "".join(advice_parts)
+                    ), False, False
         except AssetAdviceRequestError:
             raise
         except (
