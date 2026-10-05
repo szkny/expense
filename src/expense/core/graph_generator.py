@@ -2431,26 +2431,17 @@ class GraphGenerator(Base):
         df_graph["drawdown"] = self._calculate_asset_drawdown(df_graph)
 
         values = df_graph["drawdown"].tolist()
-
-        def display_value(value: float) -> float:
-            """0%付近の変化を見やすくするため表示座標だけを変換する。"""
-            return float(np.sign(value) * np.log10(1 + abs(value) * 100))
-
-        display_values = [display_value(value) for value in values]
-        tick_percentages = [-100, -50, -20, -10, -5, -2, -1, -0.5, 0]
-        tickvals = [display_value(value / 100) for value in tick_percentages]
-        ticktext = [f"{value:g}%" for value in tick_percentages]
         fig = go.Figure(
             go.Scatter(
                 x=df_graph["date"],
-                y=display_values,
-                customdata=values,
+                y=values,
                 name="ドローダウン",
-                mode="lines",
+                mode="lines+markers",
                 line=dict(
-                    width=2.5,
+                    width=3,
                     color="#bb3333" if theme == "dark" else "#cc4444",
                 ),
+                marker=dict(size=6),
                 fill="tozeroy",
                 fillcolor=(
                     "rgba(187, 51, 51, 0.25)"
@@ -2459,32 +2450,35 @@ class GraphGenerator(Base):
                 ),
                 hovertemplate=(
                     "%{x|%-Y年%-m月%-d日}<br>"
-                    "ドローダウン: %{customdata:.2%}<extra></extra>"
+                    "ドローダウン: %{y:.2%}<extra></extra>"
                 ),
             )
         )
         fig.add_hline(y=0, line_width=1, line_dash="dot", line_color="#888888")
         self._update_layout(fig, theme)
+        latest_date = df_graph["date"].max()
+        earliest_visible_date = max(
+            df_graph["date"].min(), latest_date - pd.DateOffset(years=3)
+        )
         fig.update_layout(
             title="資産ドローダウンの推移",
             hovermode="x unified",
-            meta={"disable_yaxis_autoscale": True},
+            dragmode="pan",
+            xaxis=dict(
+                range=[earliest_visible_date, latest_date],
+                fixedrange=False,
+            ),
         )
         fig.update_yaxes(
-            range=[
-                min(min(display_values), min(tickvals))
-                - max(abs(min(display_values)) * 0.2, 0.01),
-                0.01,
-            ],
             fixedrange=True,
             tickprefix="",
-            tickmode="array",
-            tickvals=tickvals,
-            ticktext=ticktext,
-            tickformat="",
+            tickformat=".1%",
         )
         graph_html = self._figure_to_html(
-            fig, include_plotlyjs
+            fig,
+            include_plotlyjs,
+            config={"scrollZoom": True},
+            autoscale_yaxis=True,
         )
         log.info("end 'generate_asset_drawdown_history_chart' method")
         return graph_html

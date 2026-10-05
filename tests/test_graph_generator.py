@@ -98,10 +98,27 @@ class GraphGeneratorAssetDrawdownTest(unittest.TestCase):
             df, include_plotlyjs=False
         )
 
-        self.assertIn('"ticktext":["-100%"', graph_html)
-        self.assertIn('"tickmode":"array"', graph_html)
-        self.assertIn('"disable_yaxis_autoscale":true', graph_html)
-        self.assertIn('"customdata":[0.0,-0.09090909090909094]', graph_html)
+        self.assertIn('"y":[0.0,-0.09090909090909094]', graph_html)
+        self.assertIn('"mode":"lines+markers"', graph_html)
+        self.assertIn('"dragmode":"pan"', graph_html)
+        self.assertIn('"scrollZoom": true', graph_html)
+
+    def test_initial_x_axis_range_is_limited_to_three_years(self) -> None:
+        generator = GraphGenerator.__new__(GraphGenerator)
+        df = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2023-01-01", "2026-01-01"]),
+                "invest_amount": [100, 100],
+                "valuation": [110, 100],
+                "profit": [10, 0],
+            }
+        )
+
+        graph_html = generator.generate_asset_drawdown_history_chart(
+            df, include_plotlyjs=False
+        )
+
+        self.assertIn('"range":["2023-01-01T00:00:00"', graph_html)
 
 
 class GraphGeneratorForecastTest(unittest.TestCase):
