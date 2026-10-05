@@ -567,7 +567,11 @@ class AssetManager(Base):
         df["date"] = pd.to_datetime(df["date"], errors="coerce")
         for column in ["invest_amount", "valuation", "profit"]:
             df[column] = pd.to_numeric(df[column], errors="coerce")
-        return df.dropna()
+        df = df.dropna()
+        df["roi"] = (
+            df["profit"] / df["invest_amount"] * 100
+        ).where(df["invest_amount"].ne(0), 0)
+        return df
 
     @retry(stop=stop_after_attempt(3))
     def get_daily_asset_history_data(

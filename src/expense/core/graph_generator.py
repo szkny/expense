@@ -2005,7 +2005,7 @@ class GraphGenerator(Base):
                 hoverinfo="text",
                 mode="lines",
                 line=dict(
-                    width=3, color="#4466cc" if theme == "dark" else "#3355bb"
+                    width=2, color="#4466cc" if theme == "dark" else "#3355bb"
                 ),
                 legendrank=7,
             )
@@ -2095,7 +2095,7 @@ class GraphGenerator(Base):
                     mode="lines",
                     name="評価額シミュレーション",
                     line=dict(
-                        width=3,
+                        width=2,
                         dash="dot",
                         color="#4466cc" if theme == "dark" else "#3355bb",
                     ),
@@ -2342,9 +2342,9 @@ class GraphGenerator(Base):
                 x=df_graph["date"],
                 y=profit_values,
                 name="含み益",
-                mode="lines+markers",
+                mode="lines",
                 line=dict(
-                    width=3, color="#22a06b" if theme == "dark" else "#16834f"
+                    width=2, color="#22a06b" if theme == "dark" else "#16834f"
                 ),
                 marker=dict(size=6),
                 hovertext=[

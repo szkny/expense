@@ -915,9 +915,12 @@ def get_asset_monthly_history_chart(
     log.info("start 'get_asset_monthly_history_chart' method")
     server_tools: ServerTools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
-    df_summary, df_items, df_records, df_stock = get_cached_asset_table(
+    df_summary, df_items, df_monthly, df_stock = get_cached_asset_table(
         asset_manager
     )
+    df_records = get_cached_asset_history_records(asset_manager)
+    if df_records.empty:
+        df_records = df_monthly
     _df_add = pd.DataFrame()
     _df_add.loc[0, "date"] = dt.date.today()
     _df_add.loc[0, "invest_amount"] = df_records["invest_amount"].iloc[-1]
@@ -959,9 +962,12 @@ def get_asset_profit_history_chart(request: Request) -> HTMLResponse:
     log.info("start 'get_asset_profit_history_chart' method")
     server_tools: ServerTools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
-    df_summary, df_items, df_records, df_stock = get_cached_asset_table(
+    df_summary, df_items, df_monthly, df_stock = get_cached_asset_table(
         asset_manager
     )
+    df_records = get_cached_asset_history_records(asset_manager)
+    if df_records.empty:
+        df_records = df_monthly
     _df_add = pd.DataFrame()
     _df_add.loc[0, "date"] = dt.date.today()
     _df_add.loc[0, "invest_amount"] = df_records["invest_amount"].iloc[-1]
