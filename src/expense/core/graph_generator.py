@@ -2076,8 +2076,21 @@ class GraphGenerator(Base):
             # invest_amount is cumulative, so its difference is the contribution.
             monthly_returns = self._calculate_monthly_returns(df_graph)
             if len(monthly_returns) >= 2:
+                observation_days = (
+                    pd.to_datetime(df_graph["date"])
+                    .sort_values()
+                    .diff()
+                    .dt.days
+                    .dropna()
+                )
+                median_days = (
+                    float(observation_days.median())
+                    if not observation_days.empty
+                    else 30.4375
+                )
+                annualization_factor = np.sqrt(365.0 / max(median_days, 1.0))
                 annual_volatility = float(
-                    monthly_returns.std(ddof=1) * np.sqrt(12) * 100
+                    monthly_returns.std(ddof=1) * annualization_factor * 100
                 )
             else:
                 annual_volatility = 0.0
