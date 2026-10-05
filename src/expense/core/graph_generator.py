@@ -2388,26 +2388,29 @@ class GraphGenerator(Base):
         profit = pd.to_numeric(df["profit"], errors="coerce")
         valuation = pd.to_numeric(df["valuation"], errors="coerce")
         invest_amount = pd.to_numeric(df["invest_amount"], errors="coerce")
-        peak_profit = profit.cummax()
-        peak_rows = peak_profit.map(
-            lambda value: (
-                profit[profit == value].index[0]
-                if pd.notna(value) and not profit[profit == value].empty
-                else None
-            )
-        )
-        peak_valuation = valuation.reindex(peak_rows).to_numpy()
-        peak_invest_amount = invest_amount.reindex(peak_rows).to_numpy()
-        denominator = pd.Series(peak_valuation, index=df.index)
-        numerator = valuation - (
-            invest_amount - pd.Series(peak_invest_amount, index=df.index)
-        )
-        drawdown = numerator / denominator - 1
-        return (
-            drawdown.where(denominator.ne(0) & denominator.notna(), 0)
-            .clip(upper=0)
-            .fillna(0)
-        )
+        drawdowns: list[float] = []
+        for row in range(len(df)):
+            history = slice(0, row + 1)
+            peak_profit = profit.iloc[history].max()
+            peak_rows = profit.iloc[history] == peak_profit
+            peak_valuation = valuation.iloc[history][peak_rows]
+            peak_invest_amount = invest_amount.iloc[history][peak_rows]
+            denominators = peak_valuation.to_numpy()
+            if (
+                pd.isna(peak_profit)
+                or len(denominators) == 0
+                or np.any(denominators == 0)
+            ):
+                drawdowns.append(0.0)
+                continue
+            current_valuation = valuation.iloc[row]
+            current_invest_amount = invest_amount.iloc[row]
+            candidates = (
+                current_valuation
+                - (current_invest_amount - peak_invest_amount.to_numpy())
+            ) / denominators - 1
+            drawdowns.append(float(min(candidates.min(), 0)))
+        return pd.Series(drawdowns, index=df.index)
 
     def generate_asset_drawdown_history_chart(
         self,
@@ -2426,6 +2429,9 @@ class GraphGenerator(Base):
         df_graph = df_graph.dropna(
             subset=["date", "invest_amount", "valuation", "profit"]
         ).sort_values("date")
+        df_graph = df_graph.loc[
+            df_graph["date"] <= pd.Timestamp(dt.date.today())
+        ]
         if df_graph.empty:
             return ""
         df_graph["drawdown"] = self._calculate_asset_drawdown(df_graph)
@@ -2436,12 +2442,11 @@ class GraphGenerator(Base):
                 x=df_graph["date"],
                 y=values,
                 name="ドローダウン",
-                mode="lines+markers",
+                mode="lines",
                 line=dict(
-                    width=3,
+                    width=2,
                     color="#bb3333" if theme == "dark" else "#cc4444",
                 ),
-                marker=dict(size=6),
                 fill="tozeroy",
                 fillcolor=(
                     "rgba(187, 51, 51, 0.25)"

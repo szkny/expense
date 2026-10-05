@@ -548,6 +548,57 @@ class AssetManager(Base):
         df.iloc[:, 1:] = df.iloc[:, 1:].astype(float)
         return df
 
+    @staticmethod
+    def _parse_daily_history_data(item_list: list[Any]) -> pd.DataFrame:
+        """資産推移日次シートA:Dの履歴をDataFrameへ変換する。"""
+        df = pd.DataFrame(item_list)
+        df = pd.DataFrame(df.to_numpy().reshape(len(item_list) // 4, 4))
+        df.columns = pd.Index(
+            ["date", "invest_amount", "valuation", "profit"]
+        )
+        df = df.replace("", pd.NA)
+        df = df.map(
+            lambda value: (
+                re.sub("[$¥%,]", "", str(value))
+                if pd.notna(value)
+                else value
+            )
+        )
+        df["date"] = pd.to_datetime(df["date"], errors="coerce")
+        for column in ["invest_amount", "valuation", "profit"]:
+            df[column] = pd.to_numeric(df[column], errors="coerce")
+        return df.dropna()
+
+    @retry(stop=stop_after_attempt(3))
+    def get_daily_asset_history_data(
+        self, cell_range: str = "A2:D"
+    ) -> pd.DataFrame:
+        """資産推移日次シートの末尾までの履歴を取得する。"""
+        log.info("start 'get_daily_asset_history_data' method")
+        try:
+            value_ranges = self.workbook.values_batch_get(
+                [f"'資産推移 日次'!{cell_range}"]
+            ).get("valueRanges", [])
+            if not value_ranges:
+                return pd.DataFrame(
+                    columns=[
+                        "date",
+                        "invest_amount",
+                        "valuation",
+                        "profit",
+                    ]
+                )
+            value_range = value_ranges[0]
+            rows = value_range.get("values", [])
+            item_list = [
+                value
+                for row in rows
+                for value in row[:4] + [""] * max(4 - len(row), 0)
+            ]
+            return self._parse_daily_history_data(item_list)
+        finally:
+            log.info("end 'get_daily_asset_history_data' method")
+
     @retry(stop=stop_after_attempt(3))
     def get_asset_data(
         self,

@@ -38,7 +38,9 @@ class GraphGeneratorMonthlyReturnsTest(unittest.TestCase):
 
 
 class GraphGeneratorAssetProfitHistoryTest(unittest.TestCase):
-    def test_generates_profit_history_with_positive_and_negative_values(self) -> None:
+    def test_generates_profit_history_with_positive_and_negative_values(
+        self,
+    ) -> None:
         generator = GraphGenerator.__new__(GraphGenerator)
         df = pd.DataFrame(
             {
@@ -99,7 +101,7 @@ class GraphGeneratorAssetDrawdownTest(unittest.TestCase):
         )
 
         self.assertIn('"y":[0.0,-0.09090909090909094]', graph_html)
-        self.assertIn('"mode":"lines+markers"', graph_html)
+        self.assertIn('"mode":"lines"', graph_html)
         self.assertIn('"dragmode":"pan"', graph_html)
         self.assertIn('"scrollZoom": true', graph_html)
 
@@ -119,6 +121,24 @@ class GraphGeneratorAssetDrawdownTest(unittest.TestCase):
         )
 
         self.assertIn('"range":["2023-01-01T00:00:00"', graph_html)
+
+    def test_ignores_future_rows_from_sheet_formulas(self) -> None:
+        generator = GraphGenerator.__new__(GraphGenerator)
+        future_date = pd.Timestamp.today().normalize() + pd.Timedelta(days=1)
+        df = pd.DataFrame(
+            {
+                "date": [pd.Timestamp("2026-01-01"), future_date],
+                "invest_amount": [100, 200],
+                "valuation": [110, 150],
+                "profit": [10, -50],
+            }
+        )
+
+        graph_html = generator.generate_asset_drawdown_history_chart(
+            df, include_plotlyjs=False
+        )
+
+        self.assertNotIn(future_date.strftime("%Y-%m-%d"), graph_html)
 
 
 class GraphGeneratorForecastTest(unittest.TestCase):

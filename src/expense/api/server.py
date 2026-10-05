@@ -83,6 +83,7 @@ _df_cache_record_lock = threading.Lock()
 _RECORD_CACHE_TTL = 300
 _df_cache_asset_table: dict = {}
 _df_cache_asset_table_lock = threading.Lock()
+_df_cache_asset_history: dict = {}
 _ASSET_CACHE_TTL: dict[str, int] = {
     "df_summary": 30,
     "df_stock": 30,
@@ -225,6 +226,29 @@ def _get_asset_cache_dataframes() -> (
     )
     df_stock.index = range(1, len(df_stock) + 1)
     return df_summary, df_items, df_records, df_stock
+
+
+def get_cached_asset_history_records(
+    asset_manager: AssetManager,
+) -> pd.DataFrame:
+    """日次資産履歴をキャッシュして取得する。"""
+    now = dt.datetime.now()
+    timestamp = _df_cache_asset_history.get("timestamp", now)
+    if "df" in _df_cache_asset_history and (
+        now - timestamp
+    ).total_seconds() < 86400:
+        return _df_cache_asset_history["df"]
+    with _df_cache_asset_table_lock:
+        now = dt.datetime.now()
+        timestamp = _df_cache_asset_history.get("timestamp", now)
+        if "df" not in _df_cache_asset_history or (
+            now - timestamp
+        ).total_seconds() >= 86400:
+            _df_cache_asset_history["df"] = (
+                asset_manager.get_daily_asset_history_data()
+            )
+            _df_cache_asset_history["timestamp"] = now
+        return _df_cache_asset_history["df"]
 
 
 @app.middleware("http")
@@ -799,7 +823,9 @@ def get_fiscal_asset_history_chart(
 def get_asset_summary(request: Request) -> HTMLResponse:
     log.info("start 'get_asset_summary' method")
     server_tools: ServerTools = ServerTools(app, gspread_handler)
-    df_summary, df_items, _, df_stock = get_cached_asset_table(asset_manager)
+    df_summary, df_items, df_records, df_stock = get_cached_asset_table(
+        asset_manager
+    )
     summary = build_asset_summary_dict(df_summary, df_items, df_stock)
     log.info("end 'get_asset_summary' method")
     return server_tools.templates.TemplateResponse(
@@ -962,9 +988,15 @@ def get_asset_drawdown_history_chart(request: Request) -> HTMLResponse:
     log.info("start 'get_asset_drawdown_history_chart' method")
     server_tools: ServerTools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
-    df_summary, df_items, df_records, df_stock = get_cached_asset_table(
+    df_summary, df_items, df_monthly, df_stock = get_cached_asset_table(
         asset_manager
     )
+    df_records = get_cached_asset_history_records(asset_manager)
+    if df_records.empty:
+        df_records = df_monthly
+    if df_records.empty:
+        log.info("No asset history data for drawdown graph.")
+        return HTMLResponse(content="")
     _df_add = pd.DataFrame()
     _df_add.loc[0, "date"] = dt.date.today()
     _df_add.loc[0, "invest_amount"] = df_records["invest_amount"].iloc[-1]
