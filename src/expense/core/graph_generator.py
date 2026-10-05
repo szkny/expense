@@ -18,6 +18,7 @@ log: logging.Logger = logging.getLogger("expense")
 
 class GraphGenerator(Base):
     _FORECAST_HALF_LIFE_DAYS = 90
+    _AVERAGE_DAYS_PER_MONTH = 365.0 / 12.0
 
     def __init__(
         self,
@@ -2086,7 +2087,7 @@ class GraphGenerator(Base):
                 median_days = (
                     float(observation_days.median())
                     if not observation_days.empty
-                    else 30.4375
+                    else self._AVERAGE_DAYS_PER_MONTH
                 )
                 annualization_factor = np.sqrt(365.0 / max(median_days, 1.0))
                 annual_volatility = float(
