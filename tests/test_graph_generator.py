@@ -104,6 +104,7 @@ class GraphGeneratorAssetDrawdownTest(unittest.TestCase):
         self.assertIn('"mode":"lines"', graph_html)
         self.assertIn('"dragmode":"pan"', graph_html)
         self.assertIn('"scrollZoom": true', graph_html)
+        self.assertIn("Plotly.Fx.unhover(graph)", graph_html)
 
     def test_initial_x_axis_range_is_limited_to_three_years(self) -> None:
         generator = GraphGenerator.__new__(GraphGenerator)

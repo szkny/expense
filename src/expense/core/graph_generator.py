@@ -705,6 +705,7 @@ class GraphGenerator(Base):
         include_plotlyjs: bool | str,
         config: dict[str, Any] | None = None,
         autoscale_yaxis: bool = False,
+        clear_hover_on_leave: bool = False,
     ) -> str:
         """Plotlyグラフを共通の表示設定でHTMLへ変換する。"""
         plotly_config = {
@@ -712,15 +713,20 @@ class GraphGenerator(Base):
             "displayModeBar": False,
             **(config or {}),
         }
+        post_scripts = []
+        if autoscale_yaxis:
+            post_scripts.append(self._plotly_yaxis_autoscale_script())
+        if clear_hover_on_leave:
+            post_scripts.append(
+                "const graph = document.getElementById('{plot_id}');"
+                "graph.addEventListener('pointerleave', () => "
+                "Plotly.Fx.unhover(graph));"
+            )
         graph_html = fig.to_html(
             full_html=False,
             include_plotlyjs=include_plotlyjs,
             config=plotly_config,
-            post_script=(
-                self._plotly_yaxis_autoscale_script()
-                if autoscale_yaxis
-                else None
-            ),
+            post_script="".join(post_scripts) or None,
         )
         return (
             '<div style="-webkit-tap-highlight-color: transparent; '
@@ -2498,6 +2504,7 @@ class GraphGenerator(Base):
             include_plotlyjs,
             config={"scrollZoom": True},
             autoscale_yaxis=True,
+            clear_hover_on_leave=True,
         )
         log.info("end 'generate_asset_drawdown_history_chart' method")
         return graph_html
