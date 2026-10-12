@@ -60,14 +60,25 @@ function updateMemoSuggestions() {
     const rowType = cells[1].textContent.trim();
     const rowAmount = cells[2].textContent.replace(/[^\d-]/g, "");
     const memo = cells[3].textContent.trim();
-    if (type && rowType === type && (!amount || rowAmount === amount) && memo) {
-      memoCounts.set(memo, (memoCounts.get(memo) || 0) + 1);
+    if (type && rowType === type && memo) {
+      const current = memoCounts.get(memo) || {
+        count: 0,
+        amountMatches: false,
+      };
+      current.count += 1;
+      current.amountMatches ||= !amount || rowAmount === amount;
+      memoCounts.set(memo, current);
     }
   }
 
   const suggestions = Array.from(memoCounts)
     .filter(([memo]) => memo.toLowerCase().startsWith(input))
-    .sort(([, countA], [, countB]) => countB - countA)
+    .sort(([, dataA], [, dataB]) => {
+      if (dataA.amountMatches !== dataB.amountMatches) {
+        return dataB.amountMatches - dataA.amountMatches;
+      }
+      return dataB.count - dataA.count;
+    })
     .map(([memo]) => memo);
 
   suggestionList.replaceChildren(
