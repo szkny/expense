@@ -54,6 +54,9 @@ class GraphGeneratorAssetProfitHistoryTest(unittest.TestCase):
         )
 
         self.assertIn('"y":[-100,250]', graph_html)
+        self.assertIn('+\\u00a5250', graph_html)
+        self.assertNotIn('+250円', graph_html)
+        self.assertIn('"yshift":8', graph_html)
         self.assertIn('"range":[-150.0,300.0]', graph_html)
         self.assertIn('"fixedrange":true', graph_html)
         self.assertIn("user-select: none", graph_html)
@@ -101,6 +104,7 @@ class GraphGeneratorAssetDrawdownTest(unittest.TestCase):
         )
 
         self.assertIn('"y":[0.0,-0.09090909090909094]', graph_html)
+        self.assertIn('"text":"-9.09%"', graph_html)
         self.assertIn('"mode":"lines"', graph_html)
         self.assertIn('"dragmode":"pan"', graph_html)
         self.assertIn('"scrollZoom": true', graph_html)

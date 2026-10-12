@@ -2352,11 +2352,16 @@ class GraphGenerator(Base):
             return ""
         df_graph["date"] = pd.to_datetime(df_graph["date"])
         df_graph["profit"] = pd.to_numeric(df_graph["profit"], errors="coerce")
-        df_graph = df_graph.dropna(subset=["date", "profit"])
+        df_graph = df_graph.dropna(subset=["date", "profit"]).sort_values("date")
         if df_graph.empty:
             return ""
 
         profit_values = df_graph["profit"].tolist()
+
+        def format_profit(value: float) -> str:
+            sign = "+" if value >= 0 else "-"
+            return f"{sign}¥{abs(value):,.0f}"
+
         fig = go.Figure(
             go.Scatter(
                 x=df_graph["date"],
@@ -2366,14 +2371,27 @@ class GraphGenerator(Base):
                 line=dict(
                     width=2, color="#22a06b" if theme == "dark" else "#16834f"
                 ),
-                marker=dict(size=6),
                 hovertext=[
                     f"{date.strftime('%Y年%-m月%-d日')}<br>"
-                    f"<b>含み益 {value:+,.0f}円</b>"
+                    f"<b>含み益 {format_profit(value)}</b>"
                     for date, value in zip(df_graph["date"], profit_values)
                 ],
                 hoverinfo="text",
             )
+        )
+        fig.add_annotation(
+            x=df_graph["date"].iloc[-1],
+            y=profit_values[-1],
+            text=format_profit(profit_values[-1]),
+            showarrow=False,
+            xanchor="right",
+            yanchor="bottom",
+            yshift=8,
+            font=dict(
+                size=12,
+                weight="bold",
+                color="#ffffff" if theme == "dark" else "#000000",
+            ),
         )
         fig.add_hline(y=0, line_width=1, line_dash="dot", line_color="#888888")
         self._update_layout(
@@ -2478,6 +2496,20 @@ class GraphGenerator(Base):
                     "ドローダウン: %{y:.2%}<extra></extra>"
                 ),
             )
+        )
+        fig.add_annotation(
+            x=df_graph["date"].iloc[-1],
+            y=values[-1],
+            text=f"{values[-1]:.2%}",
+            showarrow=False,
+            xanchor="right",
+            yanchor="bottom",
+            yshift=8,
+            font=dict(
+                size=12,
+                weight="bold",
+                color="#ffffff" if theme == "dark" else "#000000",
+            ),
         )
         fig.add_hline(y=0, line_width=1, line_dash="dot", line_color="#888888")
         self._update_layout(fig, theme)
