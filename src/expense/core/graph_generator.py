@@ -2421,12 +2421,15 @@ class GraphGenerator(Base):
         return graph_html
 
     @staticmethod
-    def _calculate_asset_drawdown(df: pd.DataFrame) -> pd.Series:
-        """含み益の最高値を基準に、日々の資産ドローダウンを計算する。"""
+    def _calculate_asset_drawdowns(
+        df: pd.DataFrame,
+    ) -> tuple[pd.Series, pd.Series]:
+        """含み益の最高値を基準に、率と金額のドローダウンを計算する。"""
         profit = pd.to_numeric(df["profit"], errors="coerce")
         valuation = pd.to_numeric(df["valuation"], errors="coerce")
         invest_amount = pd.to_numeric(df["invest_amount"], errors="coerce")
-        drawdowns: list[float] = []
+        drawdown_rates: list[float] = []
+        drawdown_amounts: list[float] = []
         for row in range(len(df)):
             history = slice(0, row + 1)
             peak_profit = profit.iloc[history].max()
@@ -2439,16 +2442,34 @@ class GraphGenerator(Base):
                 or len(denominators) == 0
                 or np.any(denominators == 0)
             ):
-                drawdowns.append(0.0)
+                drawdown_rates.append(0.0)
+                drawdown_amounts.append(0.0)
                 continue
             current_valuation = valuation.iloc[row]
             current_invest_amount = invest_amount.iloc[row]
+            candidate_amounts = (
+                current_valuation
+                - (current_invest_amount - peak_invest_amount.to_numpy())
+                - peak_valuation.to_numpy()
+            )
             candidates = (
                 current_valuation
                 - (current_invest_amount - peak_invest_amount.to_numpy())
             ) / denominators - 1
-            drawdowns.append(float(min(candidates.min(), 0)))
-        return pd.Series(drawdowns, index=df.index)
+            peak_index = int(np.argmin(candidates))
+            drawdown_rates.append(float(min(candidates[peak_index], 0)))
+            drawdown_amounts.append(
+                float(min(candidate_amounts[peak_index], 0))
+            )
+        return (
+            pd.Series(drawdown_rates, index=df.index),
+            pd.Series(drawdown_amounts, index=df.index),
+        )
+
+    @staticmethod
+    def _calculate_asset_drawdown(df: pd.DataFrame) -> pd.Series:
+        """含み益の最高値を基準に、日々の資産ドローダウン率を計算する。"""
+        return GraphGenerator._calculate_asset_drawdowns(df)[0]
 
     def generate_asset_drawdown_history_chart(
         self,
@@ -2472,7 +2493,9 @@ class GraphGenerator(Base):
         ]
         if df_graph.empty:
             return ""
-        df_graph["drawdown"] = self._calculate_asset_drawdown(df_graph)
+        df_graph["drawdown"], df_graph["drawdown_amount"] = (
+            self._calculate_asset_drawdowns(df_graph)
+        )
 
         values = df_graph["drawdown"].tolist()
         fig = go.Figure(
@@ -2491,9 +2514,15 @@ class GraphGenerator(Base):
                     if theme == "dark"
                     else "rgba(204, 68, 68, 0.18)"
                 ),
+                customdata=df_graph["drawdown_amount"].map(
+                    lambda value: f"-¥{abs(value):,.0f}"
+                    if value < 0
+                    else f"¥{value:,.0f}"
+                ),
                 hovertemplate=(
                     "%{x|%-Y年%-m月%-d日}<br>"
-                    "ドローダウン: %{y:.2%}<extra></extra>"
+                    "ドローダウン: %{y:.2%}<br>"
+                    "金額: %{customdata}<extra></extra>"
                 ),
             )
         )

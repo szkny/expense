@@ -105,6 +105,10 @@ class GraphGeneratorAssetDrawdownTest(unittest.TestCase):
 
         self.assertIn('"y":[0.0,-0.09090909090909094]', graph_html)
         self.assertIn('"text":"-9.09%"', graph_html)
+        self.assertIn(
+            '"customdata":["\\u00a50","-\\u00a510"]', graph_html
+        )
+        self.assertIn("\\u91d1\\u984d: %{customdata}", graph_html)
         self.assertIn('"mode":"lines"', graph_html)
         self.assertIn('"dragmode":"pan"', graph_html)
         self.assertIn('"scrollZoom": true', graph_html)
