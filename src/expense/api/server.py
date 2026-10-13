@@ -457,6 +457,9 @@ def _get_asset_advice_payload() -> tuple[dict[str, Any], str]:
     df_summary, df_items, df_records, df_stock = get_cached_asset_table(
         asset_manager
     )
+    df_daily_records = get_cached_asset_history_records(asset_manager)
+    if not df_daily_records.empty:
+        df_daily_records = df_daily_records.sort_values("date").tail(14)
     allocation_config = asset_manager.config.get("asset_management", {}).get(
         "allocation", {}
     )
@@ -492,6 +495,9 @@ def _get_asset_advice_payload() -> tuple[dict[str, Any], str]:
         ),
         "monthly_asset_history": json.loads(
             df_records.to_json(orient="records", date_format="iso")
+        ),
+        "recent_daily_asset_history": json.loads(
+            df_daily_records.to_json(orient="records", date_format="iso")
         ),
     }
     return payload, model
@@ -540,7 +546,7 @@ def stream_asset_advice(force: bool = False) -> StreamingResponse:
 
     def events() -> Any:
         try:
-            for advice_html, done, cached in stream_daily_asset_advice(
+            for advice_html, done, cached, generated_at in stream_daily_asset_advice(
                 payload,
                 asset_manager.cache_path,
                 os.getenv("OPENAI_API_KEY"),
@@ -552,6 +558,7 @@ def stream_asset_advice(force: bool = False) -> StreamingResponse:
                         "advice_html": advice_html,
                         "done": done,
                         "cached": cached,
+                        "generated_at": generated_at,
                     },
                     ensure_ascii=False,
                 ) + "\n\n"

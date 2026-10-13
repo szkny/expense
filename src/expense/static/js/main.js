@@ -54,6 +54,14 @@ function initAssetAdvisor() {
   if (!card || !status || !content || !retryButton) return;
 
   let loading = false;
+  const formatGeneratedAt = (generatedAt) => {
+    const date = new Date(generatedAt);
+    if (Number.isNaN(date.getTime())) return "";
+    const pad = (value) => String(value).padStart(2, "0");
+    return `${date.getFullYear()}年${pad(date.getMonth() + 1)}月${pad(
+      date.getDate(),
+    )}日 ${pad(date.getHours())}:${pad(date.getMinutes())}時点`;
+  };
   const loadAdvice = async (force = false) => {
     if (loading) return;
     loading = true;
@@ -85,9 +93,7 @@ function initAssetAdvisor() {
           content.innerHTML = result.advice_html;
           content.hidden = false;
           status.textContent = result.done
-            ? result.cached
-              ? "生成済みの分析結果を再提示しています。"
-              : "今日の分析結果です。"
+            ? formatGeneratedAt(result.generated_at) || "生成日時不明"
             : "資産データをもとに分析中...";
           completed = result.done;
         }

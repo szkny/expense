@@ -68,6 +68,13 @@ class TestDailyAssetAdvice(unittest.TestCase):
         self.assertEqual(request_body["max_output_tokens"], 2000)
         self.assertEqual(request_body["reasoning"], {"effort": "low"})
         self.assertEqual(request_body["store"], False)
+        request_input = json.loads(request_body["input"])
+        self.assertIn("daily_investment_quote", request_input)
+        self.assertIn("ポートフォリオの洞察", request_body["instructions"])
+        self.assertIn("直近の振り返り", request_body["instructions"])
+        self.assertIn("データから見えること", request_body["instructions"])
+        self.assertIn("投資の格言", request_body["instructions"])
+        self.assertIn("考えてみること", request_body["instructions"])
         cached_data = json.loads(
             (self.cache_path / "asset_advice.json").read_text(encoding="utf-8")
         )
@@ -239,6 +246,16 @@ class TestAssetAdviceEndpoint(unittest.TestCase):
                 }
             ]
         )
+        df_daily_history = pd.DataFrame(
+            [
+                {
+                    "date": "2026-09-22",
+                    "invest_amount": 1000.0,
+                    "valuation": 1210.0,
+                    "profit": 210.0,
+                }
+            ]
+        )
         df_market = pd.DataFrame(
             [{"ticker": "TEST", "change_pct_monthly": 2.0}]
         )
@@ -257,6 +274,10 @@ class TestAssetAdviceEndpoint(unittest.TestCase):
                 return_value=(df_summary, df_items, df_history, df_market),
             ),
             patch(
+                "src.expense.api.server.get_cached_asset_history_records",
+                return_value=df_daily_history,
+            ),
+            patch(
                 "src.expense.api.server.asset_manager.build_asset_allocation",
                 return_value=[],
             ),
@@ -272,6 +293,9 @@ class TestAssetAdviceEndpoint(unittest.TestCase):
         self.assertEqual(payload["holdings"][0]["ticker"], "TEST")
         self.assertEqual(
             payload["monthly_asset_history"][0]["date"], "2026-08-31"
+        )
+        self.assertEqual(
+            payload["recent_daily_asset_history"][0]["date"], "2026-09-22"
         )
         self.assertEqual(
             payload["market_indicators"][0]["change_pct_monthly"], 2.0
