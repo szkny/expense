@@ -70,11 +70,13 @@ class TestDailyAssetAdvice(unittest.TestCase):
         self.assertEqual(request_body["store"], False)
         request_input = json.loads(request_body["input"])
         self.assertIn("daily_investment_quote", request_input)
-        self.assertIn("ポートフォリオの洞察", request_body["instructions"])
-        self.assertIn("直近の振り返り", request_body["instructions"])
-        self.assertIn("データから見えること", request_body["instructions"])
+        self.assertIn("今日のインサイト", request_body["instructions"])
+        self.assertIn("今週の振り返り", request_body["instructions"])
+        self.assertIn(
+            "過去データからの小さな発見", request_body["instructions"]
+        )
         self.assertIn("投資の格言", request_body["instructions"])
-        self.assertIn("考えてみること", request_body["instructions"])
+        self.assertIn("今日の問い", request_body["instructions"])
         cached_data = json.loads(
             (self.cache_path / "asset_advice.json").read_text(encoding="utf-8")
         )
