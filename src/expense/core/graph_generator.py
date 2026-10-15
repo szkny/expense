@@ -2087,8 +2087,7 @@ class GraphGenerator(Base):
                     pd.to_datetime(df_graph["date"])
                     .sort_values()
                     .diff()
-                    .dt.days
-                    .dropna()
+                    .dt.days.dropna()
                 )
                 median_days = (
                     float(observation_days.median())
@@ -2352,7 +2351,9 @@ class GraphGenerator(Base):
             return ""
         df_graph["date"] = pd.to_datetime(df_graph["date"])
         df_graph["profit"] = pd.to_numeric(df_graph["profit"], errors="coerce")
-        df_graph = df_graph.dropna(subset=["date", "profit"]).sort_values("date")
+        df_graph = df_graph.dropna(subset=["date", "profit"]).sort_values(
+            "date"
+        )
         if df_graph.empty:
             return ""
 
@@ -2515,9 +2516,11 @@ class GraphGenerator(Base):
                     else "rgba(204, 68, 68, 0.18)"
                 ),
                 customdata=df_graph["drawdown_amount"].map(
-                    lambda value: f"-¥{abs(value):,.0f}"
-                    if value < 0
-                    else f"¥{value:,.0f}"
+                    lambda value: (
+                        f"-¥{abs(value):,.0f}"
+                        if value < 0
+                        else f"¥{value:,.0f}"
+                    )
                 ),
                 hovertemplate=(
                     "%{x|%-Y年%-m月%-d日}<br>"
@@ -2531,8 +2534,8 @@ class GraphGenerator(Base):
             y=values[-1],
             text=f"{values[-1]:.2%}",
             showarrow=False,
-            xanchor="right",
-            yanchor="bottom",
+            xanchor="left",
+            yanchor="auto",
             yshift=8,
             font=dict(
                 size=12,
