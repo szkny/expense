@@ -2351,6 +2351,9 @@ class GraphGenerator(Base):
             return ""
         df_graph["date"] = pd.to_datetime(df_graph["date"])
         df_graph["profit"] = pd.to_numeric(df_graph["profit"], errors="coerce")
+        df_graph["invest_amount"] = pd.to_numeric(
+            df_graph["invest_amount"], errors="coerce"
+        )
         df_graph = df_graph.dropna(subset=["date", "profit"]).sort_values(
             "date"
         )
@@ -2358,6 +2361,14 @@ class GraphGenerator(Base):
             return ""
 
         profit_values = df_graph["profit"].tolist()
+        roi_values = [
+            f"{profit / investment * 100:+.2f}%"
+            if investment != 0 and not pd.isna(investment)
+            else "-"
+            for profit, investment in zip(
+                profit_values, df_graph["invest_amount"]
+            )
+        ]
 
         def format_profit(value: float) -> str:
             sign = "+" if value >= 0 else "-"
@@ -2374,8 +2385,11 @@ class GraphGenerator(Base):
                 ),
                 hovertext=[
                     f"{date.strftime('%Y年%-m月%-d日')}<br>"
-                    f"<b>含み益 {format_profit(value)}</b>"
-                    for date, value in zip(df_graph["date"], profit_values)
+                    f"<b>含み益 {format_profit(value)}</b><br>"
+                    f"損益率 {roi}"
+                    for date, value, roi in zip(
+                        df_graph["date"], profit_values, roi_values
+                    )
                 ],
                 hoverinfo="text",
             )

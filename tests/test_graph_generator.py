@@ -46,6 +46,7 @@ class GraphGeneratorAssetProfitHistoryTest(unittest.TestCase):
             {
                 "date": pd.to_datetime(["2026-01-31", "2026-02-28"]),
                 "profit": [-100, 250],
+                "invest_amount": [2_000, 2_000],
             }
         )
 
@@ -55,6 +56,8 @@ class GraphGeneratorAssetProfitHistoryTest(unittest.TestCase):
 
         self.assertIn('"y":[-100,250]', graph_html)
         self.assertIn('+\\u00a5250', graph_html)
+        self.assertIn("-5.00%", graph_html)
+        self.assertIn("+12.50%", graph_html)
         self.assertNotIn('+250円', graph_html)
         self.assertIn('"yshift":8', graph_html)
         self.assertIn('"range":[-150.0,300.0]', graph_html)
