@@ -2362,9 +2362,11 @@ class GraphGenerator(Base):
 
         profit_values = df_graph["profit"].tolist()
         roi_values = [
-            f"{profit / investment * 100:+.2f}%"
-            if investment != 0 and not pd.isna(investment)
-            else "-"
+            (
+                f"{profit / investment * 100:+.2f}%"
+                if investment != 0 and not pd.isna(investment)
+                else "-"
+            )
             for profit, investment in zip(
                 profit_values, df_graph["invest_amount"]
             )
@@ -2538,8 +2540,8 @@ class GraphGenerator(Base):
                 ),
                 hovertemplate=(
                     "%{x|%-Y年%-m月%-d日}<br>"
-                    "ドローダウン: %{y:.2%}<br>"
-                    "金額: %{customdata}<extra></extra>"
+                    "<b>ドローダウン %{y:.2%}</b><br>"
+                    "金額 %{customdata}<extra></extra>"
                 ),
             )
         )
