@@ -146,18 +146,8 @@ window.attachPlotlyYAxisAutoscale = function attachPlotlyYAxisAutoscale(
   }
   graphDiv.__expenseYAxisAutoscaleAttached = true;
 
-  let isHovering = false;
   const scheduleUpdate = (xRange) =>
     window.requestAnimationFrame(() => updateYaxis(graphDiv, xRange));
-  graphDiv.on("plotly_beforehover", () => {
-    isHovering = true;
-  });
-  graphDiv.on("plotly_hover", () => {
-    isHovering = true;
-  });
-  graphDiv.on("plotly_unhover", () => {
-    isHovering = false;
-  });
   graphDiv.on("plotly_restyle", () => {
     window.setTimeout(() => scheduleUpdate(), 0);
   });
@@ -168,7 +158,6 @@ window.attachPlotlyYAxisAutoscale = function attachPlotlyYAxisAutoscale(
     window.setTimeout(() => scheduleUpdate(), 0);
   });
   graphDiv.on("plotly_relayout", (event) => {
-    if (isHovering) return;
     const xRange =
       event["xaxis.range"] ||
       ("xaxis.range[0]" in event && "xaxis.range[1]" in event
