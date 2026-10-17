@@ -198,20 +198,48 @@ class GraphGeneratorDailyChartTest(unittest.TestCase):
     def test_months_include_months_with_only_fixed_expenses(self) -> None:
         generator = GraphGenerator.__new__(GraphGenerator)
         generator.variable_types = ["食費"]
+        current_month = pd.Timestamp.today().strftime("%Y-%m")
         df = pd.DataFrame(
             {
-                "date": pd.to_datetime(["2026-10-01"]),
+                "date": pd.to_datetime([f"{current_month}-01"]),
                 "expense_type": ["家賃"],
                 "expense_amount": [100_000],
             }
         )
 
         graph_html, available_months = generator.generate_daily_chart(
-            df, target_month="2026-10", include_plotlyjs=False
+            df, target_month=current_month, include_plotlyjs=False
         )
 
         self.assertEqual(graph_html, "")
-        self.assertEqual(available_months, ["2026-10"])
+        self.assertEqual(available_months, [current_month])
+
+    def test_defaults_to_current_month_when_latest_records_are_older(
+        self,
+    ) -> None:
+        generator = GraphGenerator.__new__(GraphGenerator)
+        generator.variable_types = ["食費"]
+        generator.expense_types = ["食費"]
+        generator.graph_color = {}
+        today = pd.Timestamp.today().normalize()
+        current_month = today.strftime("%Y-%m")
+        previous_month = today.to_period("M") - 1
+        df = pd.DataFrame(
+            {
+                "date": [previous_month.start_time + pd.Timedelta(days=5)],
+                "expense_type": ["食費"],
+                "expense_amount": [1_000],
+                "expense_memo": [""],
+            }
+        )
+
+        graph_html, available_months = generator.generate_daily_chart(
+            df, include_plotlyjs=False
+        )
+
+        self.assertEqual(graph_html, "")
+        self.assertEqual(available_months[0], current_month)
+        self.assertIn(previous_month.strftime("%Y-%m"), available_months)
 
 
 class GraphGeneratorSavingsRateTest(unittest.TestCase):

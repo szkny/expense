@@ -752,9 +752,11 @@ class GraphGenerator(Base):
             return "", []
 
         today = pd.Timestamp(dt.date.today())
+        current_period = today.to_period("M")
         df["date"] = pd.to_datetime(df["date"])
-        unique_months = sorted(
-            df["date"].dt.to_period("M").unique(), reverse=True
+        unique_months = [current_period] + sorted(
+            set(df["date"].dt.to_period("M").unique()) - {current_period},
+            reverse=True,
         )
         available_months = [m.strftime("%Y-%m") for m in unique_months]
 
@@ -767,7 +769,7 @@ class GraphGenerator(Base):
 
         log.debug(f"target_month: {target_month}")
         target_period = (
-            pd.Period(target_month, "M") if target_month else unique_months[0]
+            pd.Period(target_month, "M") if target_month else current_period
         )
 
         t = target_period.to_timestamp()
