@@ -900,6 +900,15 @@ class GspreadHandler(Base):
                             df_records.loc[counter, "expense_memo"] = memo
                             df_records.loc[counter, "expense_amount"] = amount
                             counter += 1
+            if df_records.empty:
+                return pd.DataFrame(
+                    columns=[
+                        "date",
+                        "expense_type",
+                        "expense_memo",
+                        "expense_amount",
+                    ]
+                )
             df_records["expense_amount"] = df_records["expense_amount"].astype(
                 int
             )
@@ -910,6 +919,9 @@ class GspreadHandler(Base):
     def merge_expense_history_log(self) -> bool:
         log.info("start 'merge_expense_history_log' method")
         csv_files = glob((self.data_path / "expense_history*.log").as_posix())
+        if not csv_files:
+            log.info("No expense history files to merge.")
+            return False
         dfs = []
         for f in csv_files:
             df = pd.read_csv(f, header=None)

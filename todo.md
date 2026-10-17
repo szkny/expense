@@ -63,7 +63,7 @@ Sheets, Termux, or OCR device access.
   OCR request behavior with Sheets, history files, and Termux mocked. Cover
   success, invalid input, external failures, and cache invalidation. Done when
   these paths can be regression-tested without external writes.
-- [ ] Add Google Sheets/history transformation tests. Cover fixed worksheet
+- [x] Add Google Sheets/history transformation tests. Cover fixed worksheet
   data, empty inputs, duplicate history, amount and memo edits, and conversion
   between sheet records and history records. Preserve the existing sheet
   layout and history column order.
