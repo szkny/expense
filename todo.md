@@ -77,7 +77,7 @@ Sheets, Termux, or OCR device access.
   one cohesive area (for example, write-endpoint processing or graph response
   helpers), preserving routes, response formats, and cache behavior. Add or
   retain tests before moving code.
-- [ ] Share expense suggestion preparation across CLI and Web. First lock
+- [x] Share expense suggestion preparation across CLI and Web. First lock
   down favorite/frequent/recent precedence, de-duplication, and limits with
   tests; then extract shared data preparation while keeping UI formatting at
   the relevant boundary.

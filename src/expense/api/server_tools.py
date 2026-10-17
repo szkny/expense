@@ -130,28 +130,22 @@ class ServerTools(Base):
             recent_expenses = self.expense_handler.get_recent_expenses(30)
         except Exception:
             recent_expenses = []
-        if expense_config.get("filter_duplicated_items", True):
-            (
+        favorite_expenses, frequent_expenses, recent_expenses = (
+            self.expense_handler.prepare_expense_suggestions(
                 favorite_expenses,
                 recent_expenses,
                 frequent_expenses,
-            ) = self.expense_handler.filter_duplicates(
-                [
-                    favorite_expenses,
-                    recent_expenses,
-                    frequent_expenses,
-                ]
+                num_frequent_items=int(num_items.get("frequent", 5)),
+                num_recent_items=int(num_items.get("recent", 5)),
+                filter_duplicated_items=expense_config.get(
+                    "filter_duplicated_items", True
+                ),
             )
+        )
         item_list = [
             {"icon": self.icons.get("favorite"), "items": favorite_expenses},
-            {
-                "icon": self.icons.get("frequent"),
-                "items": frequent_expenses[: int(num_items.get("frequent", 5))],
-            },
-            {
-                "icon": self.icons.get("recent"),
-                "items": recent_expenses[: int(num_items.get("recent", 5))],
-            },
+            {"icon": self.icons.get("frequent"), "items": frequent_expenses},
+            {"icon": self.icons.get("recent"), "items": recent_expenses},
         ]
         instant_items = []
         for item_data in item_list:

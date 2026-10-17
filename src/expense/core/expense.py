@@ -119,18 +119,20 @@ class Expense(Base):
                 frequent_expenses = self.get_frequent_expenses(30)
                 recent_expenses = self.get_recent_expenses(30)
 
-                if expense_config.get("filter_duplicated_items", True):
-                    (
-                        favorite_expenses,
-                        recent_expenses,
-                        frequent_expenses,
-                    ) = self.filter_duplicates(
-                        [
-                            favorite_expenses,
-                            recent_expenses,
-                            frequent_expenses,
-                        ]
-                    )
+                (
+                    favorite_expenses,
+                    frequent_expenses,
+                    recent_expenses,
+                ) = self.prepare_expense_suggestions(
+                    favorite_expenses,
+                    recent_expenses,
+                    frequent_expenses,
+                    num_frequent_items=int(num_items.get("frequent", 5)),
+                    num_recent_items=int(num_items.get("recent", 5)),
+                    filter_duplicated_items=expense_config.get(
+                        "filter_duplicated_items", True
+                    ),
+                )
 
                 item_list = [
                     {
@@ -139,15 +141,11 @@ class Expense(Base):
                     },
                     {
                         "icon": icon_config.get("frequent", ""),
-                        "items": frequent_expenses[
-                            : int(num_items.get("frequent", 5))
-                        ],
+                        "items": frequent_expenses,
                     },
                     {
                         "icon": icon_config.get("recent", ""),
-                        "items": recent_expenses[
-                            : int(num_items.get("recent", 5))
-                        ],
+                        "items": recent_expenses,
                     },
                 ]
                 expense_type = self.termux_api.select_expense_type(
@@ -354,6 +352,30 @@ class Expense(Base):
 
         log.info("end 'filter_duplicates' method")
         return result
+
+    def prepare_expense_suggestions(
+        self,
+        favorite_expenses: list[dict],
+        recent_expenses: list[dict],
+        frequent_expenses: list[dict],
+        num_frequent_items: int = 5,
+        num_recent_items: int = 5,
+        filter_duplicated_items: bool = True,
+    ) -> tuple[list[dict], list[dict], list[dict]]:
+        """候補の優先順位で重複を除き、カテゴリ別の表示数に制限する。"""
+        if filter_duplicated_items:
+            (
+                favorite_expenses,
+                recent_expenses,
+                frequent_expenses,
+            ) = self.filter_duplicates(
+                [favorite_expenses, recent_expenses, frequent_expenses]
+            )
+        return (
+            favorite_expenses,
+            frequent_expenses[:num_frequent_items],
+            recent_expenses[:num_recent_items],
+        )
 
     def store_expense(
         self,
