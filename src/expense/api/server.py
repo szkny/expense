@@ -20,6 +20,7 @@ from fastapi.responses import (
 )
 
 from .server_tools import ServerTools
+from .graph_cache import get_cached_graph
 from .asset_advisor import (
     AssetAdviceConfigurationError,
     AssetAdviceRequestError,
@@ -133,20 +134,6 @@ def _get_record_cache_dataframes() -> tuple[pd.DataFrame, pd.DataFrame]:
         pd.DataFrame(_df_cache_record.get("df_records")),
         pd.DataFrame(_df_cache_record.get("df_annual")),
     )
-
-
-def _get_cached_graph(
-    cache: dict,
-    lock: threading.Lock,
-    key: tuple[Any, ...],
-    generator: Callable[[], Any],
-) -> Any:
-    """同じデータスナップショットから生成したグラフHTMLを再利用する。"""
-    with lock:
-        graph_html = cache.setdefault("graph_html", {})
-        if key not in graph_html:
-            graph_html[key] = generator()
-        return graph_html[key]
 
 
 def _clear_record_cache() -> None:
@@ -723,7 +710,7 @@ def get_pie_chart(request: Request, month: str | None = None) -> JSONResponse:
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
     df_records, _ = get_cached_records(server_tools)
-    graph_html, available_months = _get_cached_graph(
+    graph_html, available_months = get_cached_graph(
         _df_cache_record,
         _df_cache_record_lock,
         ("pie", theme, month or ""),
@@ -747,7 +734,7 @@ def get_daily_chart(request: Request, month: str | None = None) -> JSONResponse:
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
     df_records, _ = get_cached_records(server_tools)
-    graph_html, available_months = _get_cached_graph(
+    graph_html, available_months = get_cached_graph(
         _df_cache_record,
         _df_cache_record_lock,
         ("daily", theme, month or ""),
@@ -770,7 +757,7 @@ def get_monthly_bar_chart(request: Request) -> HTMLResponse:
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
     df_records, _ = get_cached_records(server_tools)
-    graph_html = _get_cached_graph(
+    graph_html = get_cached_graph(
         _df_cache_record,
         _df_cache_record_lock,
         ("bar", theme),
@@ -792,7 +779,7 @@ def get_annual_fiscal_report_chart(
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
     df_records, _ = get_cached_records(server_tools)
-    graph_html, available_years = _get_cached_graph(
+    graph_html, available_years = get_cached_graph(
         _df_cache_record,
         _df_cache_record_lock,
         ("annual_fiscal_report", theme, year or ""),
@@ -812,7 +799,7 @@ def get_fiscal_asset_history_chart(
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
     df_records, _ = get_cached_records(server_tools)
-    graph_html, available_years = _get_cached_graph(
+    graph_html, available_years = get_cached_graph(
         _df_cache_record,
         _df_cache_record_lock,
         ("fiscal_asset_history", theme, year or ""),
@@ -855,7 +842,7 @@ def get_asset_pie_chart(request: Request) -> HTMLResponse:
     df_summary, df_items, df_records, df_stock = get_cached_asset_table(
         asset_manager
     )
-    graph_html = _get_cached_graph(
+    graph_html = get_cached_graph(
         _df_cache_asset_table,
         _df_cache_asset_table_lock,
         ("asset_pie", theme),
@@ -877,7 +864,7 @@ def get_asset_waterfall_chart(request: Request) -> HTMLResponse:
     df_summary, df_items, df_records, df_stock = get_cached_asset_table(
         asset_manager
     )
-    graph_html = _get_cached_graph(
+    graph_html = get_cached_graph(
         _df_cache_asset_table,
         _df_cache_asset_table_lock,
         ("asset_waterfall", theme),
@@ -897,7 +884,7 @@ def get_asset_heatmap_chart(request: Request) -> HTMLResponse:
     df_summary, df_items, df_records, df_stock = get_cached_asset_table(
         asset_manager
     )
-    graph_html = _get_cached_graph(
+    graph_html = get_cached_graph(
         _df_cache_asset_table,
         _df_cache_asset_table_lock,
         ("asset_heatmap", theme),
@@ -941,7 +928,7 @@ def get_asset_monthly_history_chart(
     )
     df_records = pd.concat([df_records, _df_add])
     df_records.index = pd.Index(range(len(df_records)))
-    graph_html = _get_cached_graph(
+    graph_html = get_cached_graph(
         _df_cache_asset_table,
         _df_cache_asset_table_lock,
         (
@@ -985,7 +972,7 @@ def get_asset_profit_history_chart(request: Request) -> HTMLResponse:
     )
     df_records = pd.concat([df_records, _df_add])
     df_records.index = pd.Index(range(len(df_records)))
-    graph_html = _get_cached_graph(
+    graph_html = get_cached_graph(
         _df_cache_asset_table,
         _df_cache_asset_table_lock,
         ("asset_profit_history", theme, dt.date.today()),
@@ -1019,7 +1006,7 @@ def get_asset_drawdown_history_chart(request: Request) -> HTMLResponse:
         _df_add.loc[0, "valuation"] - _df_add.loc[0, "invest_amount"]
     )
     df_records = pd.concat([df_records, _df_add], ignore_index=True)
-    graph_html = _get_cached_graph(
+    graph_html = get_cached_graph(
         _df_cache_asset_table,
         _df_cache_asset_table_lock,
         ("asset_drawdown_history", theme, dt.date.today()),

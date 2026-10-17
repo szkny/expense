@@ -73,7 +73,7 @@ Sheets, Termux, or OCR device access.
 - [x] Separate `ServerTools` application setup from request-time work. Mount
   static files and register app-level resources once, not on each request.
   Verify repeated requests do not add duplicate mounts or alter responses.
-- [ ] Split a narrow set of responsibilities out of `server.py`. Start with
+- [x] Split a narrow set of responsibilities out of `server.py`. Start with
   one cohesive area (for example, write-endpoint processing or graph response
   helpers), preserving routes, response formats, and cache behavior. Add or
   retain tests before moving code.
