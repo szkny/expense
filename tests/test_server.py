@@ -1,6 +1,10 @@
 import unittest
 import threading
 import datetime as dt
+import json
+import tempfile
+from pathlib import Path
+from typing import Any
 from unittest.mock import Mock, patch, mock_open
 
 import pandas as pd
@@ -98,6 +102,318 @@ class TestCachedGraph(unittest.TestCase):
 
     def test_record_cache_ttl_is_five_minutes(self) -> None:
         self.assertEqual(_RECORD_CACHE_TTL, 300)
+
+
+class TestWriteEndpoints(unittest.TestCase):
+    def make_server_tools(self) -> Mock:
+        return Mock(
+            icons={},
+            gspread_handler=Mock(),
+            expense_handler=Mock(),
+            termux_api=Mock(),
+            notification=Mock(),
+        )
+
+    def post(
+        self, path: str, data: dict[str, str], server_tools: Mock
+    ) -> tuple[Any, Mock]:
+        with (
+            patch(
+                "src.expense.api.server.ServerTools",
+                return_value=server_tools,
+            ),
+            patch("src.expense.api.server._clear_record_cache") as clear_cache,
+        ):
+            response = TestClient(app, follow_redirects=False).post(
+                path, data=data
+            )
+
+        return response, clear_cache
+
+    def test_register_writes_to_sheets_and_history(self) -> None:
+        tools = self.make_server_tools()
+
+        response, clear_cache = self.post(
+            "/register",
+            {
+                "expense_type": "食費",
+                "expense_amount": "¥12,345",
+                "expense_memo": "昼食",
+                "expense_date": "2026-04-01",
+            },
+            tools,
+        )
+
+        self.assertEqual(response.status_code, 303)
+        self.assertIn("status=True", response.headers["location"])
+        tools.gspread_handler.register_expense.assert_called_once_with(
+            "食費", 12345, "昼食", "2026-04-01"
+        )
+        tools.expense_handler.store_expense.assert_called_once_with(
+            "食費", "昼食", 12345, "2026-04-01"
+        )
+        clear_cache.assert_called_once_with()
+
+    def test_register_rejects_invalid_amount_without_writes(self) -> None:
+        tools = self.make_server_tools()
+
+        response, clear_cache = self.post(
+            "/register",
+            {
+                "expense_type": "食費",
+                "expense_amount": "invalid",
+                "expense_memo": "昼食",
+                "expense_date": "2026-04-01",
+            },
+            tools,
+        )
+
+        self.assertEqual(response.status_code, 303)
+        self.assertIn("status=False", response.headers["location"])
+        tools.gspread_handler.register_expense.assert_not_called()
+        tools.expense_handler.store_expense.assert_not_called()
+        clear_cache.assert_not_called()
+
+    def test_register_stops_after_sheets_failure_and_invalidates_cache(
+        self,
+    ) -> None:
+        tools = self.make_server_tools()
+        tools.gspread_handler.register_expense.side_effect = RuntimeError(
+            "Sheets unavailable"
+        )
+
+        response, clear_cache = self.post(
+            "/register",
+            {
+                "expense_type": "食費",
+                "expense_amount": "1000",
+                "expense_memo": "昼食",
+                "expense_date": "2026-04-01",
+            },
+            tools,
+        )
+
+        self.assertEqual(response.status_code, 303)
+        self.assertIn("status=False", response.headers["location"])
+        tools.expense_handler.store_expense.assert_not_called()
+        clear_cache.assert_called_once_with()
+
+    def test_delete_normalizes_date_and_amount(self) -> None:
+        tools = self.make_server_tools()
+
+        response, clear_cache = self.post(
+            "/delete",
+            {
+                "expense_date": "2026-04-01(水)",
+                "expense_type": "食費",
+                "expense_amount": "¥12,345",
+                "expense_memo": "昼食",
+            },
+            tools,
+        )
+
+        self.assertEqual(response.status_code, 303)
+        self.assertIn("status=True", response.headers["location"])
+        tools.gspread_handler.delete_expense.assert_called_once_with(
+            "2026-04-01", "食費", 12345, "昼食"
+        )
+        tools.expense_handler.delete_expense.assert_called_once_with(
+            "2026-04-01", "食費", 12345, "昼食"
+        )
+        clear_cache.assert_called_once_with()
+
+    def test_delete_does_not_change_history_when_sheets_rejects(self) -> None:
+        tools = self.make_server_tools()
+        tools.gspread_handler.delete_expense.return_value = False
+
+        response, clear_cache = self.post(
+            "/delete",
+            {
+                "expense_date": "2026-04-01",
+                "expense_type": "食費",
+                "expense_amount": "1000",
+                "expense_memo": "昼食",
+            },
+            tools,
+        )
+
+        self.assertIn("status=False", response.headers["location"])
+        tools.expense_handler.delete_expense.assert_not_called()
+        clear_cache.assert_called_once_with()
+
+    def test_edit_normalizes_both_records_and_invalidates_cache(self) -> None:
+        tools = self.make_server_tools()
+
+        response, clear_cache = self.post(
+            "/edit",
+            {
+                "target_date": "2026-03-31(火)",
+                "target_type": "食費",
+                "target_amount": "¥1,000",
+                "target_memo": "昼食",
+                "new_expense_date": "2026-04-01(水)",
+                "new_expense_type": "外食",
+                "new_expense_amount": "¥2,000",
+                "new_expense_memo": "夕食",
+            },
+            tools,
+        )
+
+        target = {
+            "expense_date": "2026-03-31",
+            "expense_type": "食費",
+            "expense_amount": 1000,
+            "expense_memo": "昼食",
+        }
+        new = {
+            "expense_date": "2026-04-01",
+            "expense_type": "外食",
+            "expense_amount": 2000,
+            "expense_memo": "夕食",
+        }
+        self.assertEqual(response.status_code, 303)
+        self.assertIn("status=True", response.headers["location"])
+        tools.gspread_handler.edit_expense.assert_called_once_with(
+            target_expense=target, new_expense=new
+        )
+        tools.expense_handler.edit_expense.assert_called_once_with(
+            target_expense=target, new_expense=new
+        )
+        clear_cache.assert_called_once_with()
+
+    def test_edit_does_not_write_when_sheets_fails(self) -> None:
+        tools = self.make_server_tools()
+        tools.gspread_handler.edit_expense.return_value = False
+
+        response, clear_cache = self.post(
+            "/edit",
+            {
+                "target_date": "2026-03-31",
+                "target_type": "食費",
+                "target_amount": "1000",
+                "target_memo": "昼食",
+                "new_expense_date": "2026-04-01",
+                "new_expense_type": "外食",
+                "new_expense_amount": "2000",
+                "new_expense_memo": "夕食",
+            },
+            tools,
+        )
+
+        self.assertIn("status=False", response.headers["location"])
+        tools.expense_handler.edit_expense.assert_not_called()
+        clear_cache.assert_called_once_with()
+
+    def test_missing_register_fields_are_rejected_before_request_processing(
+        self,
+    ) -> None:
+        with patch("src.expense.api.server.ServerTools") as server_tools:
+            response = TestClient(app, follow_redirects=False).post(
+                "/register", data={}
+            )
+
+        self.assertEqual(response.status_code, 422)
+        server_tools.assert_not_called()
+
+    def test_ocr_registers_fixed_result_and_caches_it_in_temp_directory(
+        self,
+    ) -> None:
+        tools = self.make_server_tools()
+        tools.expense_handler.get_ocr_expense.return_value = {}
+        ocr = Mock()
+        ocr.main.return_value = {
+            "expense_type": "食費",
+            "expense_amount": "1234",
+            "expense_memo": "昼食",
+            "expense_date": "2026-04-01",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            tools.cache_path = Path(directory)
+            with (
+                patch("src.expense.api.server.Ocr", return_value=ocr),
+                patch(
+                    "src.expense.api.server.get_latest_screenshot",
+                    return_value="/screenshots/receipt.jpg",
+                ),
+                patch("builtins.open", mock_open()) as open_file,
+            ):
+                response, clear_cache = self.post("/ocr", {}, tools)
+
+            self.assertEqual(response.status_code, 303)
+            self.assertIn("status=True", response.headers["location"])
+            tools.gspread_handler.register_expense.assert_called_once_with(
+                "食費", 1234, "昼食", "2026-04-01"
+            )
+            tools.expense_handler.store_expense.assert_called_once_with(
+                "食費", "昼食", 1234, "2026-04-01"
+            )
+            open_file.assert_called_once_with(
+                Path(directory) / "ocr_data.json", "w"
+            )
+            serialized_cache = "".join(
+                call.args[0] for call in open_file().write.call_args_list
+            )
+            self.assertEqual(
+                json.loads(serialized_cache), ocr.main.return_value
+            )
+            clear_cache.assert_called_once_with()
+
+    def test_ocr_failure_does_not_write_history_and_clears_cache(self) -> None:
+        tools = self.make_server_tools()
+        tools.expense_handler.get_ocr_expense.return_value = {}
+        tools.gspread_handler.register_expense.side_effect = RuntimeError(
+            "Sheets unavailable"
+        )
+        ocr = Mock()
+        ocr.main.return_value = {
+            "expense_type": "食費",
+            "expense_amount": "1234",
+            "expense_memo": "昼食",
+            "expense_date": "2026-04-01",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            tools.cache_path = Path(directory)
+            with (
+                patch("src.expense.api.server.Ocr", return_value=ocr),
+                patch(
+                    "src.expense.api.server.get_latest_screenshot",
+                    return_value="/screenshots/receipt.jpg",
+                ),
+                patch("builtins.open", mock_open()) as open_file,
+            ):
+                response, clear_cache = self.post("/ocr", {}, tools)
+
+            self.assertEqual(response.status_code, 303)
+            self.assertIn("status=False", response.headers["location"])
+            tools.expense_handler.store_expense.assert_not_called()
+            open_file.assert_not_called()
+            clear_cache.assert_called_once_with()
+
+    def test_ocr_skips_a_screenshot_already_registered(self) -> None:
+        tools = self.make_server_tools()
+        tools.expense_handler.get_ocr_expense.return_value = {
+            "screenshot_name": "receipt.jpg",
+            "expense_type": "食費",
+            "expense_amount": 1234,
+            "expense_memo": "昼食",
+            "expense_date": "2026-04-01",
+        }
+        ocr = Mock()
+        with (
+            patch("src.expense.api.server.Ocr", return_value=ocr),
+            patch(
+                "src.expense.api.server.get_latest_screenshot",
+                return_value="/screenshots/receipt.jpg",
+            ),
+        ):
+            response, clear_cache = self.post("/ocr", {}, tools)
+
+        self.assertEqual(response.status_code, 303)
+        self.assertIn("status=False", response.headers["location"])
+        ocr.main.assert_not_called()
+        tools.gspread_handler.register_expense.assert_not_called()
+        tools.expense_handler.store_expense.assert_not_called()
+        clear_cache.assert_not_called()
 
 
 class TestLatestScreenshotData(unittest.TestCase):
