@@ -72,6 +72,26 @@ Individual checks are available as `make test`, `make type-check`, `make lint`,
 and `make format-check`. The formatting target checks Python and JavaScript;
 it does not modify files.
 
+### Development Command Side Effects
+
+- `make test` redirects Expense data, cache, config, and log paths to a temporary
+  directory and mocks Google authentication. It does not access Google Sheets,
+  Termux, or device OCR.
+- `make ocr-test` is a device diagnostic, not a unit test. It reads recent
+  device screenshots and runs Tesseract; OCR results can contain personal
+  expense data and are logged. Run it only when device access is intended.
+- `make coverage` deletes the previous `.coverage` data via `coverage erase`
+  and writes an `htmlcov/` report. It omits `src/expense/__main__.py`, all of
+  `src/expense/api/`, and `core/expr_analyzer.py`, `gspread_wrapper.py`,
+  `graph_generator.py`, `ocr.py`, and `termux_api.py` from measurement.
+- `make build` runs `make clean` first and removes `build/`, `dist/`, and
+  `*.egg-info`. `make install` and `make editable-install` both depend on this
+  build and then install the package into the active Python environment.
+- `make serve` starts Uvicorn on `0.0.0.0:8000` using the real user config and
+  credentials. Web requests can read or write Google Sheets and local history;
+  do not expose it to an untrusted network. `make webui` opens the Android
+  browser through Termux.
+
 ## Configuration
 
 The application's behavior can be customized through the `~/.config/expense/config.json` file.

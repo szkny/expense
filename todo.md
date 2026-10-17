@@ -91,6 +91,6 @@ Sheets, Termux, or OCR device access.
   type, lint, Python formatting, and JavaScript formatting checks. Document
   prerequisites and commands; do not add dependencies without a demonstrated
   need.
-- [ ] Document development-command side effects and coverage scope. Explain
+- [x] Document development-command side effects and coverage scope. Explain
   that OCR diagnostics require device access, identify coverage exclusions,
   and make clear that the build target cleans generated artifacts.

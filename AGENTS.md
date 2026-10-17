@@ -86,12 +86,20 @@ npm run format:js:check
 
 品質チェックにはPythonアプリ依存関係に加えて `mypy`、`ruff`、`black` が `PATH` 上に必要。JavaScript整形チェックにはNode.js/npmと、ルートで `npm install` した依存関係が必要。`make install` は開発用チェックツールをインストールしない。
 
+### コマンドの副作用とカバレッジ
+
+- `make test` は `tests` パッケージ初期化でXDGのデータ・キャッシュ・設定先を一時ディレクトリへ向け、Google認証をモックする。Google Sheets、Termux、端末OCRへ接続しない。
+- `make ocr-test` は通常の単体テストではなく、端末の最近のスクリーンショットを読み、Tesseract OCRを実行する診断コマンドである。OCR結果は支出情報を含み得るため、端末アクセスを意図した場合に限り実行する。
+- `make coverage` は最初に `coverage erase` で前回の `.coverage` を削除し、`htmlcov/` を生成する。測定対象から `src/expense/__main__.py`、`src/expense/api/*`、`src/expense/core/expr_analyzer.py`、`gspread_wrapper.py`、`graph_generator.py`、`ocr.py`、`termux_api.py` を除外する。
+- `make build` は先に `make clean` を実行し、`build/`、`dist/`、`*.egg-info` を削除する。`make install` と `make editable-install` もこのbuildを経由し、アクティブなPython環境へパッケージをインストールする。
+- `make serve` はUvicornを `0.0.0.0:8000` で起動し、実ユーザーの設定・認証情報を使う。Webからの操作はGoogle Sheetsやローカル履歴を読み書きし得るため、信頼できないネットワークに公開しない。`make webui` はTermux経由でAndroidブラウザを起動する。
+
 ### テスト方針
 
 - 新しい業務ロジックには、正常系、空データ、ファイル未存在、境界値、例外時のテストを追加する。
 - 日付・年度、金額、重複除去、OCR正規化、CSV/DataFrame変換は回帰しやすいため、入力と期待値を固定した単体テストを優先する。
 - 外部依存は `unittest.mock.patch` で差し替える。Google SheetsやTermuxを使う結合確認は通常の単体テストに混ぜない。
-- OCR画像を扱うテストでは端末のスクリーンショットを前提にしない。現状の `test_ocr_main` のように外部環境依存の診断処理を追加・変更する場合は、失敗を見逃さないテストとの役割を分ける。
+- OCR単体テストでは端末のスクリーンショットを前提にしない。端末画像を使う診断は `make ocr-test` に分離し、外部環境依存の診断と失敗を見逃さない回帰テストを混ぜない。
 - CSSやグラフの色、線、余白、ラベル位置など、動作や計算結果を変えない見た目のみの変更ではテストを実施しなくてよい。差分確認と必要に応じた構文・静的チェックのみ行う。
 - Web層を変更したら、少なくとも対象のDataFrame/レスポンス生成関数をテストし、可能ならローカルサーバーを起動して主要ページ（`/`、`/asset_management`、`/simulator`）を手動確認する。
 - サーバーの動作確認は別ターミナルで実行する。
