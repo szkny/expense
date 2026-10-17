@@ -87,7 +87,7 @@ Sheets, Termux, or OCR device access.
 - [x] Reconcile README configuration documentation with
   `src/expense/config/config.json` and runtime behavior. Correct missing or
   stale names and defaults without changing configuration semantics.
-- [ ] Add a standard Makefile quality-check target for the existing test,
+- [x] Add a standard Makefile quality-check target for the existing test,
   type, lint, Python formatting, and JavaScript formatting checks. Document
   prerequisites and commands; do not add dependencies without a demonstrated
   need.

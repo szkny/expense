@@ -1,4 +1,4 @@
-.PHONY: build install test coverage ocr-test
+.PHONY: build install test coverage ocr-test quality type-check lint format-check
 
 # Unit coverage excludes external integrations and the OCR diagnostic module.
 UNIT_COVERAGE_OMIT = src/expense/__main__.py,src/expense/api/*,src/expense/core/expr_analyzer.py,src/expense/core/gspread_wrapper.py,src/expense/core/graph_generator.py,src/expense/core/ocr.py,src/expense/core/termux_api.py
@@ -32,6 +32,18 @@ test:
 	@echo "Running tests..."
 	LOG_LEVEL=DEBUG PYTHONPATH=src python -m unittest discover -s tests -t . -p "test_*.py"
 	@echo
+
+quality: test type-check lint format-check
+
+type-check:
+	python -m mypy src tests
+
+lint:
+	ruff check .
+
+format-check:
+	black --check .
+	npm run format:js:check
 
 coverage:
 	@echo "Running tests with coverage..."

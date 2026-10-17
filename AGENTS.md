@@ -56,7 +56,7 @@
 - Pythonは4スペースインデント、1行80文字を基本とする。整形はBlackに統一し、Ruff formatterの設定を手動で上書きしない。
 - JavaScriptはPrettierで整形する。対象ファイルは `src/expense/static/**/*.js` とし、`npm run format:js` で適用、`npm run format:js:check` で確認する。
 - 新しい関数・メソッドには戻り値と引数の型注釈を付ける。`pyproject.toml` の mypy 設定（未型付け定義の禁止など）を満たす。
-- importは標準ライブラリ、外部ライブラリ、ローカルモジュールの順にまとめる。既存コードの相対import構成を維持する。
+- importは標準ライブラリ、外部ライブラリ、ローカルモジュールの順にまとめる。アプリ内では既存の相対import構成を維持し、テストや開発時の絶対importには `expense` パッケージ名を使う。`src.expense` は使わない。
 - 既存のロガー `logging.getLogger("expense")` を使い、機密情報・アクセストークン・家計の実データをログへ出さない。例外は握りつぶさず、必要な境界でログとユーザー向け通知を分ける。
 - 設定値はハードコードせず `Base.config` から取得する。設定に新しい項目を追加する場合は既定値を `src/expense/config/config.json` と README.md に反映する。
 - Google Sheets、ファイル、Termux、Tesseractなどの外部境界はcoreの対応モジュールに閉じ込め、集計や表示ロジックへ直接散らさない。
@@ -71,16 +71,20 @@
 
 ```bash
 make test
+make quality
 ```
 
-これは `LOG_LEVEL=DEBUG PYTHONPATH=src python -m unittest discover -s tests -p "test_*.py"` を実行する。個別に確認する場合は次を使う。
+`make test` は `LOG_LEVEL=DEBUG PYTHONPATH=src python -m unittest discover -s tests -t . -p "test_*.py"` を実行する。`make quality` はテスト、mypy、Ruff、Black、PrettierのJavaScriptチェックを実行する。個別に確認する場合は次を使う。
 
 ```bash
-PYTHONPATH=src python -m unittest tests/test_main.py
+PYTHONPATH=src python -m unittest tests.test_main
 python -m mypy src tests
 ruff check .
 black --check .
+npm run format:js:check
 ```
+
+品質チェックにはPythonアプリ依存関係に加えて `mypy`、`ruff`、`black` が `PATH` 上に必要。JavaScript整形チェックにはNode.js/npmと、ルートで `npm install` した依存関係が必要。`make install` は開発用チェックツールをインストールしない。
 
 ### テスト方針
 

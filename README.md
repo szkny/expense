@@ -61,6 +61,17 @@ make test
 The test command uses the source tree directly and does not access external
 services. To generate a coverage report, run `make coverage`.
 
+Run the standard quality checks with `make quality`. It runs the unit tests,
+mypy, Ruff, Black, and the Prettier JavaScript check. Python application
+dependencies must be installed (for example, with `make install`), and the
+`mypy`, `ruff`, and `black` commands must be available on `PATH`. The JavaScript
+check requires Node.js/npm and the root npm dependencies installed with
+`npm install`. `make install` does not install these development tools.
+
+Individual checks are available as `make test`, `make type-check`, `make lint`,
+and `make format-check`. The formatting target checks Python and JavaScript;
+it does not modify files.
+
 ## Configuration
 
 The application's behavior can be customized through the `~/.config/expense/config.json` file.
