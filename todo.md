@@ -70,7 +70,7 @@ Sheets, Termux, or OCR device access.
 - [x] Stabilize Plotly chart tests. Prefer assertions against figure data and
   layout or other semantic output over serialized HTML escaping and incidental
   whitespace. Keep a small number of HTML integration checks where needed.
-- [ ] Separate `ServerTools` application setup from request-time work. Mount
+- [x] Separate `ServerTools` application setup from request-time work. Mount
   static files and register app-level resources once, not on each request.
   Verify repeated requests do not add duplicate mounts or alter responses.
 - [ ] Split a narrow set of responsibilities out of `server.py`. Start with

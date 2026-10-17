@@ -35,6 +35,7 @@ from ..core.gspread_wrapper import GspreadHandler
 from ..core.notification import NotificationManager
 
 app: FastAPI = FastAPI()
+ServerTools.setup_app(app)
 log: logging.Logger = logging.getLogger("expense")
 
 

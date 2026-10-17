@@ -33,6 +33,41 @@ class TestServiceWorkerRoute(unittest.TestCase):
         )
         self.assertIn('const CACHE_NAME = "expense-cache-v3"', response.text)
 
+    def test_repeated_requests_do_not_add_static_mounts_or_change_response(
+        self,
+    ) -> None:
+        static_mounts_before = [
+            route
+            for route in app.routes
+            if getattr(route, "name", "") == "static"
+        ]
+        route_count_before = len(app.routes)
+        with (
+            patch(
+                "src.expense.api.server.gspread_handler",
+                Mock(get_spreadsheet_url=Mock(return_value="")),
+            ),
+            patch(
+                "src.expense.api.server_tools.get_latest_screenshot",
+                return_value="",
+            ),
+        ):
+            client = TestClient(app)
+            first = client.get("/api/ocr/latest")
+            second = client.get("/api/ocr/latest")
+
+        static_mounts_after = [
+            route
+            for route in app.routes
+            if getattr(route, "name", "") == "static"
+        ]
+        self.assertEqual(len(static_mounts_before), 1)
+        self.assertEqual(len(static_mounts_after), 1)
+        self.assertEqual(len(app.routes), route_count_before)
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(second.json(), first.json())
+
 
 class TestLazyGspreadHandler(unittest.TestCase):
     def test_connects_on_first_use_and_retries(self) -> None:

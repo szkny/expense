@@ -23,6 +23,18 @@ log: logging.Logger = logging.getLogger("expense")
 
 
 class ServerTools(Base):
+    @staticmethod
+    def setup_app(app: FastAPI) -> None:
+        """アプリケーション共通の静的ファイルとテンプレートを設定する。"""
+        app.mount(
+            "/static",
+            StaticFiles(directory="src/expense/static"),
+            name="static",
+        )
+        templates = Jinja2Templates(directory="src/expense/templates")
+        templates.env.filters["info_to_html"] = ServerTools.info_to_html
+        app.state.templates = templates
+
     def __init__(self, app: FastAPI, gspread_handler: GspreadHandler) -> None:
         super().__init__()
         expense_config: dict[str, Any] = self.config.get("expense", {})
@@ -82,16 +94,10 @@ class ServerTools(Base):
             capital_gain_types=self.capital_gain_types,
         )
 
-        # setup FastAPI
-        app.mount(
-            "/static",
-            StaticFiles(directory="src/expense/static"),
-            name="static",
-        )
-        self.templates = Jinja2Templates(directory="src/expense/templates")
-        self.templates.env.filters["info_to_html"] = self.info_to_html
+        self.templates: Jinja2Templates = app.state.templates
 
-    def info_to_html(self, info: str) -> Markup:
+    @staticmethod
+    def info_to_html(info: str) -> Markup:
         """
         「 ▶ 」を安全に改行＋▼ブロックに変換
         info内のHTMLはすべてエスケープする（XSS対策）
