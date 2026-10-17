@@ -64,6 +64,8 @@ services. To generate a coverage report, run `make coverage`.
 ## Configuration
 
 The application's behavior can be customized through the `~/.config/expense/config.json` file.
+If the file is missing, Expense creates it from the distributed defaults on
+startup; an existing file is loaded without being overwritten.
 
 The Asset Management page can optionally request one AI-generated investment
 comment per day. Set `OPENAI_API_KEY` in the server environment to enable it.
@@ -89,7 +91,7 @@ defaults to `gpt-5-nano`. OpenAI API usage may incur charges.
       <td>(General)</td>
       <td><code>log_level</code></td>
       <td><code>string</code></td>
-      <td><code>"DEBUG"</code></td>
+      <td><code>"INFO"</code></td>
       <td>Sets the logging level.</td>
     </tr>
     <tr>
@@ -109,8 +111,8 @@ defaults to `gpt-5-nano`. OpenAI API usage may incur charges.
       <td rowspan="2"><code>notification</code></td>
       <td><code>channel</code></td>
       <td><code>string</code></td>
-      <td><code>"termux"</code></td>
-      <td>Notification delivery channel. Set to <code>"web_push"</code> to use browser notifications.</td>
+      <td><code>"web_push"</code></td>
+      <td>The distributed config selects browser Web Push. Set to <code>"termux"</code> to use Termux notifications. If the key is absent, runtime behavior defaults to <code>"termux"</code>.</td>
     </tr>
     <tr>
       <td><code>web_push</code></td>
@@ -132,10 +134,17 @@ defaults to `gpt-5-nano`. OpenAI API usage may incur charges.
       <td>Colors for each expense category in the graphs.</td>
     </tr>
     <tr>
-      <td><code>record_table.n_records</code></td>
+      <td><code>record_table.max_n_records</code></td>
       <td><code>number</code></td>
-      <td><code>500</code></td>
+      <td><code>5000</code></td>
       <td>Number of records to display in the history table.</td>
+    </tr>
+    <tr>
+      <td><code>asset_management</code></td>
+      <td><code>fitting_duration_multiplier</code></td>
+      <td><code>number</code></td>
+      <td><code>1.0</code></td>
+      <td>Multiplier for the projection horizon of the fitted asset-valuation trend.</td>
     </tr>
     <tr>
       <td rowspan="2"><code>asset_management.allocation</code></td>
@@ -147,7 +156,7 @@ defaults to `gpt-5-nano`. OpenAI API usage may incur charges.
     <tr>
       <td><code>target_weights</code></td>
       <td><code>object</code></td>
-      <td><code>{}</code></td>
+      <td><code>See config.json</code></td>
       <td>Target allocation percentage (%) for each ticker. <code>target_amount</code> (target amount in yen) is optional and takes precedence over <code>weight</code> when specified. Specify a combined allocation for multiple tickers like <code>{"US stocks": {"tickers": ["QQQ", "VTI"], "weight": 50, "target_amount": 100000}}</code>.</td>
     </tr>
     <tr>
@@ -158,7 +167,7 @@ defaults to `gpt-5-nano`. OpenAI API usage may incur charges.
       <td>OpenAI model ID used for the daily asset advice.</td>
     </tr>
     <tr>
-      <td rowspan="4"><code>expense</code></td>
+      <td rowspan="6"><code>expense</code></td>
       <td><code>icons</code></td>
       <td><code>object</code></td>
       <td><code>See config.json</code></td>
@@ -181,6 +190,25 @@ defaults to `gpt-5-nano`. OpenAI API usage may incur charges.
       <td><code>array</code></td>
       <td><code>See config.json</code></td>
       <td>Pre-defined templates for frequently registered expenses.</td>
+    </tr>
+    <tr>
+      <td><code>num_instant_items</code></td>
+      <td><code>object</code></td>
+      <td><code>{"frequent": 5, "recent": 5}</code></td>
+      <td>Maximum number of frequent and recent suggestions shown in the CLI and Web UI. Favorites are not limited by these values.</td>
+    </tr>
+    <tr>
+      <td><code>filter_duplicated_items</code></td>
+      <td><code>boolean</code></td>
+      <td><code>true</code></td>
+      <td>Remove duplicates across favorite, recent, and frequent suggestions, preserving that precedence.</td>
+    </tr>
+    <tr>
+      <td><code>simulation</code></td>
+      <td><code>average_months</code></td>
+      <td><code>number</code></td>
+      <td><code>3</code></td>
+      <td>Number of previous complete months used to initialize the simulator's average income, expenses, and surplus.</td>
     </tr>
     <tr>
       <td rowspan="3"><code>ocr</code></td>

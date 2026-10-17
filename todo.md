@@ -84,7 +84,7 @@ Sheets, Termux, or OCR device access.
 - [x] Standardize source imports on the installed `expense` package. Update
   tests, patch targets, and development entry points consistently, then run
   the full suite to catch module-identity and mock-path issues.
-- [ ] Reconcile README configuration documentation with
+- [x] Reconcile README configuration documentation with
   `src/expense/config/config.json` and runtime behavior. Correct missing or
   stale names and defaults without changing configuration semantics.
 - [ ] Add a standard Makefile quality-check target for the existing test,
