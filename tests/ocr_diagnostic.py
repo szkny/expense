@@ -4,7 +4,7 @@ import unittest
 
 import pandas as pd
 
-from src.expense.core.ocr import Ocr, get_latest_screenshot
+from expense.core.ocr import Ocr, get_latest_screenshot
 
 
 log: logging.Logger = logging.getLogger("expense")

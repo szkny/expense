@@ -7,15 +7,15 @@ import tempfile
 from pathlib import Path
 import pandas as pd
 from unittest.mock import patch
-from src.expense.core.expense import (
+from expense.core.expense import (
     get_fiscal_year,
     get_local_only_expense_types,
     Expense,
 )
-from src.expense.core.ocr import Ocr
-from src.expense.core.asset_manager import AssetManager
-from src.expense.core.base import Base
-from src.expense.core.termux_api import TermuxAPI
+from expense.core.ocr import Ocr
+from expense.core.asset_manager import AssetManager
+from expense.core.base import Base
+from expense.core.termux_api import TermuxAPI
 
 
 class TestMain(unittest.TestCase):
@@ -39,7 +39,7 @@ class TestMain(unittest.TestCase):
     def test_toast_timeout_is_ignored(self) -> None:
         termux_api = TermuxAPI()
         with patch(
-            "src.expense.core.termux_api.subprocess.run",
+            "expense.core.termux_api.subprocess.run",
             side_effect=subprocess.TimeoutExpired(
                 cmd="termux-toast", timeout=10
             ),
@@ -60,7 +60,7 @@ class TestMain(unittest.TestCase):
         self.assertEqual(ocr.normalize_capture_text("①０ あ い"), "10あい")
 
     def test_get_fiscal_year(self) -> None:
-        with patch("src.expense.core.expense.datetime") as mock_datetime:
+        with patch("expense.core.expense.datetime") as mock_datetime:
             # Test case 1: Month is April (start of fiscal year)
             mock_datetime.date.today.return_value = datetime.date(2023, 4, 1)
             self.assertEqual(get_fiscal_year(), 2023)
@@ -127,7 +127,7 @@ class TestMain(unittest.TestCase):
     def test_get_frequent_expenses(self) -> None:
         expense = Expense()
         with (
-            patch("src.expense.core.expense.os.path.exists") as mock_exists,
+            patch("expense.core.expense.os.path.exists") as mock_exists,
             patch(
                 "builtins.open",
                 unittest.mock.mock_open(
@@ -154,7 +154,7 @@ class TestMain(unittest.TestCase):
         expense = Expense()
         with (
             patch(
-                "src.expense.core.expense.pd.read_csv",
+                "expense.core.expense.pd.read_csv",
                 unittest.mock.Mock(
                     return_value=pd.DataFrame(
                         {
@@ -196,7 +196,7 @@ class TestMain(unittest.TestCase):
                 "expense_amount": [1000, 500, 500],
             }
         )
-        with patch("src.expense.core.expense.pd.read_csv", return_value=data):
+        with patch("expense.core.expense.pd.read_csv", return_value=data):
             result = expense.get_recent_expenses(
                 3, drop_duplicates=False, with_date=True
             )

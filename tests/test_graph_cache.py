@@ -2,7 +2,7 @@ import threading
 import unittest
 from unittest.mock import Mock
 
-from src.expense.api.graph_cache import get_cached_graph
+from expense.api.graph_cache import get_cached_graph
 
 
 class TestCachedGraph(unittest.TestCase):

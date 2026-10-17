@@ -3,8 +3,8 @@ import asyncio
 import unittest
 from unittest.mock import Mock, patch
 
-from src.expense.api.server_tools import ServerTools
-from src.expense.core.expense import Expense
+from expense.api.server_tools import ServerTools
+from expense.core.expense import Expense
 
 
 def suggestion_records() -> tuple[list[dict], list[dict], list[dict]]:
@@ -67,7 +67,7 @@ class TestCliExpenseSuggestions(unittest.TestCase):
         expense.notification = Mock()
         expense.store_expense = Mock()
 
-        with patch("src.expense.core.expense.GspreadHandler"):
+        with patch("expense.core.expense.GspreadHandler"):
             asyncio.run(
                 expense.expense_main(
                     argparse.Namespace(

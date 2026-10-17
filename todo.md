@@ -81,7 +81,7 @@ Sheets, Termux, or OCR device access.
   down favorite/frequent/recent precedence, de-duplication, and limits with
   tests; then extract shared data preparation while keeping UI formatting at
   the relevant boundary.
-- [ ] Standardize source imports on the installed `expense` package. Update
+- [x] Standardize source imports on the installed `expense` package. Update
   tests, patch targets, and development entry points consistently, then run
   the full suite to catch module-identity and mock-path issues.
 - [ ] Reconcile README configuration documentation with

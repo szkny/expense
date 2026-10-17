@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch, mock_open
 import pandas as pd
 from fastapi.testclient import TestClient
 
-from src.expense.api.server import (
+from expense.api.server import (
     _RECORD_CACHE_TTL,
     _LazyGspreadHandler,
     _clear_record_cache,
@@ -18,7 +18,7 @@ from src.expense.api.server import (
     app,
     get_simulation_averages,
 )
-from src.expense.api.server_tools import ServerTools
+from expense.api.server_tools import ServerTools
 
 
 class TestServiceWorkerRoute(unittest.TestCase):
@@ -42,11 +42,11 @@ class TestServiceWorkerRoute(unittest.TestCase):
         route_count_before = len(app.routes)
         with (
             patch(
-                "src.expense.api.server.gspread_handler",
+                "expense.api.server.gspread_handler",
                 Mock(get_spreadsheet_url=Mock(return_value="")),
             ),
             patch(
-                "src.expense.api.server_tools.get_latest_screenshot",
+                "expense.api.server_tools.get_latest_screenshot",
                 return_value="",
             ),
         ):
@@ -73,10 +73,10 @@ class TestLazyGspreadHandler(unittest.TestCase):
         handler.get_spreadsheet_url.return_value = "https://example.test"
         with (
             patch(
-                "src.expense.api.server.GspreadHandler",
+                "expense.api.server.GspreadHandler",
                 side_effect=[RuntimeError("temporary"), handler],
             ) as constructor,
-            patch("src.expense.api.server.time.sleep") as sleep,
+            patch("expense.api.server.time.sleep") as sleep,
         ):
             lazy_handler = _LazyGspreadHandler("book")
 
@@ -89,10 +89,10 @@ class TestLazyGspreadHandler(unittest.TestCase):
     def test_does_not_fail_when_sheets_are_unavailable(self) -> None:
         with (
             patch(
-                "src.expense.api.server.GspreadHandler",
+                "expense.api.server.GspreadHandler",
                 side_effect=RuntimeError("unavailable"),
             ),
-            patch("src.expense.api.server.time.sleep"),
+            patch("expense.api.server.time.sleep"),
         ):
             lazy_handler = _LazyGspreadHandler("book")
 
@@ -127,10 +127,10 @@ class TestWriteEndpoints(unittest.TestCase):
     ) -> tuple[Any, Mock]:
         with (
             patch(
-                "src.expense.api.server.ServerTools",
+                "expense.api.server.ServerTools",
                 return_value=server_tools,
             ),
-            patch("src.expense.api.server._clear_record_cache") as clear_cache,
+            patch("expense.api.server._clear_record_cache") as clear_cache,
         ):
             response = TestClient(app, follow_redirects=False).post(
                 path, data=data
@@ -315,7 +315,7 @@ class TestWriteEndpoints(unittest.TestCase):
     def test_missing_register_fields_are_rejected_before_request_processing(
         self,
     ) -> None:
-        with patch("src.expense.api.server.ServerTools") as server_tools:
+        with patch("expense.api.server.ServerTools") as server_tools:
             response = TestClient(app, follow_redirects=False).post(
                 "/register", data={}
             )
@@ -338,9 +338,9 @@ class TestWriteEndpoints(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             tools.cache_path = Path(directory)
             with (
-                patch("src.expense.api.server.Ocr", return_value=ocr),
+                patch("expense.api.server.Ocr", return_value=ocr),
                 patch(
-                    "src.expense.api.server.get_latest_screenshot",
+                    "expense.api.server.get_latest_screenshot",
                     return_value="/screenshots/receipt.jpg",
                 ),
                 patch("builtins.open", mock_open()) as open_file,
@@ -382,9 +382,9 @@ class TestWriteEndpoints(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             tools.cache_path = Path(directory)
             with (
-                patch("src.expense.api.server.Ocr", return_value=ocr),
+                patch("expense.api.server.Ocr", return_value=ocr),
                 patch(
-                    "src.expense.api.server.get_latest_screenshot",
+                    "expense.api.server.get_latest_screenshot",
                     return_value="/screenshots/receipt.jpg",
                 ),
                 patch("builtins.open", mock_open()) as open_file,
@@ -408,9 +408,9 @@ class TestWriteEndpoints(unittest.TestCase):
         }
         ocr = Mock()
         with (
-            patch("src.expense.api.server.Ocr", return_value=ocr),
+            patch("expense.api.server.Ocr", return_value=ocr),
             patch(
-                "src.expense.api.server.get_latest_screenshot",
+                "expense.api.server.get_latest_screenshot",
                 return_value="/screenshots/receipt.jpg",
             ),
         ):
@@ -432,7 +432,7 @@ class TestLatestScreenshotData(unittest.TestCase):
         )
         with (
             patch(
-                "src.expense.api.server_tools.get_latest_screenshot",
+                "expense.api.server_tools.get_latest_screenshot",
                 return_value="/screenshots/receipt.png",
             ),
             patch("builtins.open", mock_open(read_data=b"png")),
@@ -446,7 +446,7 @@ class TestLatestScreenshotData(unittest.TestCase):
     def test_returns_empty_data_when_screenshot_is_missing(self) -> None:
         server_tools = ServerTools.__new__(ServerTools)
         with patch(
-            "src.expense.api.server_tools.get_latest_screenshot",
+            "expense.api.server_tools.get_latest_screenshot",
             return_value="",
         ):
             result = server_tools.get_latest_screenshot_data()
@@ -473,7 +473,7 @@ class TestReportSummary(unittest.TestCase):
         )
 
         fixed_now = dt.datetime(2026, 8, 25, 18)
-        with patch("src.expense.api.server_tools.dt.datetime") as datetime_mock:
+        with patch("expense.api.server_tools.dt.datetime") as datetime_mock:
             datetime_mock.today.return_value = fixed_now
             result = server_tools.generate_report_summary(df)
 

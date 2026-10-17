@@ -5,8 +5,8 @@ from unittest.mock import Mock
 
 import pandas as pd
 
-from src.expense.core.expense import Expense
-from src.expense.core.gspread_wrapper import GspreadHandler
+from expense.core.expense import Expense
+from expense.core.gspread_wrapper import GspreadHandler
 
 
 class TestSheetHistoryConversion(unittest.TestCase):

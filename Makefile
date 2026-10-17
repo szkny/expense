@@ -20,7 +20,7 @@ editable-install: build
 
 serve:
 	@echo "Starting the service..."
-	uvicorn src.expense.api.server:app --host 0.0.0.0 --port 8000 --log-config uvicorn_log.json --reload
+	PYTHONPATH=src uvicorn expense.api.server:app --host 0.0.0.0 --port 8000 --log-config uvicorn_log.json --reload
 	@echo
 
 webui:
@@ -43,7 +43,7 @@ coverage:
 
 ocr-test:
 	@echo "Running OCR diagnostic test..."
-	LOG_LEVEL=DEBUG python -m unittest tests/ocr_diagnostic.py
+	LOG_LEVEL=DEBUG PYTHONPATH=src python -m unittest tests/ocr_diagnostic.py
 	@echo
 
 clean:

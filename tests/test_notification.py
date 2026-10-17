@@ -8,7 +8,7 @@ from unittest.mock import patch
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
-from src.expense.core.notification import NotificationManager
+from expense.core.notification import NotificationManager
 
 
 class TestNotificationManager(unittest.TestCase):
@@ -63,7 +63,7 @@ class TestNotificationManager(unittest.TestCase):
                 }
             )
 
-            with patch("src.expense.core.notification.webpush") as send:
+            with patch("expense.core.notification.webpush") as send:
                 manager.notify("タイトル", "本文")
 
             send.assert_called_once()

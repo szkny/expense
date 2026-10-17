@@ -8,13 +8,13 @@ from unittest.mock import patch
 
 import pandas as pd
 
-from src.expense.api.asset_advisor import (
+from expense.api.asset_advisor import (
     AssetAdviceConfigurationError,
     AssetAdviceRequestError,
     get_daily_asset_advice,
     render_asset_advice,
 )
-from src.expense.api import server
+from expense.api import server
 
 
 class TestDailyAssetAdvice(unittest.TestCase):
@@ -42,7 +42,7 @@ class TestDailyAssetAdvice(unittest.TestCase):
             ]
         }
         with patch(
-            "src.expense.api.asset_advisor.urllib.request.urlopen",
+            "expense.api.asset_advisor.urllib.request.urlopen",
             return_value=io.BytesIO(json.dumps(response_body).encode()),
         ) as urlopen:
             advice, cached = get_daily_asset_advice(
@@ -98,7 +98,7 @@ class TestDailyAssetAdvice(unittest.TestCase):
             ]
         }
         with patch(
-            "src.expense.api.asset_advisor.urllib.request.urlopen",
+            "expense.api.asset_advisor.urllib.request.urlopen",
             return_value=io.BytesIO(json.dumps(response_body).encode()),
         ) as urlopen:
             advice, cached = get_daily_asset_advice(
@@ -132,7 +132,7 @@ class TestDailyAssetAdvice(unittest.TestCase):
             ]
         }
         with patch(
-            "src.expense.api.asset_advisor.urllib.request.urlopen",
+            "expense.api.asset_advisor.urllib.request.urlopen",
             return_value=io.BytesIO(json.dumps(response_body).encode()),
         ) as urlopen:
             advice, cached = get_daily_asset_advice(
@@ -167,7 +167,7 @@ class TestDailyAssetAdvice(unittest.TestCase):
             ]
         }
         with patch(
-            "src.expense.api.asset_advisor.urllib.request.urlopen",
+            "expense.api.asset_advisor.urllib.request.urlopen",
             return_value=io.BytesIO(json.dumps(response_body).encode()),
         ) as urlopen:
             advice, cached = get_daily_asset_advice(
@@ -195,7 +195,7 @@ class TestDailyAssetAdvice(unittest.TestCase):
             "output": [{"type": "reasoning"}],
         }
         with patch(
-            "src.expense.api.asset_advisor.urllib.request.urlopen",
+            "expense.api.asset_advisor.urllib.request.urlopen",
             return_value=io.BytesIO(json.dumps(response_body).encode()),
         ):
             with self.assertRaisesRegex(
@@ -263,7 +263,7 @@ class TestAssetAdviceEndpoint(unittest.TestCase):
         )
         with (
             patch(
-                "src.expense.api.server.asset_manager.config",
+                "expense.api.server.asset_manager.config",
                 {
                     "asset_management": {
                         "allocation": {"target_weights": {}},
@@ -272,22 +272,22 @@ class TestAssetAdviceEndpoint(unittest.TestCase):
                 },
             ),
             patch(
-                "src.expense.api.server.get_cached_asset_table",
+                "expense.api.server.get_cached_asset_table",
                 return_value=(df_summary, df_items, df_history, df_market),
             ),
             patch(
-                "src.expense.api.server.get_cached_asset_history_records",
+                "expense.api.server.get_cached_asset_history_records",
                 return_value=df_daily_history,
             ),
             patch(
-                "src.expense.api.server.asset_manager.build_asset_allocation",
+                "expense.api.server.asset_manager.build_asset_allocation",
                 return_value=[],
             ),
             patch(
-                "src.expense.api.server.get_daily_asset_advice",
+                "expense.api.server.get_daily_asset_advice",
                 return_value=("今日の助言", False),
             ) as get_advice,
-            patch("src.expense.api.server.os.getenv", return_value="test-key"),
+            patch("expense.api.server.os.getenv", return_value="test-key"),
         ):
             response = server.get_asset_advice()
 

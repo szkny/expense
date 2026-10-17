@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import Mock
 
-from src.expense.core.gspread_wrapper import GspreadHandler
+from expense.core.gspread_wrapper import GspreadHandler
 
 
 class TestMonthlyIncomeCells(unittest.TestCase):
@@ -26,9 +26,7 @@ class TestMonthlyIncomeCells(unittest.TestCase):
     def test_delete_uses_fixed_cell(self) -> None:
         cell = Mock(value="=1000+2000")
         self.handler.sheet.acell.return_value = cell
-        result = self.handler.delete_expense(
-            "2026-08-15", "賞与", 1000, "memo"
-        )
+        result = self.handler.delete_expense("2026-08-15", "賞与", 1000, "memo")
 
         self.assertTrue(result)
         self.handler.sheet.update_acell.assert_called_once_with("E6", "=2000")
