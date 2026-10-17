@@ -1,6 +1,7 @@
 import unittest
 import datetime
 import json
+import os
 import subprocess
 import tempfile
 from pathlib import Path
@@ -13,10 +14,27 @@ from src.expense.core.expense import (
 )
 from src.expense.core.ocr import Ocr
 from src.expense.core.asset_manager import AssetManager
+from src.expense.core.base import Base
 from src.expense.core.termux_api import TermuxAPI
 
 
 class TestMain(unittest.TestCase):
+
+    def test_base_paths_use_isolated_xdg_directories(self) -> None:
+        base = Base()
+
+        self.assertEqual(
+            base.data_path, Path(os.environ["XDG_DATA_HOME"]) / "expense"
+        )
+        self.assertEqual(
+            base.cache_path, Path(os.environ["XDG_CACHE_HOME"]) / "expense"
+        )
+        self.assertEqual(
+            base.config_path,
+            Path(os.environ["XDG_CONFIG_HOME"]) / "expense",
+        )
+        self.assertTrue((base.config_path / "config.json").is_file())
+        self.assertTrue((base.cache_path / "expense.log").is_file())
 
     def test_toast_timeout_is_ignored(self) -> None:
         termux_api = TermuxAPI()

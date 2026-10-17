@@ -56,7 +56,7 @@ unrelated refactoring or documentation changes into the same commit. Tests must
 use temporary files, fixed data, and mocks rather than real user data, Google
 Sheets, Termux, or OCR device access.
 
-- [ ] Isolate test filesystem side effects. Route `Base` data, cache, config,
+- [x] Isolate test filesystem side effects. Route `Base` data, cache, config,
   and log paths to temporary directories in tests. Done when the test suite
   leaves user config and data directories untouched and still passes.
 - [ ] Add Web write-endpoint tests. Cover register, edit, delete, and relevant
