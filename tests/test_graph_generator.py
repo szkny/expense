@@ -1,9 +1,31 @@
 import unittest
+from collections.abc import Callable
+from typing import Any
+from unittest.mock import Mock, patch
 
 import pandas as pd
 import plotly.graph_objects as go
 
 from expense.core.graph_generator import GraphGenerator
+
+
+def capture_chart_figure(
+    generator: GraphGenerator,
+    create_chart: Callable[..., str],
+    data: pd.DataFrame,
+) -> tuple[go.Figure, str, Mock]:
+    figures: list[go.Figure] = []
+
+    def render_figure(figure: go.Figure, *_args: Any, **_kwargs: Any) -> str:
+        figures.append(figure)
+        return "<div>chart</div>"
+
+    with patch.object(
+        generator, "_figure_to_html", side_effect=render_figure
+    ) as render:
+        chart_html = create_chart(data, include_plotlyjs=False)
+
+    return figures[0], chart_html, render
 
 
 class GraphGeneratorYAxisTicksTest(unittest.TestCase):
@@ -50,18 +72,29 @@ class GraphGeneratorAssetProfitHistoryTest(unittest.TestCase):
             }
         )
 
-        graph_html = generator.generate_asset_profit_history_chart(
-            df, include_plotlyjs=False
+        figure, graph_html, render = capture_chart_figure(
+            generator, generator.generate_asset_profit_history_chart, df
         )
 
-        self.assertIn('"y":[-100,250]', graph_html)
-        self.assertIn('+\\u00a5250', graph_html)
-        self.assertIn("-5.00%", graph_html)
-        self.assertIn("+12.50%", graph_html)
-        self.assertNotIn('+250円', graph_html)
-        self.assertIn('"yshift":8', graph_html)
-        self.assertIn('"range":[-150.0,300.0]', graph_html)
-        self.assertIn('"fixedrange":true', graph_html)
+        trace = figure.data[0]
+        self.assertEqual(list(trace.y), [-100, 250])
+        self.assertIn("含み益 +¥250", trace.hovertext[1])
+        self.assertIn("損益率 +12.50%", trace.hovertext[1])
+        self.assertIn("損益率 -5.00%", trace.hovertext[0])
+        self.assertEqual(figure.layout.annotations[0].text, "+¥250")
+        self.assertEqual(figure.layout.annotations[0].yshift, 8)
+        self.assertEqual(list(figure.layout.yaxis.range), [-150, 300])
+        self.assertTrue(figure.layout.yaxis.fixedrange)
+        self.assertEqual(graph_html, "<div>chart</div>")
+        self.assertTrue(render.call_args.kwargs["autoscale_yaxis"])
+
+    def test_html_renderer_wraps_a_plotly_figure(self) -> None:
+        generator = GraphGenerator.__new__(GraphGenerator)
+        figure = go.Figure(go.Scatter(x=[1], y=[2]))
+
+        graph_html = generator._figure_to_html(figure, include_plotlyjs=False)
+
+        self.assertIn("plotly-graph-div", graph_html)
         self.assertIn("user-select: none", graph_html)
 
     def test_returns_empty_html_for_empty_data(self) -> None:
@@ -102,20 +135,21 @@ class GraphGeneratorAssetDrawdownTest(unittest.TestCase):
             }
         )
 
-        graph_html = generator.generate_asset_drawdown_history_chart(
-            df, include_plotlyjs=False
+        figure, graph_html, render = capture_chart_figure(
+            generator, generator.generate_asset_drawdown_history_chart, df
         )
 
-        self.assertIn('"y":[0.0,-0.09090909090909094]', graph_html)
-        self.assertIn('"text":"-9.09%"', graph_html)
-        self.assertIn(
-            '"customdata":["\\u00a50","-\\u00a510"]', graph_html
-        )
-        self.assertIn("\\u91d1\\u984d %{customdata}", graph_html)
-        self.assertIn('"mode":"lines"', graph_html)
-        self.assertIn('"dragmode":"pan"', graph_html)
-        self.assertIn('"scrollZoom": true', graph_html)
-        self.assertIn("Plotly.Fx.unhover(graph)", graph_html)
+        trace = figure.data[0]
+        self.assertEqual(trace.y[0], 0.0)
+        self.assertAlmostEqual(trace.y[1], -1 / 11)
+        self.assertEqual(list(trace.customdata), ["¥0", "-¥10"])
+        self.assertIn("金額 %{customdata}", trace.hovertemplate)
+        self.assertEqual(trace.mode, "lines")
+        self.assertEqual(figure.layout.annotations[0].text, "-9.09%")
+        self.assertEqual(figure.layout.dragmode, "pan")
+        self.assertTrue(render.call_args.kwargs["config"]["scrollZoom"])
+        self.assertTrue(render.call_args.kwargs["clear_hover_on_leave"])
+        self.assertEqual(graph_html, "<div>chart</div>")
 
     def test_initial_x_axis_range_is_limited_to_three_years(self) -> None:
         generator = GraphGenerator.__new__(GraphGenerator)
@@ -128,11 +162,14 @@ class GraphGeneratorAssetDrawdownTest(unittest.TestCase):
             }
         )
 
-        graph_html = generator.generate_asset_drawdown_history_chart(
-            df, include_plotlyjs=False
+        figure, _, _ = capture_chart_figure(
+            generator, generator.generate_asset_drawdown_history_chart, df
         )
 
-        self.assertIn('"range":["2023-01-01T00:00:00"', graph_html)
+        self.assertEqual(
+            pd.Timestamp(figure.layout.xaxis.range[0]),
+            pd.Timestamp("2023-01-01"),
+        )
 
     def test_ignores_future_rows_from_sheet_formulas(self) -> None:
         generator = GraphGenerator.__new__(GraphGenerator)
@@ -146,11 +183,12 @@ class GraphGeneratorAssetDrawdownTest(unittest.TestCase):
             }
         )
 
-        graph_html = generator.generate_asset_drawdown_history_chart(
-            df, include_plotlyjs=False
+        figure, _, _ = capture_chart_figure(
+            generator, generator.generate_asset_drawdown_history_chart, df
         )
 
-        self.assertNotIn(future_date.strftime("%Y-%m-%d"), graph_html)
+        plotted_dates = pd.to_datetime(list(figure.data[0].x))
+        self.assertNotIn(future_date, plotted_dates)
 
 
 class GraphGeneratorForecastTest(unittest.TestCase):

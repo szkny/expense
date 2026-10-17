@@ -67,7 +67,7 @@ Sheets, Termux, or OCR device access.
   data, empty inputs, duplicate history, amount and memo edits, and conversion
   between sheet records and history records. Preserve the existing sheet
   layout and history column order.
-- [ ] Stabilize Plotly chart tests. Prefer assertions against figure data and
+- [x] Stabilize Plotly chart tests. Prefer assertions against figure data and
   layout or other semantic output over serialized HTML escaping and incidental
   whitespace. Keep a small number of HTML integration checks where needed.
 - [ ] Separate `ServerTools` application setup from request-time work. Mount
