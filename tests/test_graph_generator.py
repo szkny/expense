@@ -111,7 +111,7 @@ class GraphGeneratorAssetDrawdownTest(unittest.TestCase):
         self.assertIn(
             '"customdata":["\\u00a50","-\\u00a510"]', graph_html
         )
-        self.assertIn("\\u91d1\\u984d: %{customdata}", graph_html)
+        self.assertIn("\\u91d1\\u984d %{customdata}", graph_html)
         self.assertIn('"mode":"lines"', graph_html)
         self.assertIn('"dragmode":"pan"', graph_html)
         self.assertIn('"scrollZoom": true', graph_html)
