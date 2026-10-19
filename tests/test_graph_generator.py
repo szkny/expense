@@ -105,6 +105,81 @@ class GraphGeneratorAssetProfitHistoryTest(unittest.TestCase):
         )
 
 
+class GraphGeneratorAssetRecentlyHistoryTest(unittest.TestCase):
+    def test_loads_all_records_with_one_month_initial_range(self) -> None:
+        generator = GraphGenerator.__new__(GraphGenerator)
+        today = pd.Timestamp.today().normalize()
+        start_date = today - pd.DateOffset(months=1)
+        df = pd.DataFrame(
+            {
+                "date": [
+                    today - pd.Timedelta(days=60),
+                    start_date - pd.Timedelta(days=1),
+                    start_date,
+                    today - pd.Timedelta(days=1),
+                    today,
+                    today,
+                    today + pd.Timedelta(days=1),
+                ],
+                "valuation": [50, 100, 200, 300, 350, 400, 500],
+            }
+        )
+
+        figure, graph_html, render = capture_chart_figure(
+            generator, generator.generate_asset_recently_history_chart, df
+        )
+
+        trace = figure.data[0]
+        self.assertEqual(list(trace.y), [50, 100, 200, 300, 400])
+        self.assertEqual(trace.mode, "lines+markers")
+        self.assertEqual(
+            trace.hovertemplate, "評価額 ¥%{y:,.0f}<extra></extra>"
+        )
+        self.assertEqual(
+            pd.Timestamp(figure.layout.xaxis.range[0]),
+            start_date,
+        )
+        self.assertEqual(pd.Timestamp(figure.layout.xaxis.range[1]), today)
+        self.assertEqual(figure.layout.xaxis.type, "date")
+        self.assertIsNone(figure.layout.xaxis.tickformat)
+        self.assertEqual(figure.layout.title.text, "直近の資産推移")
+        self.assertEqual(list(figure.layout.yaxis.range), [160, 440])
+        self.assertFalse(figure.layout.yaxis.autorange)
+        self.assertFalse(figure.layout.xaxis.fixedrange)
+        self.assertEqual(figure.layout.dragmode, "pan")
+        self.assertTrue(render.call_args.kwargs["autoscale_yaxis"])
+        self.assertTrue(render.call_args.kwargs["clear_hover_on_leave"])
+        self.assertEqual(graph_html, "<div>chart</div>")
+
+    def test_constant_values_get_a_nonzero_y_axis_range(self) -> None:
+        generator = GraphGenerator.__new__(GraphGenerator)
+        today = pd.Timestamp.today().normalize()
+        df = pd.DataFrame({"date": [today], "valuation": [100]})
+
+        figure, _, _ = capture_chart_figure(
+            generator, generator.generate_asset_recently_history_chart, df
+        )
+
+        self.assertEqual(list(figure.layout.yaxis.range), [99, 101])
+
+    def test_returns_empty_html_when_no_recent_records(self) -> None:
+        generator = GraphGenerator.__new__(GraphGenerator)
+        df = pd.DataFrame(
+            {
+                "date": [
+                    pd.Timestamp.today().normalize()
+                    - pd.DateOffset(months=1)
+                    - pd.Timedelta(days=1)
+                ],
+                "valuation": [100],
+            }
+        )
+
+        self.assertEqual(
+            generator.generate_asset_recently_history_chart(df), ""
+        )
+
+
 class GraphGeneratorAssetDrawdownTest(unittest.TestCase):
     def test_drawdown_uses_the_highest_profit_point_as_the_peak(self) -> None:
         df = pd.DataFrame(

@@ -876,6 +876,49 @@ def get_asset_waterfall_chart(request: Request) -> HTMLResponse:
     return HTMLResponse(content=graph_html)
 
 
+@app.get("/api/asset_recently_history_chart", response_class=HTMLResponse)
+def get_asset_recently_history_chart(request: Request) -> HTMLResponse:
+    log.info("start 'get_asset_recently_history_chart' method")
+    server_tools: ServerTools = ServerTools(app, gspread_handler)
+    theme = request.cookies.get("theme", "light")
+    _, df_items, df_monthly, _ = get_cached_asset_table(asset_manager)
+    df_records = get_cached_asset_history_records(asset_manager)
+    if df_records.empty:
+        df_records = df_monthly
+    if df_records.empty:
+        log.info("No asset history data for recent history graph.")
+        return HTMLResponse(content="")
+
+    latest_invest_amount = df_records["invest_amount"].iloc[-1]
+    current_valuation = df_items["valuation"].sum()
+    df_records = pd.concat(
+        [
+            df_records,
+            pd.DataFrame(
+                [
+                    {
+                        "date": dt.date.today(),
+                        "invest_amount": latest_invest_amount,
+                        "valuation": current_valuation,
+                        "profit": current_valuation - latest_invest_amount,
+                    }
+                ]
+            ),
+        ],
+        ignore_index=True,
+    )
+    graph_html = get_cached_graph(
+        _df_cache_asset_table,
+        _df_cache_asset_table_lock,
+        ("asset_recently_history", theme, dt.date.today()),
+        lambda: server_tools.graph_generator.generate_asset_recently_history_chart(
+            df_records, theme=theme, include_plotlyjs=False
+        ),
+    )
+    log.info("end 'get_asset_recently_history_chart' method")
+    return HTMLResponse(content=graph_html)
+
+
 @app.get("/api/asset_heatmap_chart", response_class=HTMLResponse)
 def get_asset_heatmap_chart(request: Request) -> HTMLResponse:
     log.info("start 'get_asset_heatmap_chart' method")

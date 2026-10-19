@@ -61,9 +61,10 @@ function getVisibleYRange(graphDiv, xRangeOverride) {
   const rawXRange = xRangeOverride || xaxis?.range;
   const xRange = rawXRange?.map((value) => new Date(value).getTime());
   const hasXRange = xRange?.length === 2 && xRange.every(Number.isFinite);
-  let ymin = isLog ? Infinity : 0;
-  let ymax = 0;
+  let ymin = Infinity;
+  let ymax = -Infinity;
   let hasValue = false;
+  let hasBarZeroBaseline = false;
 
   for (const trace of graphDiv._fullData || graphDiv.data || []) {
     if (
@@ -104,8 +105,17 @@ function getVisibleYRange(graphDiv, xRangeOverride) {
         hasValue = true;
         continue;
       }
-      ymin = Math.min(ymin, base ?? 0, endpoint);
-      ymax = Math.max(ymax, base ?? 0, endpoint);
+      const baseline =
+        base ??
+        (trace.type === "bar" || trace.type === "waterfall" ? 0 : value);
+      if (
+        (trace.type === "bar" || trace.type === "waterfall") &&
+        baseline === 0
+      ) {
+        hasBarZeroBaseline = true;
+      }
+      ymin = Math.min(ymin, baseline, endpoint);
+      ymax = Math.max(ymax, baseline, endpoint);
       hasValue = true;
     }
   }
@@ -114,8 +124,12 @@ function getVisibleYRange(graphDiv, xRangeOverride) {
   if (isLog) {
     return [Math.log10(ymin / 1.2), Math.log10(ymax * 1.2)];
   }
-  const margin = Math.max(Math.abs(ymin), Math.abs(ymax), 1) * 0.2;
-  return [ymin - (ymin < 0 ? margin : 0), ymax + margin];
+  const margin = Math.max(
+    (ymax - ymin) * 0.2,
+    Math.max(Math.abs(ymin), Math.abs(ymax), 1) * 0.01,
+  );
+  const lowerMargin = hasBarZeroBaseline && ymin >= 0 ? 0 : margin;
+  return [ymin - lowerMargin, ymax + margin];
 }
 
 function updateYaxis(graphDiv, xRange) {

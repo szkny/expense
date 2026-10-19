@@ -35,6 +35,11 @@ const allChartConfigs = {
       hasDropdown: false,
     },
     {
+      id: "asset-recently-history",
+      endpoint: "/api/asset_recently_history_chart",
+      hasDropdown: false,
+    },
+    {
       id: "asset-waterfall",
       endpoint: "/api/asset_waterfall_chart",
       hasDropdown: false,

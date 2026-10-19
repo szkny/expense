@@ -1,4 +1,4 @@
-const CACHE_NAME = "expense-cache-v3";
+const CACHE_NAME = "expense-cache-v4";
 const urlsToCache = [
   "/",
   "/asset_management",

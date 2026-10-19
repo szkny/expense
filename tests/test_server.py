@@ -29,7 +29,7 @@ class TestServiceWorkerRoute(unittest.TestCase):
         self.assertIn(
             "application/javascript", response.headers["content-type"]
         )
-        self.assertIn('const CACHE_NAME = "expense-cache-v3"', response.text)
+        self.assertIn('const CACHE_NAME = "expense-cache-v4"', response.text)
 
     def test_repeated_requests_do_not_add_static_mounts_or_change_response(
         self,
@@ -65,6 +65,65 @@ class TestServiceWorkerRoute(unittest.TestCase):
         self.assertEqual(first.status_code, 200)
         self.assertEqual(second.status_code, 200)
         self.assertEqual(second.json(), first.json())
+
+
+class TestAssetRecentlyHistoryChartRoute(unittest.TestCase):
+    def test_passes_recent_history_and_current_valuation_to_generator(
+        self,
+    ) -> None:
+        today = pd.Timestamp.today().normalize()
+        df_items = pd.DataFrame({"valuation": [250]})
+        df_monthly = pd.DataFrame(
+            {
+                "date": [today - pd.Timedelta(days=20)],
+                "invest_amount": [100],
+                "valuation": [110],
+                "profit": [10],
+            }
+        )
+        df_daily = pd.DataFrame(
+            {
+                "date": [today - pd.Timedelta(days=1)],
+                "invest_amount": [100],
+                "valuation": [120],
+                "profit": [20],
+            }
+        )
+        graph_generator = Mock()
+        graph_generator.generate_asset_recently_history_chart.return_value = (
+            "<div>recent</div>"
+        )
+        server_tools = Mock(graph_generator=graph_generator)
+
+        with (
+            patch("expense.api.server.ServerTools", return_value=server_tools),
+            patch(
+                "expense.api.server.get_cached_asset_table",
+                return_value=(
+                    pd.DataFrame(),
+                    df_items,
+                    df_monthly,
+                    pd.DataFrame(),
+                ),
+            ),
+            patch(
+                "expense.api.server.get_cached_asset_history_records",
+                return_value=df_daily,
+            ),
+            patch(
+                "expense.api.server.get_cached_graph",
+                side_effect=lambda *args: args[-1](),
+            ),
+        ):
+            response = TestClient(app).get("/api/asset_recently_history_chart")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.text, "<div>recent</div>")
+        graph_data = graph_generator.generate_asset_recently_history_chart.call_args.args[
+            0
+        ]
+        self.assertEqual(list(graph_data["valuation"]), [120, 250])
+        self.assertEqual(pd.Timestamp(graph_data["date"].iloc[-1]), today)
 
 
 class TestLazyGspreadHandler(unittest.TestCase):

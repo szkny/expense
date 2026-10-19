@@ -1970,6 +1970,80 @@ class GraphGenerator(Base):
         log.info("end 'generate_asset_waterfall_chart' method")
         return graph_html
 
+    def generate_asset_recently_history_chart(
+        self,
+        df: pd.DataFrame,
+        theme: str = "light",
+        include_plotlyjs: bool | str = True,
+    ) -> str:
+        """直近1か月の資産評価額推移を生成する。"""
+        log.info("start 'generate_asset_recently_history_chart' method")
+        if df.empty:
+            return ""
+
+        df_graph = df.copy()
+        df_graph["date"] = pd.to_datetime(df_graph["date"], errors="coerce")
+        df_graph["valuation"] = pd.to_numeric(
+            df_graph["valuation"], errors="coerce"
+        )
+        df_graph = df_graph.dropna(subset=["date", "valuation"])
+        df_graph["date"] = df_graph["date"].dt.normalize()
+
+        today = pd.Timestamp(dt.date.today())
+        start_date = today - pd.DateOffset(months=1)
+        df_graph = df_graph.loc[df_graph["date"] <= today].sort_values("date")
+        df_graph = df_graph.drop_duplicates(subset=["date"], keep="last")
+        if df_graph.empty:
+            return ""
+        df_visible = df_graph.loc[df_graph["date"].between(start_date, today)]
+        if df_visible.empty:
+            return ""
+
+        fig = go.Figure(
+            go.Scatter(
+                x=df_graph["date"],
+                y=df_graph["valuation"],
+                name="評価額",
+                mode="lines+markers",
+                line=dict(
+                    width=2, color="#4466cc" if theme == "dark" else "#3355bb"
+                ),
+                hovertemplate="評価額 ¥%{y:,.0f}<extra></extra>",
+            )
+        )
+        self._update_layout(fig, theme)
+        fig.update_layout(
+            title="直近の資産推移",
+            hovermode="x unified",
+            dragmode="pan",
+        )
+        fig.update_xaxes(
+            range=[start_date, today],
+            type="date",
+            fixedrange=False,
+        )
+        min_value = float(df_visible["valuation"].min())
+        max_value = float(df_visible["valuation"].max())
+        margin = max(
+            (max_value - min_value) * 0.2,
+            max(abs(min_value), abs(max_value), 1.0) * 0.01,
+        )
+        fig.update_yaxes(
+            range=[min_value - margin, max_value + margin],
+            autorange=False,
+            fixedrange=True,
+        )
+        fig.update_yaxes(**self._format_yaxis_ticks(fig))
+
+        graph_html = self._figure_to_html(
+            fig,
+            include_plotlyjs,
+            autoscale_yaxis=True,
+            clear_hover_on_leave=True,
+        )
+        log.info("end 'generate_asset_recently_history_chart' method")
+        return graph_html
+
     def generate_asset_monthly_history_chart(
         self,
         df: pd.DataFrame,
