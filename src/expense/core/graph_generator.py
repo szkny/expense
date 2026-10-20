@@ -2632,7 +2632,6 @@ class GraphGenerator(Base):
                     )
                 ),
                 hovertemplate=(
-                    "%{x|%-Y年%-m月%-d日}<br>"
                     "<b>ドローダウン %{y:.2%}</b><br>"
                     "金額 %{customdata}<extra></extra>"
                 ),
