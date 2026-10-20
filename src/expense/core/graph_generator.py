@@ -2636,6 +2636,7 @@ class GraphGenerator(Base):
                     "<b>ドローダウン %{y:.2%}</b><br>"
                     "金額 %{customdata}<extra></extra>"
                 ),
+                showlegend=False,
             )
         )
         fig.add_trace(
