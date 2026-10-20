@@ -221,12 +221,39 @@ class GraphGeneratorAssetDrawdownTest(unittest.TestCase):
         self.assertIn("金額 %{customdata}", trace.hovertemplate)
         self.assertEqual(trace.mode, "lines")
         self.assertEqual(figure.layout.annotations[0].text, "-9.09%")
+        self.assertEqual(figure.data[1].mode, "text")
+        self.assertEqual(list(figure.data[1].text), [])
+        self.assertEqual(figure.data[1].textposition, "bottom center")
         self.assertEqual(figure.layout.dragmode, "pan")
         self.assertTrue(render.call_args.kwargs["config"]["scrollZoom"])
         self.assertTrue(render.call_args.kwargs["clear_hover_on_leave"])
         self.assertEqual(graph_html, "<div>chart</div>")
 
-    def test_initial_x_axis_range_spans_six_months_before_and_one_after(self) -> None:
+    def test_labels_deepest_drawdown_in_each_significant_decline(self) -> None:
+        generator = GraphGenerator.__new__(GraphGenerator)
+        df = pd.DataFrame(
+            {
+                "date": pd.date_range("2026-01-01", periods=8),
+                "invest_amount": [100] * 8,
+                "valuation": [200, 180, 198, 170, 200, 220, 198, 220],
+                "profit": [100, 80, 98, 70, 100, 120, 98, 120],
+            }
+        )
+
+        figure, _, _ = capture_chart_figure(
+            generator, generator.generate_asset_drawdown_history_chart, df
+        )
+
+        labels = figure.data[1]
+        self.assertEqual(list(labels.text), ["-15.00%", "-10.00%"])
+        self.assertEqual(
+            pd.to_datetime(list(labels.x)).tolist(),
+            [pd.Timestamp("2026-01-04"), pd.Timestamp("2026-01-07")],
+        )
+
+    def test_initial_x_axis_range_spans_six_months_before_and_one_after(
+        self,
+    ) -> None:
         generator = GraphGenerator.__new__(GraphGenerator)
         df = pd.DataFrame(
             {

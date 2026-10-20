@@ -2583,7 +2583,7 @@ class GraphGenerator(Base):
         ).sort_values("date")
         df_graph = df_graph.loc[
             df_graph["date"] <= pd.Timestamp(dt.date.today())
-        ]
+        ].reset_index(drop=True)
         if df_graph.empty:
             return ""
         df_graph["drawdown"], df_graph["drawdown_amount"] = (
@@ -2591,6 +2591,23 @@ class GraphGenerator(Base):
         )
 
         values = df_graph["drawdown"].tolist()
+        # Keep rebounds in the same event until drawdown returns to zero.
+        underwater = df_graph["drawdown"] < 0
+        drawdown_events = (~underwater).cumsum()
+        drawdown_trough_positions = (
+            df_graph.loc[underwater]
+            .groupby(drawdown_events[underwater], sort=False)["drawdown"]
+            .idxmin()
+            .to_numpy()
+        )
+        trough_values = df_graph.iloc[drawdown_trough_positions][
+            "drawdown"
+        ].to_numpy()
+        major_drawdown_positions = drawdown_trough_positions[
+            (trough_values <= -0.05)
+            & (drawdown_trough_positions < len(df_graph) - 1)
+        ]
+        major_drawdowns = df_graph.iloc[major_drawdown_positions]
         fig = go.Figure(
             go.Scatter(
                 x=df_graph["date"],
@@ -2619,6 +2636,24 @@ class GraphGenerator(Base):
                     "<b>ドローダウン %{y:.2%}</b><br>"
                     "金額 %{customdata}<extra></extra>"
                 ),
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=major_drawdowns["date"],
+                y=major_drawdowns["drawdown"],
+                text=major_drawdowns["drawdown"].map(
+                    lambda value: f"{value:.2%}"
+                ),
+                mode="text",
+                textposition="bottom center",
+                textfont=dict(
+                    size=11,
+                    weight="bold",
+                    color="#ffffff" if theme == "dark" else "#000000",
+                ),
+                hoverinfo="skip",
+                showlegend=False,
             )
         )
         fig.add_annotation(
