@@ -2638,15 +2638,15 @@ class GraphGenerator(Base):
         fig.add_hline(y=0, line_width=1, line_dash="dot", line_color="#888888")
         self._update_layout(fig, theme)
         latest_date = df_graph["date"].max()
-        earliest_visible_date = max(
-            df_graph["date"].min(), latest_date - pd.DateOffset(years=3)
-        )
         fig.update_layout(
             title="資産ドローダウンの推移",
             hovermode="x unified",
             dragmode="pan",
             xaxis=dict(
-                range=[earliest_visible_date, latest_date],
+                range=[
+                    latest_date - pd.DateOffset(months=6),
+                    latest_date + pd.DateOffset(months=1),
+                ],
                 fixedrange=False,
             ),
         )

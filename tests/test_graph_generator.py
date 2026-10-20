@@ -226,7 +226,7 @@ class GraphGeneratorAssetDrawdownTest(unittest.TestCase):
         self.assertTrue(render.call_args.kwargs["clear_hover_on_leave"])
         self.assertEqual(graph_html, "<div>chart</div>")
 
-    def test_initial_x_axis_range_is_limited_to_three_years(self) -> None:
+    def test_initial_x_axis_range_spans_six_months_before_and_one_after(self) -> None:
         generator = GraphGenerator.__new__(GraphGenerator)
         df = pd.DataFrame(
             {
@@ -243,7 +243,11 @@ class GraphGeneratorAssetDrawdownTest(unittest.TestCase):
 
         self.assertEqual(
             pd.Timestamp(figure.layout.xaxis.range[0]),
-            pd.Timestamp("2023-01-01"),
+            pd.Timestamp("2025-07-01"),
+        )
+        self.assertEqual(
+            pd.Timestamp(figure.layout.xaxis.range[1]),
+            pd.Timestamp("2026-02-01"),
         )
 
     def test_ignores_future_rows_from_sheet_formulas(self) -> None:
