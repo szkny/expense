@@ -293,8 +293,14 @@ export function initCollapsibleSections() {
 
 export function initCardReordering() {
   const container = document.querySelector(".container");
-  const cards = Array.from(container?.querySelectorAll(":scope > .card") ?? []);
-  if (!container || cards.length < 2) return;
+  const cardContainer =
+    container?.querySelector(
+      ":scope > #home-content, :scope > #asset-content",
+    ) ?? container;
+  const cards = Array.from(
+    cardContainer?.querySelectorAll(":scope > .card") ?? [],
+  );
+  if (!cardContainer || cards.length < 2) return;
 
   const pageKey = location.pathname === "/asset_management" ? "asset" : "home";
   const storageKey = `expense.cardOrder.${pageKey}`;
@@ -307,14 +313,14 @@ export function initCardReordering() {
     if (Array.isArray(savedKeys)) {
       savedKeys
         .filter((key) => cardByKey.has(key))
-        .forEach((key) => container.appendChild(cardByKey.get(key)));
+        .forEach((key) => cardContainer.appendChild(cardByKey.get(key)));
     }
   } catch {
     localStorage.removeItem(storageKey);
   }
 
   const saveOrder = () => {
-    const order = Array.from(container.querySelectorAll(":scope > .card"))
+    const order = Array.from(cardContainer.querySelectorAll(":scope > .card"))
       .map((card) => card.dataset.cardKey)
       .filter(Boolean);
     localStorage.setItem(storageKey, JSON.stringify(order));
@@ -413,7 +419,7 @@ export function initCardReordering() {
       touchPlaceholder.style.height = `${rect.height}px`;
       touchPlaceholder.textContent = "ドラッグ＆ドロップで並び替え";
       touchOriginalStyle = card.getAttribute("style");
-      container.insertBefore(touchPlaceholder, card);
+      cardContainer.insertBefore(touchPlaceholder, card);
       card.style.position = "fixed";
       card.style.left = "-10000px";
       card.style.top = "-10000px";
@@ -504,7 +510,7 @@ export function initCardReordering() {
         const previousPositions = new Map(
           cards.map((item) => [item, item.getBoundingClientRect()]),
         );
-        container.insertBefore(
+        cardContainer.insertBefore(
           touchPlaceholder,
           insertBefore ? target : target.nextSibling,
         );
@@ -569,7 +575,7 @@ export function initCardReordering() {
       if (!draggedCard || draggedCard === card) return;
       const rect = card.getBoundingClientRect();
       const insertBefore = event.clientY < rect.top + rect.height / 2;
-      container.insertBefore(
+      cardContainer.insertBefore(
         draggedCard,
         insertBefore ? card : card.nextSibling,
       );
