@@ -78,7 +78,6 @@ class ServerTools(Base):
 
         self.expense_handler = Expense()
         self.gspread_handler: GspreadHandler = gspread_handler
-        self.gspread_url: str = self.gspread_handler.get_spreadsheet_url()
         self.termux_api: TermuxAPI = TermuxAPI()
         self.notification: NotificationManager = NotificationManager()
 
@@ -301,16 +300,13 @@ class ServerTools(Base):
                 "prev_monthly_total": 0,
             }
 
-        # Plotly.js
-        plotlyjs = self.graph_generator.get_plotlyjs()
-
         log.info("end 'generate_commons' method")
         return {
             "icons": self.icons,
             "theme": theme,
             "expense_date_range": expense_date_range,
             "n_records": n_records,
-            "gspread_url": self.gspread_url,
+            "gspread_url": "",
             "items": items,
             "records": recent_expenses,
             "recurring_expenses": recurring_expenses,
@@ -318,6 +314,5 @@ class ServerTools(Base):
             "screenshot_base64": img_base64,
             "disable_ocr": disable_ocr,
             "today": dt.datetime.today().date().isoformat(),
-            "plotlyjs": plotlyjs,
             **report_summary,
         }

@@ -12,7 +12,7 @@
   <script src="/static/js/plotly_yaxis_autoscale.js"></script>
 </head>
 
-<body data-reload-icon="{{ icons.get('reload', '↻') }}">
+<body data-reload-icon="{{ icons.get('reload', '↻') }}" data-plotly-version="{{ plotly_version }}">
   <button id="install-btn" class="btn install" style="display: none;"> {{ icons.get("pwa_install", "📲") }}
     インストール</button>
   <button id="hamburger-menu-btn" class="small-btn"> ☰ </button>
@@ -39,6 +39,13 @@
       <button id="msg-close-btn" type="button" class="btn-close"> ✕ </button>
     </div>
 
+    <div id="home-content">
+      {% if home_data_loading %}
+      <div class="card loading" role="status" aria-live="polite">
+        <div class="spinner"></div>
+        <p>家計簿を読み込んでいます...</p>
+      </div>
+      {% else %}
     <div class="card" data-card-key="register">
       <form method="post" action="/register">
         <h3 class="collapsible-trigger" data-key="register">
@@ -186,7 +193,7 @@
         </div>
       </div>
       <div class="link-container">
-        <a href="{{ gspread_url }}" class="link-text">
+        <a id="spreadsheet-link" href="{{ gspread_url }}" class="link-text" hidden>
           {{ icons.get("link", "🔗") }} スプレッドシートを開く </a>
       </div>
       <div id="record-container" class="collapsible-content">
@@ -238,7 +245,6 @@
           <li> 前月の支出金額 : ¥{{ "{:,}".format(prev_monthly_total) }} </li>
         </div>
         <div class="graph-container">
-          {{ plotlyjs | safe }}
           <hr>
           <div id="pie-chart-controls" class="chart-controls"></div>
           <div id="pie-chart-container" class="loading">
@@ -267,12 +273,14 @@
         </div>
       </div>
     </div>
+      {% endif %}
+    </div>
 
   </div>
   <div id="loader" class="overlay" style="display: none;">
     <div class="spinner"></div>
   </div>
 </body>
-<script type="module" src="/static/js/main.js"></script>
+<script type="module" src="/static/js/home.js"></script>
 
 </html>

@@ -29,7 +29,7 @@ class TestServiceWorkerRoute(unittest.TestCase):
         self.assertIn(
             "application/javascript", response.headers["content-type"]
         )
-        self.assertIn('const CACHE_NAME = "expense-cache-v4"', response.text)
+        self.assertIn('const CACHE_NAME = "expense-cache-v5"', response.text)
 
     def test_repeated_requests_do_not_add_static_mounts_or_change_response(
         self,
@@ -98,9 +98,10 @@ class TestRecurringExpenseDialog(unittest.TestCase):
         }
 
         with patch("expense.api.server.ServerTools", return_value=server_tools):
-            response = TestClient(app).get("/")
+            response = TestClient(app).get("/api/home")
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["cache-control"], "no-store")
         self.assertIn("この内容で登録しますか？", response.text)
         self.assertIn("3,000円", response.text)
         self.assertIn("&lt;script&gt;", response.text)
@@ -108,6 +109,41 @@ class TestRecurringExpenseDialog(unittest.TestCase):
         self.assertIn('data-today="2026-04-15"', response.text)
         self.assertIn('data-expense-type="通信費"', response.text)
         self.assertIn('name="expense_date" value="2026-04-15"', response.text)
+
+
+class TestHomeShell(unittest.TestCase):
+    def test_root_returns_shell_without_generating_home_data(self) -> None:
+        server_tools = Mock(templates=app.state.templates, icons={})
+
+        with patch("expense.api.server.ServerTools", return_value=server_tools):
+            response = TestClient(app).get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("家計簿を読み込んでいます", response.text)
+        server_tools.generate_commons.assert_not_called()
+
+    def test_plotly_bundle_is_cached_separately(self) -> None:
+        with patch(
+            "expense.api.server._get_plotlyjs_bundle",
+            return_value="window.Plotly = {};",
+        ):
+            response = TestClient(app).get("/plotly.js")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.text, "window.Plotly = {};")
+        self.assertIn("max-age=86400", response.headers["cache-control"])
+
+    def test_spreadsheet_url_is_loaded_separately(self) -> None:
+        handler = Mock(
+            get_spreadsheet_url=Mock(return_value="https://example.test")
+        )
+
+        with patch("expense.api.server.gspread_handler", handler):
+            response = TestClient(app).get("/api/spreadsheet_url")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"url": "https://example.test"})
+        self.assertEqual(response.headers["cache-control"], "no-store")
 
 
 class TestAssetRecentlyHistoryChartRoute(unittest.TestCase):

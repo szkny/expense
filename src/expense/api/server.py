@@ -5,9 +5,12 @@ import logging
 import datetime as dt
 import threading
 import time
+from functools import lru_cache
 from typing import Any
 import pandas as pd
 from typing import Callable
+import plotly
+from plotly.offline import get_plotlyjs
 
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import (
@@ -276,6 +279,20 @@ async def manifest() -> FileResponse:
     return FileResponse("static/manifest.json")
 
 
+@lru_cache(maxsize=1)
+def _get_plotlyjs_bundle() -> str:
+    return get_plotlyjs()
+
+
+@app.get("/plotly.js")
+def plotlyjs() -> Response:
+    return Response(
+        content=_get_plotlyjs_bundle(),
+        media_type="application/javascript",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
+
 @app.get("/api/notifications/config", response_class=JSONResponse)
 def notification_config() -> JSONResponse:
     try:
@@ -323,7 +340,7 @@ def read_root(
     """
     log.info("start 'read_root' method")
     server_tools: ServerTools = ServerTools(app, gspread_handler)
-    commons = server_tools.generate_commons(request)
+    theme = request.cookies.get("theme", "light")
     log.info("end 'read_root' method")
     return server_tools.templates.TemplateResponse(
         "index.j2",
@@ -332,8 +349,33 @@ def read_root(
             "status": status,
             "msg": msg,
             "info": info,
-            **commons,
+            "icons": server_tools.icons,
+            "theme": theme,
+            "plotly_version": plotly.__version__,
+            "home_data_loading": True,
         },
+    )
+
+
+@app.get("/api/home", response_class=HTMLResponse)
+def home_content(request: Request) -> HTMLResponse:
+    """トップページの履歴や集計をHTMLで返す。"""
+    server_tools = ServerTools(app, gspread_handler)
+    commons = server_tools.generate_commons(request)
+    commons["home_data_loading"] = False
+    commons["plotly_version"] = plotly.__version__
+    response = server_tools.templates.TemplateResponse(
+        "index.j2", {"request": request, **commons}
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.get("/api/spreadsheet_url", response_class=JSONResponse)
+def get_spreadsheet_url() -> JSONResponse:
+    return JSONResponse(
+        content={"url": gspread_handler.get_spreadsheet_url()},
+        headers={"Cache-Control": "no-store"},
     )
 
 

@@ -62,6 +62,23 @@ const allChartConfigs = {
   ],
 };
 
+let plotlyLoadPromise;
+
+function ensurePlotlyLoaded() {
+  if (window.Plotly) return Promise.resolve();
+  if (!plotlyLoadPromise) {
+    plotlyLoadPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      const version = document.body.dataset.plotlyVersion || "1";
+      script.src = `/plotly.js?v=${encodeURIComponent(version)}`;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error("Failed to load Plotly.js"));
+      document.head.appendChild(script);
+    });
+  }
+  return plotlyLoadPromise;
+}
+
 function getCurrentFiscalYear() {
   const today = new Date();
   return String(today.getFullYear() - (today.getMonth() + 1 < 4 ? 1 : 0));
@@ -147,6 +164,7 @@ export async function fetchAndRenderChart(config, params = {}, force = false) {
       initAssetMasking();
     }
     const scripts = container.getElementsByTagName("script");
+    if (scripts.length > 0) await ensurePlotlyLoaded();
     for (let i = 0; i < scripts.length; i++) {
       new Function(scripts[i].innerHTML)();
     }
@@ -369,6 +387,10 @@ export function initializeCharts() {
   const assetChartContainer = document.getElementById("asset-chart-container");
 
   if (!reportContainer && !assetChartContainer) return;
+
+  ensurePlotlyLoaded().catch((error) => {
+    console.error("Failed to load Plotly.js:", error);
+  });
 
   if (reportContainer) {
     allChartConfigs.report.forEach((config) => fetchAndRenderChart(config));
