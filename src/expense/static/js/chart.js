@@ -23,11 +23,6 @@ const allChartConfigs = {
     },
   ],
   asset: [
-    {
-      id: "asset-summary",
-      endpoint: "/api/asset_summary",
-      hasDropdown: false,
-    },
     { id: "asset-pie", endpoint: "/api/asset_pie_chart", hasDropdown: false },
     {
       id: "asset-heatmap",
@@ -279,30 +274,42 @@ function initAssetSimulation() {
     }
   }
 
-  if (!yieldInput || !investmentInput || !yearsInput) return;
-  if (!config) return;
-
-  const updateSim = (isInitial = false, force = false) => {
-    const params = getParams();
-    localStorage.setItem("simParams", JSON.stringify(params));
-    if (
-      yieldInput.value === "" ||
-      investmentInput.value === "" ||
-      yearsInput.value === ""
-    ) {
-      if (isInitial) {
-        fetchAndRenderChart(config, {}, force);
+  if (yieldInput && investmentInput && yearsInput && config) {
+    const updateSim = () => {
+      const params = getParams();
+      localStorage.setItem("simParams", JSON.stringify(params));
+      if (
+        yieldInput.value === "" ||
+        investmentInput.value === "" ||
+        yearsInput.value === ""
+      ) {
+        return;
       }
-      return;
-    }
-    fetchAndRenderChart(config, params, force);
-  };
+      fetchAndRenderChart(config, params);
+    };
 
-  updateSim(true);
+    [yieldInput, investmentInput, yearsInput].forEach((input) => {
+      input.addEventListener("change", updateSim);
+    });
+  }
 
-  [yieldInput, investmentInput, yearsInput].forEach((input) => {
-    input.addEventListener("change", () => updateSim(false));
-  });
+  return getParams;
+}
+
+let tradingViewLoadPromise;
+
+function ensureTradingViewLoaded() {
+  if (window.TradingView) return Promise.resolve();
+  if (!tradingViewLoadPromise) {
+    tradingViewLoadPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://s3.tradingview.com/tv.js";
+      script.onload = resolve;
+      script.onerror = () => reject(new Error("Failed to load TradingView"));
+      document.head.appendChild(script);
+    });
+  }
+  return tradingViewLoadPromise;
 }
 
 function initTradingViewChart() {
@@ -318,8 +325,14 @@ function initTradingViewChart() {
     ? "dark"
     : "light";
 
-  const loadChart = (symbol) => {
+  const loadChart = async (symbol) => {
     if (!symbol) return;
+    try {
+      await ensureTradingViewLoaded();
+    } catch (error) {
+      console.error("Failed to load TradingView:", error);
+      return;
+    }
     let tvSymbol = symbol;
     if (symbol === "USDJPY") {
       tvSymbol = "FX:USDJPY";
@@ -388,23 +401,60 @@ export function initializeCharts() {
 
   if (!reportContainer && !assetChartContainer) return;
 
-  ensurePlotlyLoaded().catch((error) => {
-    console.error("Failed to load Plotly.js:", error);
-  });
-
   if (reportContainer) {
     allChartConfigs.report.forEach((config) => fetchAndRenderChart(config));
   }
 
   if (assetChartContainer) {
+    let initialized = false;
     const initAssetChart = () => {
+      if (initialized) return;
+      initialized = true;
+      const getSimulationParams = initAssetSimulation() || (() => ({}));
       allChartConfigs.asset.forEach((config) => {
-        if (config.id !== "asset-monthly-history") {
-          fetchAndRenderChart(config);
+        const container = document.getElementById(
+          `${config.id}-chart-container`,
+        );
+        if (!container) return;
+
+        const loadChart = () =>
+          fetchAndRenderChart(
+            config,
+            config.id === "asset-monthly-history" ? getSimulationParams() : {},
+          );
+        if (!("IntersectionObserver" in window)) {
+          loadChart();
+          return;
         }
+
+        const observer = new IntersectionObserver(
+          (entries) => {
+            if (!entries.some((entry) => entry.isIntersecting)) return;
+            observer.disconnect();
+            loadChart();
+          },
+          { rootMargin: "300px" },
+        );
+        observer.observe(container);
       });
-      initTradingViewChart();
-      initAssetSimulation();
+      const tradingViewContainer = document.getElementById(
+        "asset-tradingview-chart-container",
+      );
+      if (tradingViewContainer) {
+        if (!("IntersectionObserver" in window)) {
+          initTradingViewChart();
+        } else {
+          const observer = new IntersectionObserver(
+            (entries) => {
+              if (!entries.some((entry) => entry.isIntersecting)) return;
+              observer.disconnect();
+              initTradingViewChart();
+            },
+            { rootMargin: "300px" },
+          );
+          observer.observe(tradingViewContainer);
+        }
+      }
     };
 
     const trigger = document.querySelector("[data-key='asset-chart']");

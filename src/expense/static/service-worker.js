@@ -1,10 +1,11 @@
-const CACHE_NAME = "expense-cache-v5";
+const CACHE_NAME = "expense-cache-v6";
 const urlsToCache = [
   "/",
   "/asset_management",
   "/static/style.css",
   "/static/js/main.js",
   "/static/js/home.js",
+  "/static/js/asset.js",
   "/static/js/chart.js",
   "/static/js/plotly_yaxis_autoscale.js",
   "/static/js/ui.js",
@@ -83,9 +84,15 @@ self.addEventListener("notificationclick", (event) => {
 self.addEventListener("fetch", (event) => {
   const requestUrl = new URL(event.request.url);
   const isHomeContent = requestUrl.pathname === "/api/home";
+  const isAssetManagementContent =
+    requestUrl.pathname === "/api/asset_management/content";
 
-  // 家計ページのデータは、従来のトップページHTMLと同様にオフライン用に保持する。
-  if (event.request.url.includes("/api/") && !isHomeContent) {
+  // ページデータはネットワーク優先で取得し、オフライン用にも保持する。
+  if (
+    event.request.url.includes("/api/") &&
+    !isHomeContent &&
+    !isAssetManagementContent
+  ) {
     event.respondWith(fetch(event.request));
     return;
   }

@@ -425,21 +425,28 @@ def build_asset_summary_dict(
     return summary
 
 
-@app.get("/asset_management", response_class=HTMLResponse)
-def asset_management(
+def _get_asset_management_context(
     request: Request,
+    server_tools: ServerTools,
     status: bool | None = None,
     msg: str | None = None,
     info: str | None = None,
-) -> HTMLResponse:
-    """
-    資産管理ページ
-    """
-    log.info("start 'asset_management' method")
-    server_tools: ServerTools = ServerTools(app, gspread_handler)
-    df_summary, df_items, df_records, df_stock = get_cached_asset_table(
-        asset_manager
-    )
+    data_loading: bool = False,
+) -> dict[str, Any]:
+    context: dict[str, Any] = {
+        "request": request,
+        "status": status,
+        "msg": msg,
+        "info": info,
+        "icons": server_tools.icons,
+        "theme": request.cookies.get("theme", "light"),
+        "plotly_version": plotly.__version__,
+        "asset_data_loading": data_loading,
+    }
+    if data_loading:
+        return context
+
+    df_summary, df_items, _, df_stock = get_cached_asset_table(asset_manager)
     summary = build_asset_summary_dict(df_summary, df_items, df_stock)
     items = df_items.to_dict(orient="records")
     allocation_config = server_tools.config.get("asset_management", {}).get(
@@ -456,21 +463,13 @@ def asset_management(
         if allocation["action"] != "調整不要"
     ]
     asset_tickers = [
-        t for t in df_stock["ticker"].dropna().unique().tolist() if t != "JPY"
+        ticker
+        for ticker in df_stock["ticker"].dropna().unique().tolist()
+        if ticker != "JPY"
     ]
-    asset_tickers.append("VIX")
-    asset_tickers.append("High Yield Spread")
-    plotlyjs = server_tools.graph_generator.get_plotlyjs()
-    log.info("end 'asset_management' method")
-    return server_tools.templates.TemplateResponse(
-        "asset_management.j2",
+    asset_tickers.extend(["VIX", "High Yield Spread"])
+    context.update(
         {
-            "request": request,
-            "status": status,
-            "msg": msg,
-            "info": info,
-            "icons": server_tools.icons,
-            "gspread_url": asset_manager.get_spreadsheet_url(),
             "today": dt.datetime.today(),
             "asset_summary": summary,
             "asset_items": items,
@@ -478,8 +477,48 @@ def asset_management(
             "allocation_adjustments": allocation_adjustments,
             "allocation_tolerance_percent": tolerance_percent,
             "asset_tickers": asset_tickers,
-            "plotlyjs": plotlyjs,
-        },
+        }
+    )
+    return context
+
+
+@app.get("/asset_management", response_class=HTMLResponse)
+def asset_management(
+    request: Request,
+    status: bool | None = None,
+    msg: str | None = None,
+    info: str | None = None,
+) -> HTMLResponse:
+    """
+    資産管理ページ
+    """
+    log.info("start 'asset_management' method")
+    server_tools: ServerTools = ServerTools(app, gspread_handler)
+    log.info("end 'asset_management' method")
+    return server_tools.templates.TemplateResponse(
+        "asset_management.j2",
+        _get_asset_management_context(
+            request, server_tools, status, msg, info, data_loading=True
+        ),
+    )
+
+
+@app.get("/api/asset_management/content", response_class=HTMLResponse)
+def asset_management_content(request: Request) -> HTMLResponse:
+    server_tools = ServerTools(app, gspread_handler)
+    response = server_tools.templates.TemplateResponse(
+        "asset_management.j2",
+        _get_asset_management_context(request, server_tools),
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.get("/api/asset_spreadsheet_url", response_class=JSONResponse)
+def get_asset_spreadsheet_url() -> JSONResponse:
+    return JSONResponse(
+        content={"url": asset_manager.get_spreadsheet_url()},
+        headers={"Cache-Control": "no-store"},
     )
 
 

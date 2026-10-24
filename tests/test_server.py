@@ -29,7 +29,11 @@ class TestServiceWorkerRoute(unittest.TestCase):
         self.assertIn(
             "application/javascript", response.headers["content-type"]
         )
-        self.assertIn('const CACHE_NAME = "expense-cache-v5"', response.text)
+        self.assertIn('const CACHE_NAME = "expense-cache-v6"', response.text)
+        self.assertIn(
+            'requestUrl.pathname === "/api/asset_management/content"',
+            response.text,
+        )
 
     def test_repeated_requests_do_not_add_static_mounts_or_change_response(
         self,
@@ -140,6 +144,97 @@ class TestHomeShell(unittest.TestCase):
 
         with patch("expense.api.server.gspread_handler", handler):
             response = TestClient(app).get("/api/spreadsheet_url")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"url": "https://example.test"})
+        self.assertEqual(response.headers["cache-control"], "no-store")
+
+
+class TestAssetManagementShell(unittest.TestCase):
+    def test_asset_management_returns_shell_without_loading_asset_data(
+        self,
+    ) -> None:
+        server_tools = Mock(templates=app.state.templates, icons={})
+        asset_manager = Mock()
+
+        with (
+            patch("expense.api.server.ServerTools", return_value=server_tools),
+            patch("expense.api.server.asset_manager", asset_manager),
+            patch(
+                "expense.api.server.get_cached_asset_table"
+            ) as get_asset_table,
+        ):
+            response = TestClient(app).get("/asset_management")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("資産データを読み込んでいます", response.text)
+        self.assertIn("/static/js/asset.js", response.text)
+        self.assertNotIn("window.Plotly", response.text)
+        get_asset_table.assert_not_called()
+        asset_manager.get_spreadsheet_url.assert_not_called()
+
+    def test_asset_content_is_not_cached_and_renders_asset_data(self) -> None:
+        server_tools = Mock(
+            templates=app.state.templates,
+            icons={},
+            config={"asset_management": {"allocation": {}}},
+        )
+        df_summary = pd.DataFrame(
+            [
+                {
+                    "change_jpy": 0,
+                    "change_pct": 0,
+                    "drawdown": 0,
+                    "usdjpy": 150,
+                    "profit_etf": 0,
+                    "roi": 0,
+                }
+            ]
+        )
+        df_items = pd.DataFrame(
+            [
+                {
+                    "ticker": "TEST",
+                    "num": 1,
+                    "acquisition": 100,
+                    "price_dollar": 1,
+                    "price": 150,
+                    "invest_amount": 100,
+                    "valuation": 150,
+                    "profit": 50,
+                    "weight": 100,
+                    "roi": 50,
+                }
+            ]
+        )
+        df_stock = pd.DataFrame({"ticker": ["JPY"], "change_pct": [0]})
+        asset_manager = Mock()
+        asset_manager.build_asset_allocation.return_value = []
+
+        with (
+            patch("expense.api.server.ServerTools", return_value=server_tools),
+            patch("expense.api.server.asset_manager", asset_manager),
+            patch(
+                "expense.api.server.get_cached_asset_table",
+                return_value=(df_summary, df_items, pd.DataFrame(), df_stock),
+            ),
+        ):
+            response = TestClient(app).get("/api/asset_management/content")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["cache-control"], "no-store")
+        self.assertIn("資産一覧", response.text)
+        self.assertIn("TEST", response.text)
+        self.assertNotIn("資産データを読み込んでいます", response.text)
+        self.assertNotIn("window.Plotly", response.text)
+        asset_manager.get_spreadsheet_url.assert_not_called()
+
+    def test_asset_spreadsheet_url_is_loaded_separately(self) -> None:
+        asset_manager = Mock()
+        asset_manager.get_spreadsheet_url.return_value = "https://example.test"
+
+        with patch("expense.api.server.asset_manager", asset_manager):
+            response = TestClient(app).get("/api/asset_spreadsheet_url")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"url": "https://example.test"})

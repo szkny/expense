@@ -12,7 +12,7 @@
   <script src="/static/js/plotly_yaxis_autoscale.js"></script>
 </head>
 
-<body data-reload-icon="{{ icons.get('reload', '↻') }}">
+<body data-reload-icon="{{ icons.get('reload', '↻') }}" data-plotly-version="{{ plotly_version }}">
   <button id="install-btn" class="btn install" style="display: none;"> {{ icons.get("pwa_install", "📲") }}
     インストール</button>
   <button id="hamburger-menu-btn" class="small-btn"> ☰ </button>
@@ -30,6 +30,13 @@
   <div class="container">
     <h1> {{ icons.get("title", "") }} Asset Management </h1>
 
+    <div id="asset-content">
+      {% if asset_data_loading %}
+      <div class="card loading" role="status" aria-live="polite">
+        <div class="spinner"></div>
+        <p>資産データを読み込んでいます...</p>
+      </div>
+      {% else %}
     {% if allocation_adjustments %}
     <div class="msg" id="success-msg">
       アセットアロケーションに調整が必要な項目があります。
@@ -78,7 +85,6 @@
         <span class="collapsible-toggle"></span>
       </h3>
       <div id="asset-chart-container" class="collapsible-content">
-        {{ plotlyjs | safe }}
         <div id="asset-pie-chart-controls" class="chart-controls"></div>
         <div id="asset-pie-chart-container" class="loading">
           <div class="spinner"></div>
@@ -251,18 +257,19 @@
         </div>
         <div class="link-container">
           <br>
-          <a href="{{ gspread_url }}" class="link-text">
+          <a id="asset-spreadsheet-link" href="#" class="link-text" hidden>
             {{ icons.get("link", "🔗") }} スプレッドシートを開く </a>
         </div>
       </div>
     </div>
 
+      {% endif %}
+    </div>
   </div>
   <div id="loader" class="overlay" style="display: none;">
     <div class="spinner"></div>
   </div>
 </body>
-<script src="https://s3.tradingview.com/tv.js"></script>
-<script type="module" src="/static/js/main.js"></script>
+<script type="module" src="/static/js/asset.js"></script>
 
 </html>
