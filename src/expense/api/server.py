@@ -341,6 +341,7 @@ def read_root(
     log.info("start 'read_root' method")
     server_tools: ServerTools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
+    fiscal_year = get_fiscal_year()
     log.info("end 'read_root' method")
     return server_tools.templates.TemplateResponse(
         "index.j2",
@@ -351,6 +352,12 @@ def read_root(
             "info": info,
             "icons": server_tools.icons,
             "theme": theme,
+            "expense_date_range": (
+                dt.date(fiscal_year, 4, 1).isoformat(),
+                dt.date(fiscal_year + 1, 3, 31).isoformat(),
+            ),
+            "today": dt.date.today().isoformat(),
+            "items": ["[HEAD] 支出タイプ", *server_tools.expense_types],
             "plotly_version": plotly.__version__,
             "home_data_loading": True,
         },

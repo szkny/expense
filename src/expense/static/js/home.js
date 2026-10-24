@@ -1,4 +1,29 @@
 const container = document.getElementById("home-content");
+const registerTrigger = document.querySelector(
+  '.collapsible-trigger[data-key="register"]',
+);
+
+if (registerTrigger) {
+  const registerContainer = document.getElementById("register-container");
+  registerTrigger.dataset.collapsibleInitialized = "true";
+  registerTrigger.setAttribute(
+    "aria-expanded",
+    String(document.documentElement.classList.contains("register-open")),
+  );
+  registerTrigger.addEventListener("click", () => {
+    const collapsed =
+      !document.documentElement.classList.contains("register-collapsed");
+    document.documentElement.classList.toggle("register-collapsed", collapsed);
+    document.documentElement.classList.toggle("register-open", !collapsed);
+    registerContainer?.classList.toggle("is-open", !collapsed);
+    registerTrigger.setAttribute("aria-expanded", String(!collapsed));
+    try {
+      localStorage.setItem("registerCollapsed", String(collapsed));
+    } catch {
+      // The input section remains usable when storage is unavailable.
+    }
+  });
+}
 
 async function loadHomeContent() {
   try {
@@ -10,7 +35,31 @@ async function loadHomeContent() {
     const content = documentFragment.getElementById("home-content");
     if (!container || !content) throw new Error("家計簿画面を表示できません。");
 
-    container.innerHTML = content.innerHTML;
+    const currentTypeSelect = document.getElementById("expense-type");
+    const loadedTypeSelect = documentFragment.getElementById("expense-type");
+    if (currentTypeSelect && loadedTypeSelect) {
+      const selectedType = currentTypeSelect.value;
+      const wasFocused = document.activeElement === currentTypeSelect;
+      currentTypeSelect.replaceChildren(
+        ...Array.from(loadedTypeSelect.options, (option) =>
+          option.cloneNode(true),
+        ),
+      );
+      if (
+        Array.from(currentTypeSelect.options).some(
+          (option) => option.value === selectedType,
+        )
+      ) {
+        currentTypeSelect.value = selectedType;
+      }
+      if (wasFocused) currentTypeSelect.focus({ preventScroll: true });
+    }
+
+    const registerCard = container.querySelector('[data-card-key="register"]');
+    const loadedCards = Array.from(content.children).filter(
+      (card) => card.dataset.cardKey !== "register",
+    );
+    container.replaceChildren(registerCard, ...loadedCards);
     try {
       await import("./main.js");
     } catch (error) {
@@ -29,7 +78,14 @@ async function loadHomeContent() {
       reloadButton.textContent = "再読み込み";
       reloadButton.addEventListener("click", () => location.reload());
       card.append(message, reloadButton);
-      container.replaceChildren(card);
+      const registerCard = container.querySelector(
+        '[data-card-key="register"]',
+      );
+      if (registerCard) {
+        container.replaceChildren(registerCard, card);
+      } else {
+        container.replaceChildren(card);
+      }
     }
   }
 }

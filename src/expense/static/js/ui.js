@@ -261,7 +261,8 @@ export function initCollapsibleSections() {
 
   triggers.forEach((trigger) => {
     const key = trigger.dataset.key;
-    if (!key) return;
+    if (!key || trigger.dataset.collapsibleInitialized) return;
+    trigger.dataset.collapsibleInitialized = "true";
 
     const container = trigger
       .closest(".card")

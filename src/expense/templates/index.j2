@@ -40,12 +40,6 @@
     </div>
 
     <div id="home-content">
-      {% if home_data_loading %}
-      <div class="card loading" role="status" aria-live="polite">
-        <div class="spinner"></div>
-        <p>家計簿を読み込んでいます...</p>
-      </div>
-      {% else %}
     <div class="card" data-card-key="register">
       <form method="post" action="/register">
         <h3 class="collapsible-trigger" data-key="register">
@@ -85,6 +79,13 @@
         </div>
       </form>
     </div>
+
+      {% if home_data_loading %}
+      <div class="card loading" role="status" aria-live="polite">
+        <div class="spinner"></div>
+        <p>家計簿を読み込んでいます...</p>
+      </div>
+      {% else %}
 
     {% if recurring_expenses %}
     <dialog id="recurring-expense-dialog" data-today="{{ today }}"

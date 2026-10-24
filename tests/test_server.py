@@ -29,7 +29,7 @@ class TestServiceWorkerRoute(unittest.TestCase):
         self.assertIn(
             "application/javascript", response.headers["content-type"]
         )
-        self.assertIn('const CACHE_NAME = "expense-cache-v6"', response.text)
+        self.assertIn('const CACHE_NAME = "expense-cache-v7"', response.text)
         self.assertIn(
             'requestUrl.pathname === "/api/asset_management/content"',
             response.text,
@@ -117,13 +117,20 @@ class TestRecurringExpenseDialog(unittest.TestCase):
 
 class TestHomeShell(unittest.TestCase):
     def test_root_returns_shell_without_generating_home_data(self) -> None:
-        server_tools = Mock(templates=app.state.templates, icons={})
+        server_tools = Mock(
+            templates=app.state.templates,
+            icons={},
+            expense_types=["食費", "給与"],
+        )
 
         with patch("expense.api.server.ServerTools", return_value=server_tools):
             response = TestClient(app).get("/")
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("家計簿を読み込んでいます", response.text)
+        self.assertIn('id="expense-type"', response.text)
+        self.assertIn('<option value="食費">', response.text)
+        self.assertIn('name="expense_date"', response.text)
         server_tools.generate_commons.assert_not_called()
 
     def test_plotly_bundle_is_cached_separately(self) -> None:
