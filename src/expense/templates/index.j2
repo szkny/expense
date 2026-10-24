@@ -79,6 +79,32 @@
       </form>
     </div>
 
+    {% if recurring_expenses %}
+    <dialog id="recurring-expense-dialog" data-today="{{ today }}"
+      aria-labelledby="recurring-expense-title">
+      <h2 id="recurring-expense-title">この内容で登録しますか？</h2>
+      <div class="recurring-expense-list">
+        {% for expense in recurring_expenses %}
+        <div class="recurring-expense-item" data-expense-type="{{ expense.expense_type | e }}"
+          data-expense-memo="{{ expense.expense_memo | e }}" data-expense-amount="{{ expense.expense_amount }}">
+          <p>
+            <strong>{{ expense.expense_type | e }}{% if expense.expense_memo %} {{ expense.expense_memo | e }}{% endif %}</strong>
+            <span>{{ "{:,}".format(expense.expense_amount) }}円</span>
+          </p>
+          <form method="post" action="/register">
+            <input type="hidden" name="expense_type" value="{{ expense.expense_type | e }}" />
+            <input type="hidden" name="expense_amount" value="{{ expense.expense_amount }}" />
+            <input type="hidden" name="expense_memo" value="{{ expense.expense_memo | e }}" />
+            <input type="hidden" name="expense_date" value="{{ today }}" />
+            <button type="submit" class="btn">登録する</button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+      <button id="recurring-expense-dismiss" type="button" class="btn secondary">今回は登録しない</button>
+    </dialog>
+    {% endif %}
+
     {% if screenshot_name %}
     <div class="card" data-card-key="ocr">
       <form id="ocr-complete-form" method="post" action="/ocr/complete"></form>

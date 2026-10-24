@@ -101,6 +101,62 @@ export function initExpenseForm() {
   });
 }
 
+export function initRecurringExpenseDialog() {
+  const dialog = document.getElementById("recurring-expense-dialog");
+  const dismissButton = document.getElementById("recurring-expense-dismiss");
+  if (!dialog || !dismissButton) return;
+
+  const storageKey = "expense.dismissedRecurringExpenses";
+  const today = dialog.dataset.today;
+  const getRecommendationKey = (item) =>
+    JSON.stringify([
+      item.dataset.expenseType,
+      item.dataset.expenseMemo,
+      item.dataset.expenseAmount,
+    ]);
+  let dismissedKeys = new Set();
+  try {
+    const dismissed = JSON.parse(localStorage.getItem(storageKey) || "null");
+    if (dismissed?.date === today && Array.isArray(dismissed.keys)) {
+      dismissedKeys = new Set(dismissed.keys);
+    }
+  } catch {
+    // Ignore unavailable or invalid local storage.
+  }
+
+  dialog.querySelectorAll(".recurring-expense-item").forEach((item) => {
+    if (dismissedKeys.has(getRecommendationKey(item))) item.remove();
+  });
+  if (!dialog.querySelector(".recurring-expense-item")) return;
+
+  dialog.addEventListener("click", (event) => {
+    const bounds = dialog.getBoundingClientRect();
+    if (
+      event.clientX < bounds.left ||
+      event.clientX > bounds.right ||
+      event.clientY < bounds.top ||
+      event.clientY > bounds.bottom
+    ) {
+      dialog.close();
+    }
+  });
+  dismissButton.addEventListener("click", () => {
+    dialog.querySelectorAll(".recurring-expense-item").forEach((item) => {
+      dismissedKeys.add(getRecommendationKey(item));
+    });
+    try {
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({ date: today, keys: [...dismissedKeys] }),
+      );
+    } catch {
+      // Closing the dialog still works when storage is unavailable.
+    }
+    dialog.close();
+  });
+  dialog.showModal();
+}
+
 export function initFormLoaders() {
   const forms = document.querySelectorAll("form");
   const loader = document.getElementById("loader");

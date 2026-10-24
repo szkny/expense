@@ -274,6 +274,12 @@ class ServerTools(Base):
             )
         except Exception:
             recent_expenses = []
+
+        try:
+            recurring_expenses = self.expense_handler.get_recurring_expenses()
+        except Exception:
+            log.exception("Failed to get recurring expense recommendations.")
+            recurring_expenses = []
         n_records = len(recent_expenses)
 
         # 支出レポートを計算
@@ -307,6 +313,7 @@ class ServerTools(Base):
             "gspread_url": self.gspread_url,
             "items": items,
             "records": recent_expenses,
+            "recurring_expenses": recurring_expenses,
             "screenshot_name": screenshot_name,
             "screenshot_base64": img_base64,
             "disable_ocr": disable_ocr,

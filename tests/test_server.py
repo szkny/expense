@@ -67,6 +67,49 @@ class TestServiceWorkerRoute(unittest.TestCase):
         self.assertEqual(second.json(), first.json())
 
 
+class TestRecurringExpenseDialog(unittest.TestCase):
+    def test_renders_escaped_recommendation_and_today_registration_form(
+        self,
+    ) -> None:
+        server_tools = Mock(templates=app.state.templates)
+        server_tools.generate_commons.return_value = {
+            "icons": {},
+            "theme": "light",
+            "expense_date_range": ("2026-04-01", "2027-03-31"),
+            "n_records": 0,
+            "gspread_url": "",
+            "items": [],
+            "records": [],
+            "recurring_expenses": [
+                {
+                    "expense_type": "通信費",
+                    "expense_memo": '<script>alert("x")</script>',
+                    "expense_amount": 3000,
+                }
+            ],
+            "screenshot_name": "",
+            "screenshot_base64": "",
+            "disable_ocr": True,
+            "today": "2026-04-15",
+            "plotlyjs": "",
+            "today_total": 0,
+            "monthly_total": 0,
+            "prev_monthly_total": 0,
+        }
+
+        with patch("expense.api.server.ServerTools", return_value=server_tools):
+            response = TestClient(app).get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("この内容で登録しますか？", response.text)
+        self.assertIn("3,000円", response.text)
+        self.assertIn("&lt;script&gt;", response.text)
+        self.assertNotIn('<script>alert("x")</script>', response.text)
+        self.assertIn('data-today="2026-04-15"', response.text)
+        self.assertIn('data-expense-type="通信費"', response.text)
+        self.assertIn('name="expense_date" value="2026-04-15"', response.text)
+
+
 class TestAssetRecentlyHistoryChartRoute(unittest.TestCase):
     def test_passes_recent_history_and_current_valuation_to_generator(
         self,

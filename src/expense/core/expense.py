@@ -6,7 +6,7 @@ import logging
 import argparse
 import datetime
 import pandas as pd
-from typing import Any
+from typing import Any, cast
 from collections import Counter
 
 from .base import Base
@@ -292,6 +292,98 @@ class Expense(Base):
         # )
         log.info("end 'get_recent_expenses' method")
         return recent_expenses
+
+    def get_recurring_expenses(
+        self, today: datetime.date | None = None
+    ) -> list[dict[str, Any]]:
+        """今日が登録日となる、未登録の月次支出候補を返す。"""
+        today = today or datetime.date.today()
+        try:
+            df = pd.read_csv(
+                self.expense_history,
+                header=None,
+                names=[
+                    "datetime",
+                    "expense_type",
+                    "expense_memo",
+                    "expense_amount",
+                ],
+            )
+        except (FileNotFoundError, pd.errors.EmptyDataError):
+            return []
+
+        expense_type_config: dict[str, list[str]] = self.config.get(
+            "expense", {}
+        ).get("expense_types", {})
+        income_types = {
+            expense_type
+            for category in (
+                "income",
+                "irregular_income",
+                "investment_income",
+                "capital_gain",
+            )
+            for expense_type in expense_type_config.get(category, [])
+        }
+        df["date"] = pd.to_datetime(df["datetime"], errors="coerce")
+        df["expense_amount"] = pd.to_numeric(
+            df["expense_amount"], errors="coerce"
+        )
+        df["expense_memo"] = df["expense_memo"].fillna("").astype(str)
+
+        def month_offset(year: int, month: int, offset: int) -> tuple[int, int]:
+            month_index = year * 12 + month - 1 - offset
+            return month_index // 12, month_index % 12 + 1
+
+        current_month = (today.year, today.month)
+        prior_months = {
+            month_offset(today.year, today.month, offset)
+            for offset in (1, 2, 3)
+        }
+        months_by_expense: dict[
+            tuple[int, str, str, int], set[tuple[int, int]]
+        ] = {}
+        current_month_expenses: set[tuple[str, str, int]] = set()
+
+        for row in df.itertuples(index=False):
+            record_timestamp = cast(pd.Timestamp, row.date)
+            if pd.isna(record_timestamp) or pd.isna(row.expense_amount):
+                continue
+            expense_type = str(row.expense_type)
+            if expense_type in income_types:
+                continue
+            record_date = record_timestamp.date()
+            expense_memo = cast(str, row.expense_memo)
+            expense_amount = int(cast(float, row.expense_amount))
+            key = (
+                record_date.day,
+                expense_type,
+                expense_memo,
+                expense_amount,
+            )
+            identity = (expense_type, expense_memo, expense_amount)
+            record_month = (record_date.year, record_date.month)
+            months_by_expense.setdefault(key, set()).add(record_month)
+            if record_month == current_month:
+                current_month_expenses.add(identity)
+
+        recurring_expenses = []
+        for key, months in months_by_expense.items():
+            day, expense_type, expense_memo, expense_amount = key
+            identity = (expense_type, expense_memo, expense_amount)
+            if (
+                day == today.day
+                and identity not in current_month_expenses
+                and prior_months.issubset(months)
+            ):
+                recurring_expenses.append(
+                    {
+                        "expense_type": expense_type,
+                        "expense_memo": expense_memo,
+                        "expense_amount": expense_amount,
+                    }
+                )
+        return recurring_expenses
 
     def get_ocr_expense(self) -> dict:
         """

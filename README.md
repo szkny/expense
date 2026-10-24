@@ -8,6 +8,7 @@ It features receipt scanning via OCR, a web-based user interface, and integratio
 - **Web UI:** An intuitive web interface for adding, editing, and viewing expense records.
   - It can be installed as PWA.
   - Memo suggestions are filtered by expense type and, when entered, amount, with frequent memos shown first.
+  - Recommends recurring expenses on their usual day when the current month is not registered yet.
 - **OCR Functionality:** Automatically extracts dates and amounts from receipt images captured with your smartphone's camera.
 - **Data Visualization:** Displays daily and monthly expenditures, asset history, and portfolio drawdown in graphs for a visual overview of your finances. Hover over monthly income to see a breakdown by income type and memo.
 - **Asset Management:** Track the status of your assets.

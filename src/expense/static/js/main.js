@@ -7,6 +7,7 @@ import {
   initMenu,
   initClosableMessages,
   initExpenseForm,
+  initRecurringExpenseDialog,
   initFormLoaders,
   initThemeToggle,
   initScreenshotZoom,
@@ -31,6 +32,7 @@ function onDOMContentLoaded() {
   initMenu();
   initClosableMessages();
   initExpenseForm();
+  initRecurringExpenseDialog();
   initFormLoaders();
   initThemeToggle();
   initScreenshotZoom();
