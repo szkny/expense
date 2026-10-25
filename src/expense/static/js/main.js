@@ -24,8 +24,8 @@ import {
 
 function onDOMContentLoaded() {
   initCardReordering();
-  initAssetAdvisor();
   initCollapsibleSections();
+  initAssetAdvisor();
   initializeCharts();
   initChartReloadUI();
   initializeTableFilter();
@@ -261,10 +261,11 @@ function initAssetAdviceChat(adviceContent) {
 
 function initAssetAdvisor() {
   const card = document.querySelector('[data-card-key="asset-advice"]');
+  const trigger = card?.querySelector(".collapsible-trigger");
   const status = document.getElementById("asset-advice-status");
   const content = document.getElementById("asset-advice-content");
   const retryButton = document.getElementById("asset-advice-retry");
-  if (!card || !status || !content || !retryButton) return;
+  if (!card || !trigger || !status || !content || !retryButton) return;
 
   const chat = initAssetAdviceChat(content);
   let loading = false;
@@ -332,18 +333,31 @@ function initAssetAdvisor() {
   };
 
   retryButton.addEventListener("click", () => loadAdvice(true));
+  let cardVisible = false;
+  let observer = null;
+  const loadWhenOpenAndVisible = () => {
+    if (cardVisible && trigger.getAttribute("aria-expanded") === "true") {
+      observer?.disconnect();
+      loadAdvice();
+    }
+  };
+  trigger.addEventListener("click", loadWhenOpenAndVisible);
+
   if ("IntersectionObserver" in window) {
-    const observer = new IntersectionObserver(
+    observer = new IntersectionObserver(
       (entries) => {
         if (!entries.some((entry) => entry.isIntersecting)) return;
-        observer.disconnect();
-        loadAdvice();
+        cardVisible = true;
+        loadWhenOpenAndVisible();
       },
       { rootMargin: "160px" },
     );
     observer.observe(card);
   } else {
-    window.setTimeout(loadAdvice, 0);
+    window.setTimeout(() => {
+      cardVisible = true;
+      loadWhenOpenAndVisible();
+    }, 0);
   }
 }
 
