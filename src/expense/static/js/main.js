@@ -174,6 +174,7 @@ function initAssetAdviceChat(adviceContent) {
     pendingBubble.append(typingIndicator);
     sending = true;
     status.textContent = "";
+    input.value = "";
     updateControls();
     try {
       const response = await fetch("/api/asset_advice/chat", {
@@ -234,11 +235,10 @@ function initAssetAdviceChat(adviceContent) {
         role: "assistant",
         content: replyMarkdown,
       });
-      input.value = "";
       status.textContent =
         history.length >= maxMessages
-          ? "10往復に達しました。リセットして続けてください。"
-          : `${history.length / 2}往復`;
+          ? "10/10往復に達しました。リセットして続けてください。"
+          : `${history.length / 2}/10往復`;
     } catch (error) {
       userBubble.remove();
       pendingBubble.remove();
