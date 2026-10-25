@@ -16,6 +16,15 @@ DEFAULT_MODEL = "gpt-5-nano"
 _MAX_OUTPUT_TOKENS = 2000
 _cache_lock = threading.Lock()
 _ADVICE_MARKDOWN = MarkdownIt("js-default", {"html": False}).disable("image")
+_DAILY_ADVICE_ANGLES = (
+    "売買の予測より、投資ルールを守るための小さな工夫",
+    "分散と集中のバランスを、データに沿って点検する視点",
+    "値動きのノイズと、長期の流れを見分ける視点",
+    "下落への備えを、平常時にどう整えるか",
+    "何もしないことが合理的な場面を見極める視点",
+    "保有資産の意外な特徴や、見落としやすい偏り",
+    "投資計画を航海図にたとえ、今日できる手入れを考える視点",
+)
 _INVESTMENT_QUOTES = (
     "卵を一つの籠に盛るな。",
     "強気相場は悲観の中に生まれ、懐疑の中で育つ。",
@@ -66,12 +75,22 @@ def _to_json_value(value: Any) -> Any:
 
 def _daily_investment_quote(payload: dict[str, Any]) -> str:
     """Return a deterministic quote for the date used by the advice request."""
+    day = _payload_date(payload)
+    return _INVESTMENT_QUOTES[day.toordinal() % len(_INVESTMENT_QUOTES)]
+
+
+def _payload_date(payload: dict[str, Any]) -> dt.date:
     as_of = payload.get("as_of")
     try:
-        day = dt.date.fromisoformat(str(as_of))
+        return dt.date.fromisoformat(str(as_of))
     except (TypeError, ValueError):
-        day = dt.date.today()
-    return _INVESTMENT_QUOTES[day.toordinal() % len(_INVESTMENT_QUOTES)]
+        return dt.date.today()
+
+
+def _daily_advice_angle(payload: dict[str, Any]) -> str:
+    """Return a deterministic, rotating editorial angle for the advice."""
+    day = _payload_date(payload)
+    return _DAILY_ADVICE_ANGLES[day.toordinal() % len(_DAILY_ADVICE_ANGLES)]
 
 
 def _generated_at() -> str:
@@ -125,12 +144,20 @@ def _request_body(
     data = _to_json_value(payload)
     if isinstance(data, dict):
         data["daily_investment_quote"] = _daily_investment_quote(payload)
+        data["daily_advice_angle"] = _daily_advice_angle(payload)
     body: dict[str, Any] = {
         "model": model,
         "instructions": (
             "あなたはプロフェッショナルな資産管理アドバイザーです。"
             "入力された資産データだけを根拠に、日本語、Markdownで簡潔にアドバイスしてください。"
             "MarkdownはトピックごとにH2タグの見出しを設け、太字、箇条書き、表などを使った分かりやすい表現を心がけてください。"
+            "語り口は知的で親しみやすい投資コーチ。毎回同じ定型文に頼らず、"
+            "入力のdaily_advice_angleを今日の主な切り口として反映してください。"
+            "通常時は今日のアドバイスに、データに根ざした印象に残る比喩や"
+            "機知ある一言を少なくとも一つ自然に添えてください。"
+            "下落や損失、不安が読み取れる場面ではユーモアを抑え、まず共感と"
+            "冷静さを示してください。無理な冗談やダジャレで水増しせず、"
+            "ユーザーや損失を笑いの対象にしないでください。"
             "\n\n"
             "holdingsのnumは保有数量、acquisition/price/valuation/profit/"
             "invest_amountは円、price_dollarは米ドル、weight/roiはパーセントです。"
@@ -147,6 +174,12 @@ def _request_body(
             "資産概況や要点を整理しなおしたり、出力しないでください。"
             "今日のアドバイスでは、数値の再掲ではなく、データから読み取れる意味や"
             "具体的な心構えを中心に書いてください。"
+            "『長期目線で』『一喜一憂しない』『継続が大切』のような一般論だけで"
+            "結論にせず、今日の入力にある具体的な特徴と結びつけてください。"
+            "daily_advice_angleに沿った観点を選び、見出しの順番は守りながら、"
+            "毎回同じ論点・比喩・問いにならないよう工夫してください。"
+            "その視点を裏付けるデータがなければ事実のように扱わず、"
+            "一般的な考え方として短く触れるか、無理に使わないでください。"
             "今週の振り返りでは、利用可能な直近データrecent_daily_asset_historyから最近の傾向を要約してください。"
             "週次データがない場合は、週次の数値を推測せず、その制約を短く明記してください。"
             "過去データからの小さな発見では、monthly_asset_historyまたは"

@@ -11,6 +11,7 @@ import pandas as pd
 from expense.api.asset_advisor import (
     AssetAdviceConfigurationError,
     AssetAdviceRequestError,
+    _request_body,
     get_daily_asset_advice,
     render_asset_advice,
 )
@@ -22,7 +23,10 @@ class TestDailyAssetAdvice(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.cache_path = Path(self.temp_dir.name)
         self.today = dt.date(2026, 9, 23)
-        self.payload = {"holdings": [{"ticker": "TEST", "valuation": 1000}]}
+        self.payload = {
+            "as_of": self.today.isoformat(),
+            "holdings": [{"ticker": "TEST", "valuation": 1000}],
+        }
 
     def tearDown(self) -> None:
         self.temp_dir.cleanup()
@@ -70,6 +74,7 @@ class TestDailyAssetAdvice(unittest.TestCase):
         self.assertEqual(request_body["store"], False)
         request_input = json.loads(request_body["input"])
         self.assertIn("daily_investment_quote", request_input)
+        self.assertIn("daily_advice_angle", request_input)
         self.assertIn("今日のアドバイス", request_body["instructions"])
         self.assertIn("今週の振り返り", request_body["instructions"])
         self.assertIn(
@@ -77,12 +82,35 @@ class TestDailyAssetAdvice(unittest.TestCase):
         )
         self.assertIn("投資の格言", request_body["instructions"])
         self.assertIn("今日の問い", request_body["instructions"])
+        self.assertIn("機知ある一言", request_body["instructions"])
+        self.assertIn(
+            "ユーザーや損失を笑いの対象にしない",
+            request_body["instructions"],
+        )
+        self.assertIn(
+            "daily_advice_angleを今日の主な切り口",
+            request_body["instructions"],
+        )
+        self.assertIn(
+            "裏付けるデータがなければ事実のように扱わず",
+            request_body["instructions"],
+        )
         cached_data = json.loads(
             (self.cache_path / "asset_advice.json").read_text(encoding="utf-8")
         )
         self.assertEqual(cached_data["date"], self.today.isoformat())
         self.assertEqual(cached_data["model"], "gpt-5-nano")
         self.assertNotIn("holdings", cached_data)
+
+    def test_daily_advice_angle_changes_with_the_date(self) -> None:
+        today = json.loads(
+            _request_body({"as_of": "2026-09-23"}, "gpt-5-nano")["input"]
+        )["daily_advice_angle"]
+        tomorrow = json.loads(
+            _request_body({"as_of": "2026-09-24"}, "gpt-5-nano")["input"]
+        )["daily_advice_angle"]
+
+        self.assertNotEqual(today, tomorrow)
 
     def test_requests_a_new_comment_on_a_new_day(self) -> None:
         self.cache_path.joinpath("asset_advice.json").write_text(
