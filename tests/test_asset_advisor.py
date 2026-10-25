@@ -311,6 +311,7 @@ class TestDailyAssetAdvice(unittest.TestCase):
         request_body = json.loads(urlopen.call_args.args[0].data)
         self.assertEqual(request_body["store"], False)
         self.assertEqual(request_body["stream"], True)
+        self.assertEqual(request_body["max_output_tokens"], 3000)
         self.assertEqual(
             request_body["tools"],
             [{"type": "web_search", "search_context_size": "low"}],
