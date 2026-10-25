@@ -7,6 +7,7 @@ import threading
 import time
 from functools import lru_cache
 from typing import Any
+from urllib.parse import urlsplit
 import pandas as pd
 from typing import Callable
 import plotly
@@ -30,6 +31,7 @@ from .asset_advisor import (
     DEFAULT_MODEL,
     get_daily_asset_advice,
     render_asset_advice,
+    stream_asset_advice_chat_reply,
     stream_daily_asset_advice,
 )
 from ..core.expense import get_fiscal_year
@@ -657,6 +659,147 @@ def stream_asset_advice(force: bool = False) -> StreamingResponse:
         events(),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@app.post("/api/asset_advice/chat", response_class=StreamingResponse)
+def chat_with_asset_advisor(body: dict[str, Any]) -> Response:
+    """Answer a follow-up question using the current advice and asset data."""
+    advice = body.get("advice")
+    messages = body.get("messages")
+    if (
+        not isinstance(advice, str)
+        or not advice.strip()
+        or len(advice) > 12000
+        or not isinstance(messages, list)
+        or not 1 <= len(messages) <= 20
+    ):
+        return JSONResponse(
+            status_code=400,
+            content={"error": "アドバイスか会話内容を確認してください。"},
+            headers={"Cache-Control": "no-store"},
+        )
+
+    for message in messages:
+        role = message.get("role") if isinstance(message, dict) else None
+        content = message.get("content") if isinstance(message, dict) else None
+        if (
+            not isinstance(message, dict)
+            or not isinstance(role, str)
+            or role not in {"user", "assistant"}
+            or not isinstance(content, str)
+            or not content.strip()
+        ):
+            return JSONResponse(
+                status_code=400,
+                content={"error": "会話メッセージの形式を確認してください。"},
+                headers={"Cache-Control": "no-store"},
+            )
+        max_message_length = 1500 if role == "user" else 6000
+        if len(content) > max_message_length:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "会話メッセージが長すぎます。"},
+                headers={"Cache-Control": "no-store"},
+            )
+    if messages[-1].get("role") != "user":
+        return JSONResponse(
+            status_code=400,
+            content={"error": "質問を入力してから送信してください。"},
+            headers={"Cache-Control": "no-store"},
+        )
+
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": "OPENAI_API_KEYが設定されていません。",
+                "code": "missing_api_key",
+            },
+            headers={"Cache-Control": "no-store"},
+        )
+
+    payload, model = _get_asset_advice_payload()
+
+    def events() -> Any:
+        reply_parts: list[str] = []
+        sources: list[dict[str, str]] = []
+        source_urls: set[str] = set()
+        try:
+            for event_type, value in stream_asset_advice_chat_reply(
+                payload, advice, messages, api_key, model=model
+            ):
+                if event_type == "delta":
+                    reply_parts.append(value)
+                    yield "data: " + json.dumps(
+                        {
+                            "reply_html": render_asset_advice(
+                                "".join(reply_parts)
+                            ),
+                            "done": False,
+                        },
+                        ensure_ascii=False,
+                    ) + "\n\n"
+                elif event_type == "citation" and len(sources) < 8:
+                    url = value.get("url")
+                    if not isinstance(url, str) or len(url) > 2048:
+                        continue
+                    try:
+                        parsed_url = urlsplit(url)
+                    except ValueError:
+                        continue
+                    if (
+                        parsed_url.scheme != "https"
+                        or not parsed_url.hostname
+                        or url in source_urls
+                    ):
+                        continue
+                    title = value.get("title")
+                    sources.append(
+                        {
+                            "title": (
+                                title[:200]
+                                if isinstance(title, str) and title.strip()
+                                else parsed_url.hostname
+                            ),
+                            "url": url,
+                        }
+                    )
+                    source_urls.add(url)
+            reply = "".join(reply_parts).strip()
+            if not reply:
+                raise AssetAdviceRequestError(
+                    "OpenAI returned no chat reply."
+                )
+            yield "data: " + json.dumps(
+                {
+                    "reply_markdown": reply,
+                    "reply_html": render_asset_advice(reply),
+                    "sources": sources,
+                    "done": True,
+                },
+                ensure_ascii=False,
+            ) + "\n\n"
+        except AssetAdviceConfigurationError as error:
+            yield "data: " + json.dumps(
+                {"error": str(error), "done": True}, ensure_ascii=False
+            ) + "\n\n"
+        except AssetAdviceRequestError:
+            log.exception("Failed to stream asset advisor chat reply.")
+            yield "data: " + json.dumps(
+                {
+                    "error": "アドバイザーから返答を取得できませんでした。",
+                    "code": "openai_unavailable",
+                    "done": True,
+                },
+                ensure_ascii=False,
+            ) + "\n\n"
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
     )
 
 

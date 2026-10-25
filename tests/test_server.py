@@ -29,7 +29,7 @@ class TestServiceWorkerRoute(unittest.TestCase):
         self.assertIn(
             "application/javascript", response.headers["content-type"]
         )
-        self.assertIn('const CACHE_NAME = "expense-cache-v7"', response.text)
+        self.assertIn('const CACHE_NAME = "expense-cache-v10"', response.text)
         self.assertIn(
             'requestUrl.pathname === "/api/asset_management/content"',
             response.text,
@@ -232,6 +232,10 @@ class TestAssetManagementShell(unittest.TestCase):
         self.assertEqual(response.headers["cache-control"], "no-store")
         self.assertIn("資産一覧", response.text)
         self.assertIn("TEST", response.text)
+        self.assertIn('id="asset-advice-chat"', response.text)
+        self.assertIn('id="asset-advice-chat-form"', response.text)
+        self.assertIn('aria-label="会話をリセット"', response.text)
+        self.assertIn("data-no-loader", response.text)
         self.assertNotIn("資産データを読み込んでいます", response.text)
         self.assertNotIn("window.Plotly", response.text)
         asset_manager.get_spreadsheet_url.assert_not_called()

@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pandas as pd
+from fastapi.testclient import TestClient
 
 from expense.api.asset_advisor import (
     AssetAdviceConfigurationError,
@@ -14,6 +15,7 @@ from expense.api.asset_advisor import (
     _request_body,
     get_daily_asset_advice,
     render_asset_advice,
+    stream_asset_advice_chat_reply,
 )
 from expense.api import server
 
@@ -251,6 +253,89 @@ class TestDailyAssetAdvice(unittest.TestCase):
         self.assertNotIn("<img", rendered)
         self.assertNotIn('<a href="javascript:', rendered)
 
+    def test_chat_request_includes_advice_assets_and_conversation(self) -> None:
+        response_events = [
+            {
+                "type": "response.output_text.delta",
+                "delta": "比率の",
+            },
+            {
+                "type": "response.output_text.delta",
+                "delta": "見方です。",
+            },
+            {
+                "type": "response.output_text.annotation.added",
+                "annotation": {
+                    "type": "url_citation",
+                    "url": "https://www.fsa.go.jp/",
+                    "title": "金融庁",
+                },
+            },
+        ]
+        response_stream = (
+            "".join(
+                "data: " + json.dumps(event, ensure_ascii=False) + "\n\n"
+                for event in response_events
+            )
+            + "data: [DONE]\n\n"
+        )
+        messages = [{"role": "user", "content": "このアドバイスを説明して"}]
+        with patch(
+            "expense.api.asset_advisor.urllib.request.urlopen",
+            return_value=io.BytesIO(response_stream.encode()),
+        ) as urlopen:
+            reply = list(
+                stream_asset_advice_chat_reply(
+                    self.payload,
+                    "## 今日のアドバイス\n配分を確認しましょう。",
+                    messages,
+                    "test-key",
+                )
+            )
+
+        self.assertEqual(
+            reply,
+            [
+                ("delta", "比率の"),
+                ("delta", "見方です。"),
+                (
+                    "citation",
+                    {
+                        "type": "url_citation",
+                        "url": "https://www.fsa.go.jp/",
+                        "title": "金融庁",
+                    },
+                ),
+            ],
+        )
+        request_body = json.loads(urlopen.call_args.args[0].data)
+        self.assertEqual(request_body["store"], False)
+        self.assertEqual(request_body["stream"], True)
+        self.assertEqual(
+            request_body["tools"],
+            [{"type": "web_search", "search_context_size": "low"}],
+        )
+        self.assertEqual(request_body["tool_choice"], "auto")
+        self.assertIn(
+            "回答に必要なデータが不足していても",
+            request_body["instructions"],
+        )
+        self.assertIn(
+            "最新の公開情報が必要な場合",
+            request_body["instructions"],
+        )
+        self.assertIn(
+            "最初に『〇〇のデータがないため",
+            request_body["instructions"],
+        )
+        chat_input = json.loads(request_body["input"])
+        self.assertEqual(chat_input["asset_data"], self.payload)
+        self.assertEqual(
+            chat_input["daily_advice"],
+            "## 今日のアドバイス\n配分を確認しましょう。",
+        )
+        self.assertEqual(chat_input["conversation"], messages)
+
     def test_requires_an_api_key_when_no_daily_cache_exists(self) -> None:
         with self.assertRaises(AssetAdviceConfigurationError):
             get_daily_asset_advice(
@@ -332,3 +417,96 @@ class TestAssetAdviceEndpoint(unittest.TestCase):
         )
         self.assertEqual(get_advice.call_args.kwargs["model"], "gpt-5-nano")
         self.assertIn("今日の助言", json.loads(response.body)["advice_html"])
+
+
+class TestAssetAdviceChatEndpoint(unittest.TestCase):
+    def test_returns_a_sanitized_reply_with_current_asset_context(self) -> None:
+        payload = {"holdings": [{"ticker": "TEST"}]}
+        messages = [
+            {"role": "assistant", "content": "過去の回答" * 200},
+            {"role": "user", "content": "この配分を説明して"},
+        ]
+        with (
+            patch(
+                "expense.api.server._get_asset_advice_payload",
+                return_value=(payload, "gpt-5-nano"),
+            ),
+            patch("expense.api.server.os.getenv", return_value="test-key"),
+            patch(
+                "expense.api.server.stream_asset_advice_chat_reply",
+                return_value=iter(
+                    [
+                        ("delta", "**説明**\n\n"),
+                        ("delta", "<script>alert(1)</script>"),
+                        (
+                            "citation",
+                            {
+                                "url": "https://www.fsa.go.jp/",
+                                "title": "金融庁",
+                            },
+                        ),
+                        (
+                            "citation",
+                            {
+                                "url": "javascript:alert(1)",
+                                "title": "不正URL",
+                            },
+                        ),
+                    ]
+                ),
+            ) as get_reply,
+        ):
+            response = TestClient(server.app).post(
+                "/api/asset_advice/chat",
+                json={
+                    "advice": "今日のアドバイス",
+                    "messages": messages,
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/event-stream", response.headers["content-type"])
+        self.assertEqual(response.headers["cache-control"], "no-store")
+        events = [
+            json.loads(line[6:])
+            for line in response.text.splitlines()
+            if line.startswith("data: ")
+        ]
+        self.assertEqual(len(events), 3)
+        self.assertFalse(events[0]["done"])
+        self.assertTrue(events[-1]["done"])
+        self.assertIn("<strong>説明</strong>", events[-1]["reply_html"])
+        self.assertNotIn("<script>", events[-1]["reply_html"])
+        self.assertEqual(
+            events[-1]["reply_markdown"].splitlines()[0], "**説明**"
+        )
+        self.assertEqual(
+            events[-1]["sources"],
+            [{"title": "金融庁", "url": "https://www.fsa.go.jp/"}],
+        )
+        self.assertEqual(
+            get_reply.call_args.args[:3],
+            (payload, "今日のアドバイス", messages),
+        )
+        self.assertEqual(get_reply.call_args.kwargs["model"], "gpt-5-nano")
+
+    def test_rejects_invalid_chat_messages_before_requesting_openai(
+        self,
+    ) -> None:
+        with patch(
+            "expense.api.server.stream_asset_advice_chat_reply"
+        ) as get_reply:
+            for role in ("system", []):
+                with self.subTest(role=role):
+                    response = TestClient(server.app).post(
+                        "/api/asset_advice/chat",
+                        json={
+                            "advice": "今日のアドバイス",
+                            "messages": [
+                                {"role": role, "content": "不正なロール"}
+                            ],
+                        },
+                    )
+                    self.assertEqual(response.status_code, 400)
+
+        get_reply.assert_not_called()

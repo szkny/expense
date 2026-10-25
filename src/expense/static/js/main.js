@@ -48,6 +48,217 @@ function onDOMContentLoaded() {
   });
 }
 
+function initAssetAdviceChat(adviceContent) {
+  const chat = document.getElementById("asset-advice-chat");
+  const messagesContainer = document.getElementById(
+    "asset-advice-chat-messages",
+  );
+  const status = document.getElementById("asset-advice-chat-status");
+  const form = document.getElementById("asset-advice-chat-form");
+  const input = document.getElementById("asset-advice-chat-input");
+  const sendButton = document.getElementById("asset-advice-chat-send");
+  const resetButton = document.getElementById("asset-advice-chat-reset");
+  if (
+    !chat ||
+    !messagesContainer ||
+    !status ||
+    !form ||
+    !input ||
+    !sendButton ||
+    !resetButton
+  ) {
+    return { resetForAdviceReload: () => {}, setReady: () => {} };
+  }
+
+  const history = [];
+  const maxMessages = 20;
+  let ready = false;
+  let sending = false;
+
+  const updateControls = () => {
+    sendButton.disabled =
+      !ready || sending || !input.value.trim() || history.length >= maxMessages;
+    input.disabled = !ready || sending;
+    resetButton.disabled = sending;
+  };
+  const appendMessage = (role, text, html = null, pending = false) => {
+    const message = document.createElement("div");
+    message.className = `asset-advice-chat-message ${role}`;
+    if (pending) message.classList.add("pending");
+    if (html !== null) message.innerHTML = html;
+    else message.textContent = text;
+    messagesContainer.append(message);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    return message;
+  };
+  const appendSources = (message, sources) => {
+    if (!Array.isArray(sources)) return;
+    const links = sources.flatMap((source) => {
+      if (typeof source?.title !== "string" || typeof source?.url !== "string")
+        return [];
+      try {
+        const url = new URL(source.url);
+        return url.protocol === "https:" ? [{ title: source.title, url }] : [];
+      } catch {
+        return [];
+      }
+    });
+    if (links.length === 0) return;
+
+    const section = document.createElement("div");
+    section.className = "asset-advice-chat-sources";
+    const heading = document.createElement("p");
+    heading.textContent = "参照したWeb情報";
+    section.append(heading);
+    const list = document.createElement("ul");
+    for (const source of links) {
+      const item = document.createElement("li");
+      const link = document.createElement("a");
+      link.href = source.url.href;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = source.title || source.url.hostname;
+      item.append(link);
+      list.append(item);
+    }
+    section.append(list);
+    message.append(section);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  };
+  const reset = (hide) => {
+    history.length = 0;
+    messagesContainer.replaceChildren();
+    status.textContent = "";
+    input.value = "";
+    chat.hidden = hide;
+    updateControls();
+  };
+  const setReady = (value) => {
+    ready = value;
+    chat.hidden = !ready;
+    updateControls();
+  };
+
+  input.addEventListener("input", updateControls);
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      form.requestSubmit();
+    }
+  });
+  resetButton.addEventListener("click", () => reset(false));
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const question = input.value.trim();
+    if (!question || sending || !ready) return;
+    if (history.length >= maxMessages) {
+      status.textContent = "会話は10往復までです。リセットして続けてください。";
+      return;
+    }
+
+    const userMessage = { role: "user", content: question };
+    const userBubble = appendMessage("user", question);
+    const pendingBubble = appendMessage(
+      "assistant",
+      "AIが回答を生成中",
+      null,
+      true,
+    );
+    pendingBubble.setAttribute("role", "status");
+    const typingIndicator = document.createElement("span");
+    typingIndicator.className = "asset-advice-typing-indicator";
+    typingIndicator.setAttribute("aria-hidden", "true");
+    for (let index = 0; index < 3; index += 1) {
+      typingIndicator.append(document.createElement("span"));
+    }
+    pendingBubble.append(typingIndicator);
+    sending = true;
+    status.textContent = "";
+    updateControls();
+    try {
+      const response = await fetch("/api/asset_advice/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          advice: adviceContent.innerText || adviceContent.textContent,
+          messages: [...history, userMessage],
+        }),
+      });
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || `HTTP ${response.status}`);
+      }
+      if (!response.body) throw new Error("応答を受信できません。");
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let replyMarkdown = "";
+      let completed = false;
+      while (!completed) {
+        const { value, done } = await reader.read();
+        buffer += decoder.decode(value || new Uint8Array(), {
+          stream: !done,
+        });
+        const events = buffer.split("\n\n");
+        buffer = events.pop() || "";
+        for (const eventText of events) {
+          const dataLine = eventText
+            .split("\n")
+            .find((line) => line.startsWith("data: "));
+          if (!dataLine) continue;
+          const result = JSON.parse(dataLine.slice(6));
+          if (result.error) throw new Error(result.error);
+          if (typeof result.reply_html === "string") {
+            if (result.reply_html.trim()) {
+              pendingBubble.innerHTML = result.reply_html;
+              pendingBubble.classList.remove("pending");
+              pendingBubble.removeAttribute("role");
+              messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+          }
+          if (result.done) {
+            if (typeof result.reply_markdown !== "string")
+              throw new Error("返答を取得できませんでした。");
+            replyMarkdown = result.reply_markdown;
+            appendSources(pendingBubble, result.sources);
+            completed = true;
+            break;
+          }
+        }
+        if (done) break;
+      }
+      if (!completed) throw new Error("応答が途中で終了しました。");
+
+      history.push(userMessage, {
+        role: "assistant",
+        content: replyMarkdown,
+      });
+      input.value = "";
+      status.textContent =
+        history.length >= maxMessages
+          ? "10往復に達しました。リセットして続けてください。"
+          : `${history.length / 2}往復`;
+    } catch (error) {
+      userBubble.remove();
+      pendingBubble.remove();
+      input.value = question;
+      status.textContent = error.message;
+    } finally {
+      sending = false;
+      updateControls();
+    }
+  });
+
+  return {
+    resetForAdviceReload: () => {
+      ready = false;
+      reset(true);
+    },
+    setReady,
+  };
+}
+
 function initAssetAdvisor() {
   const card = document.querySelector('[data-card-key="asset-advice"]');
   const status = document.getElementById("asset-advice-status");
@@ -55,6 +266,7 @@ function initAssetAdvisor() {
   const retryButton = document.getElementById("asset-advice-retry");
   if (!card || !status || !content || !retryButton) return;
 
+  const chat = initAssetAdviceChat(content);
   let loading = false;
   const formatGeneratedAt = (generatedAt) => {
     const date = new Date(generatedAt);
@@ -67,6 +279,10 @@ function initAssetAdvisor() {
   const loadAdvice = async (force = false) => {
     if (loading) return;
     loading = true;
+    const previousAdvice = force
+      ? { html: content.innerHTML, hidden: content.hidden }
+      : null;
+    if (force) chat.resetForAdviceReload();
     retryButton.hidden = true;
     status.textContent = "資産データをもとに分析中...";
     try {
@@ -103,9 +319,13 @@ function initAssetAdvisor() {
       }
       if (!completed) throw new Error("分析結果の受信が途中で終了しました。");
       retryButton.hidden = false;
+      chat.setReady(true);
     } catch (error) {
+      if (previousAdvice && !previousAdvice.hidden)
+        content.innerHTML = previousAdvice.html;
       status.textContent = error.message;
       retryButton.hidden = false;
+      chat.setReady(Boolean(previousAdvice && !previousAdvice.hidden));
     } finally {
       loading = false;
     }

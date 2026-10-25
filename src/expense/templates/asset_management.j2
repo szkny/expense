@@ -62,6 +62,46 @@
           </button>
         </div>
         <div id="asset-advice-content" class="asset-advice-content" hidden></div>
+        <section id="asset-advice-chat" class="asset-advice-chat" hidden>
+          <div class="asset-advice-chat-heading">
+            <h4>このアドバイスについて聞く</h4>
+            <button
+              id="asset-advice-chat-reset"
+              type="button"
+              class="btn-reload asset-advice-chat-reset"
+              title="会話をリセット"
+              aria-label="会話をリセット"
+            >
+              {{ icons.get("reload", "↻") }}
+            </button>
+          </div>
+          <div
+            id="asset-advice-chat-messages"
+            class="asset-advice-chat-messages"
+            role="log"
+            aria-live="polite"
+            aria-relevant="additions"
+          ></div>
+          <p id="asset-advice-chat-status" class="asset-advice-chat-status" role="status" aria-live="polite"></p>
+          <form id="asset-advice-chat-form" class="asset-advice-chat-form" data-no-loader>
+            <label class="visually-hidden" for="asset-advice-chat-input">
+              アドバイザーへの質問
+            </label>
+            <textarea
+              id="asset-advice-chat-input"
+              maxlength="1500"
+              rows="2"
+              placeholder="気になる点を質問してください"
+              required
+            ></textarea>
+            <button id="asset-advice-chat-send" type="submit" class="btn" disabled>
+              送信
+            </button>
+          </form>
+          <p class="asset-advice-chat-notice">
+            資産データと会話内容はOpenAIに送信されます。会話履歴はこの画面を離れると消去されます。
+          </p>
+        </section>
       </div>
     </div>
 

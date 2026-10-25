@@ -163,6 +163,7 @@ export function initFormLoaders() {
   if (forms.length === 0 || !loader) return;
 
   forms.forEach((form) => {
+    if (form.hasAttribute("data-no-loader")) return;
     form.addEventListener("submit", () => {
       loader.style.display = "flex";
     });

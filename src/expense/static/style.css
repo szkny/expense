@@ -268,6 +268,240 @@ hr {
   color: #dbeafe;
 }
 
+.asset-advice-chat {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.asset-advice-chat-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.asset-advice-chat-heading h4 {
+  margin: 0;
+  color: #374151;
+}
+
+.asset-advice-chat-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 22rem;
+  margin: 8px 0 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.asset-advice-chat-messages:empty,
+.asset-advice-chat-status:empty {
+  display: none;
+  margin: 0;
+}
+
+.asset-advice-chat-reset {
+  cursor: pointer;
+}
+
+.asset-advice-chat-message {
+  max-width: min(90%, 38rem);
+  padding: 10px 13px;
+  border-radius: 16px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.asset-advice-chat-message p {
+  margin: 0;
+}
+
+.asset-advice-chat-sources {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(107, 114, 128, 0.25);
+  font-size: 0.8rem;
+}
+
+.asset-advice-chat-sources ul {
+  margin: 4px 0 0;
+  padding-left: 1.2rem;
+}
+
+.asset-advice-chat-sources a {
+  color: #2563eb;
+  overflow-wrap: anywhere;
+}
+
+.dark .asset-advice-chat-sources a {
+  color: #93c5fd;
+}
+
+.asset-advice-chat-message.assistant {
+  align-self: flex-start;
+  background: #f3f4f6;
+  border-bottom-left-radius: 4px;
+}
+
+.asset-advice-chat-message.user {
+  align-self: flex-end;
+  background: #2563eb;
+  color: #fff;
+  border-bottom-right-radius: 4px;
+  white-space: pre-wrap;
+}
+
+.asset-advice-chat-message.pending {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.asset-advice-typing-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.asset-advice-typing-indicator span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: asset-advice-typing 1.2s infinite ease-in-out;
+}
+
+.asset-advice-typing-indicator span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.asset-advice-typing-indicator span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes asset-advice-typing {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .asset-advice-typing-indicator span {
+    animation: none;
+  }
+}
+
+.asset-advice-chat-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.asset-advice-chat-form textarea {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  width: 100%;
+  height: 52px;
+  min-height: 52px;
+  max-height: 9rem;
+  margin: 0;
+  padding: 12px;
+  resize: vertical;
+  border: 1px solid #d1d5db;
+  border-radius: 14px;
+  background: #f9fafb;
+  color: #333;
+  font: inherit;
+  line-height: 1.4;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.asset-advice-chat-form textarea:focus {
+  border-color: #2563eb;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.asset-advice-chat-form .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: auto;
+  height: 52px;
+  min-height: 52px;
+  padding: 10px 16px;
+  border-radius: 14px;
+}
+
+.asset-advice-chat-form .btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.asset-advice-chat-status,
+.asset-advice-chat-notice {
+  margin: 8px 0;
+  color: #6b7280;
+  font-size: 0.8rem;
+}
+
+.asset-advice-chat-notice {
+  margin-bottom: 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.dark .asset-advice-chat {
+  border-top-color: #374151;
+}
+
+.dark .asset-advice-chat-heading h4 {
+  color: #f3f4f6;
+}
+
+.dark .asset-advice-chat-message.assistant,
+.dark .asset-advice-chat-form textarea {
+  background: #1f2937;
+  color: #f3f4f6;
+}
+
+.dark .asset-advice-chat-form textarea {
+  border-color: #4b5563;
+}
+
+.dark .asset-advice-chat-status,
+.dark .asset-advice-chat-notice,
+.dark .asset-advice-chat-message.pending {
+  color: #9ca3af;
+}
+
 .card-drag-handle {
   cursor: grab;
   touch-action: none;

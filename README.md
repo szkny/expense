@@ -100,13 +100,19 @@ If the file is missing, Expense creates it from the distributed defaults on
 startup; an existing file is loaded without being overwritten.
 
 The Asset Management page can optionally request one AI-generated investment
-comment per day. Set `OPENAI_API_KEY` in the server environment to enable it.
-When the card is first viewed, the current portfolio, allocation, market
-indicators, and monthly asset history are sent to OpenAI. Household expense
-records are not included. Only the generated Markdown comment is cached
-locally for the day and model. Markdown is rendered with raw HTML and images
-disabled. The model is configured with `asset_management.ai_advisor.model` and
-defaults to `gpt-5-nano`. OpenAI API usage may incur charges.
+comment per day and continue with follow-up questions in a chat. Set
+`OPENAI_API_KEY` in the server environment to enable it. When the advice is
+first requested, the current portfolio, allocation, market indicators, and
+asset history are sent to OpenAI. Each chat request also sends that context,
+the displayed advice, and the in-memory conversation. Household expense
+records are not included. Only the generated daily Markdown comment is cached
+locally; chat history is not persisted and is cleared when leaving the page.
+The chat can use OpenAI's hosted web search for questions that need current
+public information; cited sources are shown as links. Search queries should not
+contain personal portfolio amounts or holdings. OpenAI Responses requests set
+`store` to `false`. Markdown is rendered with raw HTML and images disabled. The
+model is configured with `asset_management.ai_advisor.model` and defaults to
+`gpt-5-nano`. OpenAI API and web search usage may incur charges.
 
 <table>
   <thead>
