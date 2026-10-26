@@ -70,10 +70,147 @@ function initAssetAdviceChat(adviceContent) {
     return { resetForAdviceReload: () => {}, setReady: () => {} };
   }
 
+  const storageKey = "expense.assetAdviceChat.v1";
   const history = [];
   const maxMessages = 20;
   let ready = false;
   let sending = false;
+
+  const clearStoredHistory = () => {
+    try {
+      sessionStorage.removeItem(storageKey);
+    } catch {
+      // Chat remains usable when browser storage is unavailable.
+    }
+  };
+  const saveHistory = () => {
+    try {
+      sessionStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          advice: adviceContent.innerText || adviceContent.textContent || "",
+          messages: history,
+        }),
+      );
+    } catch {
+      // Chat remains usable when browser storage is unavailable or full.
+    }
+  };
+  const restoreReplyHtml = (html) => {
+    const template = document.createElement("template");
+    template.innerHTML = html;
+    const allowedTags = new Set([
+      "A",
+      "BLOCKQUOTE",
+      "BR",
+      "CODE",
+      "DEL",
+      "EM",
+      "H1",
+      "H2",
+      "H3",
+      "H4",
+      "H5",
+      "H6",
+      "HR",
+      "LI",
+      "OL",
+      "P",
+      "PRE",
+      "S",
+      "STRONG",
+      "SUB",
+      "SUP",
+      "TABLE",
+      "TBODY",
+      "TD",
+      "TH",
+      "THEAD",
+      "TR",
+      "UL",
+    ]);
+    const copyNode = (node) => {
+      if (node.nodeType === Node.TEXT_NODE)
+        return document.createTextNode(node.textContent || "");
+      if (node.nodeType !== Node.ELEMENT_NODE)
+        return document.createDocumentFragment();
+
+      if (!allowedTags.has(node.tagName)) {
+        const fragment = document.createDocumentFragment();
+        for (const child of node.childNodes) fragment.append(copyNode(child));
+        return fragment;
+      }
+      const element = document.createElement(node.tagName.toLowerCase());
+      for (const child of node.childNodes) element.append(copyNode(child));
+      if (node.tagName === "A") {
+        try {
+          const url = new URL(node.getAttribute("href"), window.location.href);
+          if (!["http:", "https:"].includes(url.protocol))
+            return document.createDocumentFragment();
+          element.href = url.href;
+          element.target = "_blank";
+          element.rel = "noopener noreferrer";
+        } catch {
+          return document.createDocumentFragment();
+        }
+      }
+      return element;
+    };
+    const fragment = document.createDocumentFragment();
+    for (const child of template.content.childNodes)
+      fragment.append(copyNode(child));
+    return fragment;
+  };
+  const restoreHistory = () => {
+    try {
+      const stored = JSON.parse(sessionStorage.getItem(storageKey) || "null");
+      const advice = adviceContent.innerText || adviceContent.textContent || "";
+      if (
+        stored?.advice !== advice ||
+        !Array.isArray(stored.messages) ||
+        stored.messages.length > maxMessages ||
+        stored.messages.length % 2 !== 0
+      ) {
+        clearStoredHistory();
+        return;
+      }
+      const validMessages = stored.messages.every((message, index) => {
+        const expectedRole = index % 2 === 0 ? "user" : "assistant";
+        const maxLength = expectedRole === "user" ? 1500 : 6000;
+        return (
+          message?.role === expectedRole &&
+          typeof message.content === "string" &&
+          message.content.trim().length > 0 &&
+          message.content.length <= maxLength &&
+          (message.timestamp === undefined ||
+            (typeof message.timestamp === "string" &&
+              Number.isFinite(Date.parse(message.timestamp)))) &&
+          (expectedRole === "user" ||
+            (typeof message.html === "string" && message.html.length <= 50000))
+        );
+      });
+      if (!validMessages) {
+        clearStoredHistory();
+        return;
+      }
+
+      history.push(...stored.messages);
+      for (const message of history) {
+        if (message.role === "user") {
+          const bubble = appendMessage("user", message.content);
+          appendMessageTime(bubble, message.timestamp);
+        } else {
+          const bubble = appendMessage("assistant", "");
+          bubble.append(restoreReplyHtml(message.html));
+          appendMessageTime(bubble, message.timestamp);
+        }
+      }
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      status.textContent = `${history.length / 2}/10往復`;
+    } catch {
+      clearStoredHistory();
+    }
+  };
 
   const updateControls = () => {
     sendButton.disabled =
@@ -90,6 +227,23 @@ function initAssetAdviceChat(adviceContent) {
     messagesContainer.append(message);
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
     return message;
+  };
+  const appendMessageTime = (message, timestamp) => {
+    if (typeof timestamp !== "string") return;
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return;
+    const time = document.createElement("time");
+    time.className = "asset-advice-chat-time";
+    time.dateTime = date.toISOString();
+    time.textContent = new Intl.DateTimeFormat("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(date);
+    message.append(time);
   };
   const appendSources = (message, sources) => {
     if (!Array.isArray(sources)) return;
@@ -127,6 +281,7 @@ function initAssetAdviceChat(adviceContent) {
   };
   const reset = (hide) => {
     history.length = 0;
+    clearStoredHistory();
     messagesContainer.replaceChildren();
     status.textContent = "";
     input.value = "";
@@ -136,6 +291,7 @@ function initAssetAdviceChat(adviceContent) {
   const setReady = (value) => {
     ready = value;
     chat.hidden = !ready;
+    if (ready && history.length === 0) restoreHistory();
     updateControls();
   };
 
@@ -156,8 +312,13 @@ function initAssetAdviceChat(adviceContent) {
       return;
     }
 
-    const userMessage = { role: "user", content: question };
+    const userMessage = {
+      role: "user",
+      content: question,
+      timestamp: new Date().toISOString(),
+    };
     const userBubble = appendMessage("user", question);
+    appendMessageTime(userBubble, userMessage.timestamp);
     const pendingBubble = appendMessage(
       "assistant",
       "AIが回答を生成中",
@@ -182,7 +343,10 @@ function initAssetAdviceChat(adviceContent) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           advice: adviceContent.innerText || adviceContent.textContent,
-          messages: [...history, userMessage],
+          messages: [
+            ...history.map(({ role, content }) => ({ role, content })),
+            { role: userMessage.role, content: userMessage.content },
+          ],
         }),
       });
       if (!response.ok) {
@@ -195,6 +359,8 @@ function initAssetAdviceChat(adviceContent) {
       const decoder = new TextDecoder();
       let buffer = "";
       let replyMarkdown = "";
+      let replyHtml = "";
+      let replyTimestamp = "";
       let completed = false;
       while (!completed) {
         const { value, done } = await reader.read();
@@ -223,6 +389,9 @@ function initAssetAdviceChat(adviceContent) {
               throw new Error("返答を取得できませんでした。");
             replyMarkdown = result.reply_markdown;
             appendSources(pendingBubble, result.sources);
+            replyHtml = pendingBubble.innerHTML;
+            replyTimestamp = new Date().toISOString();
+            appendMessageTime(pendingBubble, replyTimestamp);
             completed = true;
             break;
           }
@@ -234,7 +403,10 @@ function initAssetAdviceChat(adviceContent) {
       history.push(userMessage, {
         role: "assistant",
         content: replyMarkdown,
+        html: replyHtml,
+        timestamp: replyTimestamp,
       });
+      saveHistory();
       status.textContent =
         history.length >= maxMessages
           ? "10/10往復に達しました。リセットして続けてください。"

@@ -104,9 +104,12 @@ comment per day and continue with follow-up questions in a chat. Set
 `OPENAI_API_KEY` in the server environment to enable it. When the advice is
 first requested, the current portfolio, allocation, market indicators, and
 asset history are sent to OpenAI. Each chat request also sends that context,
-the displayed advice, and the in-memory conversation. Household expense
-records are not included. Only the generated daily Markdown comment is cached
-locally; chat history is not persisted and is cleared when leaving the page.
+the displayed advice, and the conversation history for the current tab.
+Household expense records are not included. Only the generated daily Markdown
+comment is cached on the server. Chat history is stored in the browser tab's
+session storage so it survives page reloads, and is cleared when the tab is
+closed, the chat is reset, or the advice is regenerated. The stored history
+remains on the device and is sent to OpenAI again with each follow-up question.
 The chat can use OpenAI's hosted web search for questions that need current
 public information; cited sources are shown as links. Search queries should not
 contain personal portfolio amounts or holdings. OpenAI Responses requests set

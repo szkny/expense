@@ -321,6 +321,23 @@ hr {
   margin: 0;
 }
 
+.asset-advice-chat-time {
+  display: block;
+  margin-top: 6px;
+  color: #6b7280;
+  font-size: 0.7rem;
+  line-height: 1.2;
+  text-align: right;
+}
+
+.asset-advice-chat-message.user .asset-advice-chat-time {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.dark .asset-advice-chat-message.assistant .asset-advice-chat-time {
+  color: #9ca3af;
+}
+
 .asset-advice-chat-sources {
   margin-top: 12px;
   padding-top: 8px;

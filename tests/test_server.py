@@ -9,6 +9,7 @@ from unittest.mock import Mock, patch, mock_open
 import pandas as pd
 from fastapi.testclient import TestClient
 
+from expense.api import server
 from expense.api.server import (
     _RECORD_CACHE_TTL,
     _LazyGspreadHandler,
@@ -354,6 +355,25 @@ class TestRecordCache(unittest.TestCase):
 
     def test_record_cache_ttl_is_five_minutes(self) -> None:
         self.assertEqual(_RECORD_CACHE_TTL, 300)
+
+    def test_expired_daily_asset_history_cache_is_refreshed(self) -> None:
+        previous_history = pd.DataFrame({"date": ["2026-10-24"]})
+        latest_history = pd.DataFrame({"date": ["2026-10-27"]})
+        cached_at = dt.datetime.now() - dt.timedelta(
+            seconds=server._ASSET_HISTORY_CACHE_TTL + 1
+        )
+        asset_manager = Mock(
+            get_daily_asset_history_data=Mock(return_value=latest_history)
+        )
+
+        with patch(
+            "expense.api.server._df_cache_asset_history",
+            {"df": previous_history, "timestamp": cached_at},
+        ):
+            history = server.get_cached_asset_history_records(asset_manager)
+
+        asset_manager.get_daily_asset_history_data.assert_called_once_with()
+        pd.testing.assert_frame_equal(history, latest_history)
 
 
 class TestWriteEndpoints(unittest.TestCase):

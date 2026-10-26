@@ -91,6 +91,7 @@ _RECORD_CACHE_TTL = 300
 _df_cache_asset_table: dict = {}
 _df_cache_asset_table_lock = threading.Lock()
 _df_cache_asset_history: dict = {}
+_ASSET_HISTORY_CACHE_TTL = 300
 _ASSET_CACHE_TTL: dict[str, int] = {
     "df_summary": 30,
     "df_stock": 30,
@@ -229,14 +230,14 @@ def get_cached_asset_history_records(
     timestamp = _df_cache_asset_history.get("timestamp", now)
     if "df" in _df_cache_asset_history and (
         now - timestamp
-    ).total_seconds() < 86400:
+    ).total_seconds() < _ASSET_HISTORY_CACHE_TTL:
         return _df_cache_asset_history["df"]
     with _df_cache_asset_table_lock:
         now = dt.datetime.now()
         timestamp = _df_cache_asset_history.get("timestamp", now)
         if "df" not in _df_cache_asset_history or (
             now - timestamp
-        ).total_seconds() >= 86400:
+        ).total_seconds() >= _ASSET_HISTORY_CACHE_TTL:
             _df_cache_asset_history["df"] = (
                 asset_manager.get_daily_asset_history_data()
             )
