@@ -846,6 +846,10 @@ img.screenshot {
   min-height: 100px;
 }
 
+.card.loading {
+  gap: 12px;
+}
+
 .chart-placeholder {
   display: flex;
   justify-content: center;
