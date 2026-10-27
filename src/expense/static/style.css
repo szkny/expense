@@ -200,12 +200,17 @@ hr {
 }
 
 .asset-advice-content {
+  box-sizing: border-box;
   max-height: min(24rem, 50vh);
   overflow-y: auto;
   overscroll-behavior-y: auto;
   overflow-wrap: anywhere;
   line-height: 1.7;
   margin: 0;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #f9fafb;
 }
 
 .asset-advice-status-row {
@@ -260,6 +265,11 @@ hr {
 
 .dark .asset-advice-content pre {
   background: #1f2937;
+}
+
+.dark .asset-advice-content {
+  border-color: #374151;
+  background: #111827;
 }
 
 .dark .asset-advice-content blockquote {
