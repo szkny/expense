@@ -326,6 +326,14 @@ class TestDailyAssetAdvice(unittest.TestCase):
             request_body["instructions"],
         )
         self.assertIn(
+            "今日の日付はasset_data.as_ofを基準",
+            request_body["instructions"],
+        )
+        self.assertIn(
+            "モデル自身の現在日付やUTCの日付で上書きしない",
+            request_body["instructions"],
+        )
+        self.assertIn(
             "最初に『〇〇のデータがないため",
             request_body["instructions"],
         )
