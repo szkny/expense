@@ -201,7 +201,7 @@ hr {
 
 .asset-advice-content {
   box-sizing: border-box;
-  max-height: min(24rem, 50vh);
+  max-height: min(16rem, 36vh);
   overflow-y: auto;
   overscroll-behavior-y: auto;
   overflow-wrap: anywhere;
@@ -211,6 +211,57 @@ hr {
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   background: #f9fafb;
+}
+
+.asset-advice-content[tabindex] {
+  cursor: zoom-in;
+}
+
+.asset-advice-content[tabindex]:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+#asset-advice-dialog {
+  box-sizing: border-box;
+  width: min(54rem, calc(100vw - 2rem));
+  max-width: none;
+  max-height: calc(100vh - 2rem);
+  overscroll-behavior: contain;
+  padding: 20px;
+  border: none;
+  border-radius: 20px;
+  color: #333;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.3);
+}
+
+#asset-advice-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.asset-advice-dialog-heading {
+  position: relative;
+  padding-right: 32px;
+}
+
+.asset-advice-dialog-heading h3 {
+  margin: 0 0 12px;
+}
+
+.asset-advice-dialog-heading .btn-close {
+  top: 2px;
+  right: 0;
+}
+
+.asset-advice-dialog-content {
+  max-height: calc(100vh - 8rem);
+  overscroll-behavior: contain;
+  cursor: auto;
+}
+
+.dark #asset-advice-dialog {
+  background: #1f2937;
+  color: #f3f4f6;
 }
 
 .asset-advice-status-row {

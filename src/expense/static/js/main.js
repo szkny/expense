@@ -436,8 +436,28 @@ function initAssetAdvisor() {
   const trigger = card?.querySelector(".collapsible-trigger");
   const status = document.getElementById("asset-advice-status");
   const content = document.getElementById("asset-advice-content");
+  const dialog = document.getElementById("asset-advice-dialog");
+  const dialogContent = document.getElementById("asset-advice-dialog-content");
   const retryButton = document.getElementById("asset-advice-retry");
   if (!card || !trigger || !status || !content || !retryButton) return;
+
+  const openAdviceDialog = () => {
+    if (!dialog || !dialogContent || content.hidden) return;
+    dialogContent.replaceChildren(
+      ...Array.from(content.childNodes, (node) => node.cloneNode(true)),
+    );
+    dialog.showModal();
+  };
+  content.addEventListener("click", (event) => {
+    if (event.target.closest("a")) return;
+    openAdviceDialog();
+  });
+  content.addEventListener("keydown", (event) => {
+    if (event.target !== content || !["Enter", " "].includes(event.key)) return;
+    event.preventDefault();
+    openAdviceDialog();
+  });
+  dialog?.addEventListener("click", () => dialog.close());
 
   const chat = initAssetAdviceChat(content);
   let loading = false;

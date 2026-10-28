@@ -61,7 +61,16 @@
             {{ icons.get("reload", "↻") }}
           </button>
         </div>
-        <div id="asset-advice-content" class="asset-advice-content" hidden></div>
+        <div
+          id="asset-advice-content"
+          class="asset-advice-content"
+          tabindex="0"
+          role="region"
+          aria-label="今日の資産アドバイス。タップまたはEnter/Spaceキーで拡大表示"
+          aria-haspopup="dialog"
+          title="タップして拡大表示"
+          hidden
+        ></div>
         <section id="asset-advice-chat" class="asset-advice-chat" hidden>
           <div class="asset-advice-chat-heading">
             <h4>このアドバイスについて聞く</h4>
@@ -104,6 +113,10 @@
         </section>
       </div>
     </div>
+
+    <dialog id="asset-advice-dialog" aria-labelledby="asset-advice-dialog-title">
+      <div id="asset-advice-dialog-content" class="asset-advice-content asset-advice-dialog-content"></div>
+    </dialog>
 
     <div class="card" data-card-key="asset-report">
       <div class="asset-chart-header">
