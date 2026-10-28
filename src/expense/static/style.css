@@ -233,9 +233,24 @@ hr {
   border-radius: 20px;
   color: #333;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transform: scale(0.7);
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s ease;
+}
+
+#asset-advice-dialog.is-visible {
+  opacity: 1;
+  transform: scale(1);
 }
 
 #asset-advice-dialog::backdrop {
+  background: rgba(0, 0, 0, 0);
+  transition: background 0.5s ease;
+}
+
+#asset-advice-dialog.is-visible::backdrop {
   background: rgba(0, 0, 0, 0.6);
 }
 
@@ -480,6 +495,11 @@ hr {
 @media (prefers-reduced-motion: reduce) {
   .asset-advice-typing-indicator span {
     animation: none;
+  }
+
+  #asset-advice-dialog,
+  #asset-advice-dialog::backdrop {
+    transition: none;
   }
 }
 

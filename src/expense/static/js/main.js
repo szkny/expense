@@ -441,12 +441,49 @@ function initAssetAdvisor() {
   const retryButton = document.getElementById("asset-advice-retry");
   if (!card || !trigger || !status || !content || !retryButton) return;
 
+  let closingAdviceDialog = false;
+  const closeAdviceDialog = () => {
+    if (!dialog?.open || closingAdviceDialog) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      dialog.close();
+      return;
+    }
+    if (!dialog.classList.contains("is-visible")) {
+      dialog.close();
+      return;
+    }
+
+    closingAdviceDialog = true;
+    dialog.classList.remove("is-visible");
+    const finishClosing = () => {
+      if (!closingAdviceDialog) return;
+      closingAdviceDialog = false;
+      dialog.close();
+    };
+    const onTransitionEnd = (event) => {
+      if (event.target !== dialog || event.propertyName !== "opacity") return;
+      dialog.removeEventListener("transitionend", onTransitionEnd);
+      window.clearTimeout(closeTimeout);
+      finishClosing();
+    };
+    dialog.addEventListener("transitionend", onTransitionEnd);
+    const closeTimeout = window.setTimeout(() => {
+      dialog.removeEventListener("transitionend", onTransitionEnd);
+      finishClosing();
+    }, 550);
+  };
+
   const openAdviceDialog = () => {
     if (!dialog || !dialogContent || content.hidden) return;
     dialogContent.replaceChildren(
       ...Array.from(content.childNodes, (node) => node.cloneNode(true)),
     );
     dialog.showModal();
+    requestAnimationFrame(() => {
+      if (dialog.open && !closingAdviceDialog) {
+        dialog.classList.add("is-visible");
+      }
+    });
   };
   content.addEventListener("click", (event) => {
     if (event.target.closest("a")) return;
@@ -457,7 +494,11 @@ function initAssetAdvisor() {
     event.preventDefault();
     openAdviceDialog();
   });
-  dialog?.addEventListener("click", () => dialog.close());
+  dialog?.addEventListener("click", closeAdviceDialog);
+  dialog?.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closeAdviceDialog();
+  });
 
   const chat = initAssetAdviceChat(content);
   let loading = false;
