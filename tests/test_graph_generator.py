@@ -419,6 +419,34 @@ class GraphGeneratorIncomeHoverTest(unittest.TestCase):
         self.assertFalse(mapped_summary.isna().any())
 
 
+class GraphGeneratorFiscalAssetHistoryChartTest(unittest.TestCase):
+    def test_uses_unified_hover_for_each_date(self) -> None:
+        generator = GraphGenerator.__new__(GraphGenerator)
+        generator.fixed_types = []
+        generator.variable_types = ["食費"]
+        generator.all_income_types = ["給与"]
+        generator.forecast_income_types = ["給与"]
+        df = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2024-04-01", "2024-04-02"]),
+                "expense_type": ["給与", "食費"],
+                "expense_amount": [200_000, 1_000],
+            }
+        )
+
+        figure, _, _ = capture_chart_figure(
+            generator,
+            lambda data, include_plotlyjs=False: (
+                generator.generate_fiscal_asset_history_chart(
+                    data, target_year="2024", include_plotlyjs=include_plotlyjs
+                )[0]
+            ),
+            df,
+        )
+
+        self.assertEqual(figure.layout.hovermode, "x unified")
+
+
 class GraphGeneratorFiscalForecastTest(unittest.TestCase):
     def test_forecast_starts_after_irregular_income_in_actual_balance(
         self,

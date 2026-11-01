@@ -1543,7 +1543,6 @@ class GraphGenerator(Base):
                     name=f"{name}（予測）",
                     line=dict(color=color, dash="dot", shape="hv", width=1.5),
                     hovertemplate=(
-                        "%{x|%-Y年%-m月%-d日}<br>"
                         f"{name}（予測）: ¥%{{y:,.0f}}"
                         + (
                             " (%{customdata})"
@@ -1666,7 +1665,6 @@ class GraphGenerator(Base):
                     name=name,
                     line=dict(color=color, shape="hv", width=2),
                     hovertemplate=(
-                        "%{x|%-Y年%-m月%-d日}<br>"
                         f"{name}: ¥%{{y:,.0f}}"
                         + (" (%{customdata})" if column == "balance" else "")
                         + "<extra></extra>"
@@ -1703,6 +1701,7 @@ class GraphGenerator(Base):
                 spikedash="dot",
             ),
             yaxis=dict(range=[y_min - y_margin, y_max + y_margin]),
+            hovermode="x unified",
         )
         self._update_layout(fig, theme, ymax_for_format=max(abs(y_min), y_max))
         fig.update_xaxes(range=[fiscal_start, fiscal_end], fixedrange=True)
