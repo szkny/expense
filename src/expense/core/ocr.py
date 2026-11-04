@@ -11,6 +11,7 @@ from typing import Any
 from janome.tokenizer import Tokenizer
 
 from .base import HOME
+from .history_store import ExpenseHistoryStore
 from .termux_api import TermuxAPI
 
 log: logging.Logger = logging.getLogger("expense")
@@ -358,17 +359,12 @@ class Ocr(TermuxAPI):
         get expense history as a pandas DataFrame
         """
         log.info("start 'get_expense_history' method")
-        df = pd.DataFrame()
-        try:
-            df = pd.read_csv(self.expense_history, index_col=None)
-        except FileNotFoundError:
-            pass
-        except pd.errors.EmptyDataError:
-            pass
+        df = pd.DataFrame(
+            ExpenseHistoryStore(self.expense_history).records(),
+            columns=["date", "type", "memo", "amount"],
+        )
         if df.empty:
             return df
-        df = df.T.reset_index().T
-        df.columns = pd.Index(["date", "type", "memo", "amount"])
         df.index = pd.Index(range(len(df)))
         log.info("end 'get_expense_history' method")
         return df

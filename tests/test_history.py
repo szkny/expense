@@ -1,12 +1,13 @@
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pandas as pd
 
 from expense.core.expense import Expense
 from expense.core.gspread_wrapper import GspreadHandler
+from expense.core.history_store import ExpenseHistoryStore
 
 
 class TestSheetHistoryConversion(unittest.TestCase):
@@ -64,6 +65,57 @@ class TestSheetHistoryConversion(unittest.TestCase):
 
 
 class TestHistoryFiles(unittest.TestCase):
+    def test_legacy_csv_is_imported_once_and_kept_as_csv_mirror(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            csv_path = Path(directory) / "expense_history.log"
+            csv_path.write_text(
+                "2026-04-01T10:00:00.000000,食費,昼食,1000\n"
+                "2026-04-02T10:00:00.000000,食費,昼,夕食,1200\n",
+                encoding="utf-8",
+            )
+
+            store = ExpenseHistoryStore(csv_path)
+            self.assertEqual(
+                store.records(),
+                [
+                    ("2026-04-01T10:00:00.000000", "食費", "昼食", 1000),
+                    (
+                        "2026-04-02T10:00:00.000000",
+                        "食費",
+                        "昼,夕食",
+                        1200,
+                    ),
+                ],
+            )
+            store.add("外食", "夕食,会食", 2500, "2026-04-03T10:00:00.000000")
+
+            reopened_store = ExpenseHistoryStore(csv_path)
+            self.assertEqual(len(reopened_store.records()), 3)
+            self.assertEqual(
+                csv_path.read_text(encoding="utf-8").splitlines()[-1],
+                '2026-04-03T10:00:00.000000,外食,"夕食,会食",2500',
+            )
+
+    def test_failed_csv_mirror_is_retried_when_store_reopens(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            csv_path = Path(directory) / "expense_history.log"
+            store = ExpenseHistoryStore(csv_path)
+            with (
+                self.assertLogs("expense", level="ERROR"),
+                patch(
+                    "expense.core.history_store.os.replace",
+                    side_effect=OSError("mirror unavailable"),
+                ),
+            ):
+                store.add("食費", "昼食", 1000, "2026-04-01T10:00:00.000000")
+
+            reopened_store = ExpenseHistoryStore(csv_path)
+            self.assertEqual(len(reopened_store.records()), 1)
+            self.assertEqual(
+                csv_path.read_text(encoding="utf-8"),
+                "2026-04-01T10:00:00.000000,食費,昼食,1000\n",
+            )
+
     def test_edit_changes_only_last_duplicate_and_keeps_same_day_timestamp(
         self,
     ) -> None:

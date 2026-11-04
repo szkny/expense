@@ -21,9 +21,24 @@ It features receipt scanning via OCR, a web-based user interface, and integratio
 ## Requirements
 
 - Python 3.10 ~ 3.13
+- A Python build with the standard-library `sqlite3` module enabled
 - Tesseract OCR
 - Google Cloud Platform credentials (`credentials.json`)
 - (Optional) Termux (Terminal emulator for Android)
+
+The `sqlite3` module is included with Python and does not require installing
+the separate `sqlite3` command-line program.
+
+## Local Storage and Sheets Sync
+
+Local expense history is now backed by SQLite. The existing headerless
+four-column `expense_history.log` file is retained as a CSV mirror; an existing
+CSV is imported once when the SQLite history database is first accessed. Do
+not edit the mirror directly after migration.
+
+Registration still waits for Google Sheets, and the UI does not yet show sync
+status. The planned next step is to make SQLite authoritative for registration
+and queue Sheets synchronization in the background.
 
 ## Installation
 
@@ -78,6 +93,9 @@ it does not modify files.
 - `make test` redirects Expense data, cache, config, and log paths to a temporary
   directory and mocks Google authentication. It does not access Google Sheets,
   Termux, or device OCR.
+- Application initialization checks that Python can open an in-memory SQLite
+  database. Expense history access creates `expense_history.sqlite3` in the
+  application data directory and keeps `expense_history.log` as a CSV mirror.
 - `make ocr-test` is a device diagnostic, not a unit test. It reads recent
   device screenshots and runs Tesseract; OCR results can contain personal
   expense data and are logged. Run it only when device access is intended.

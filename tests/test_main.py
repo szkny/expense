@@ -2,6 +2,7 @@ import unittest
 import datetime
 import json
 import os
+import sqlite3
 import subprocess
 import tempfile
 from pathlib import Path
@@ -14,11 +15,21 @@ from expense.core.expense import (
 )
 from expense.core.ocr import Ocr
 from expense.core.asset_manager import AssetManager
-from expense.core.base import Base
+from expense.core.base import Base, check_sqlite3
 from expense.core.termux_api import TermuxAPI
 
 
 class TestMain(unittest.TestCase):
+
+    def test_check_sqlite3_rejects_unavailable_database(self) -> None:
+        with patch(
+            "sqlite3.connect",
+            side_effect=sqlite3.OperationalError("SQLite unavailable"),
+        ):
+            with self.assertRaisesRegex(
+                RuntimeError, "SQLiteを初期化できません"
+            ):
+                check_sqlite3()
 
     def test_base_paths_use_isolated_xdg_directories(self) -> None:
         base = Base()
@@ -125,17 +136,17 @@ class TestMain(unittest.TestCase):
         )
 
     def test_get_frequent_expenses(self) -> None:
-        expense = Expense()
-        with (
-            patch("expense.core.expense.os.path.exists") as mock_exists,
-            patch(
-                "builtins.open",
-                unittest.mock.mock_open(
-                    read_data="2023-01-01,食費,,1000\n2023-01-01,食費,,1000\n2023-01-02,交通費,,500"
-                ),
-            ),
-        ):
-            mock_exists.return_value = True
+        with tempfile.TemporaryDirectory() as directory:
+            expense = Expense.__new__(Expense)
+            expense.expense_history = Path(directory) / "history.log"
+            expense.expense_history.write_text(
+                "2023-01-01,食費,,1000\n"
+                "2023-01-01,食費,,1000\n"
+                "2023-01-02,交通費,,500\n"
+                "2023-01-03,外食,昼,会食,2000\n"
+                "2023-01-04,外食,昼,会食,2000",
+                encoding="utf-8",
+            )
             self.assertEqual(
                 expense.get_frequent_expenses(1),
                 [
@@ -146,27 +157,29 @@ class TestMain(unittest.TestCase):
                     }
                 ],
             )
+            self.assertEqual(
+                expense.get_frequent_expenses(2)[1],
+                {
+                    "expense_type": "外食",
+                    "expense_memo": "昼,会食",
+                    "expense_amount": 2000,
+                },
+            )
 
-            mock_exists.return_value = False
-            self.assertEqual(expense.get_frequent_expenses(1), [])
+            empty_expense = Expense.__new__(Expense)
+            empty_expense.expense_history = Path(directory) / "empty.log"
+            self.assertEqual(empty_expense.get_frequent_expenses(1), [])
 
     def test_get_recent_expenses(self) -> None:
-        expense = Expense()
-        with (
-            patch(
-                "expense.core.expense.pd.read_csv",
-                unittest.mock.Mock(
-                    return_value=pd.DataFrame(
-                        {
-                            "date": ["2023-01-01", "2023-01-02", "2023-01-03"],
-                            "expense_type": ["食費", "交通費", "遊興費"],
-                            "expense_memo": ["", "", ""],
-                            "expense_amount": [1000, 500, 2000],
-                        }
-                    )
-                ),
-            ) as mock_read_csv,
-        ):
+        with tempfile.TemporaryDirectory() as directory:
+            expense = Expense.__new__(Expense)
+            expense.expense_history = Path(directory) / "history.log"
+            expense.expense_history.write_text(
+                "2023-01-01,食費,,1000\n"
+                "2023-01-02,交通費,,500\n"
+                "2023-01-03,遊興費,,2000\n",
+                encoding="utf-8",
+            )
             self.assertEqual(
                 expense.get_recent_expenses(2),
                 [
@@ -183,20 +196,20 @@ class TestMain(unittest.TestCase):
                 ],
             )
 
-            mock_read_csv.side_effect = FileNotFoundError
-            self.assertEqual(expense.get_recent_expenses(2), [])
+            empty_expense = Expense.__new__(Expense)
+            empty_expense.expense_history = Path(directory) / "empty.log"
+            self.assertEqual(empty_expense.get_recent_expenses(2), [])
 
     def test_get_recent_expenses_with_dates_and_duplicates(self) -> None:
-        expense = Expense()
-        data = pd.DataFrame(
-            {
-                "date": ["2024-04-01", "2024-04-02", "2024-04-02"],
-                "expense_type": ["食費", "交通費", "交通費"],
-                "expense_memo": ["", "電車", "電車"],
-                "expense_amount": [1000, 500, 500],
-            }
-        )
-        with patch("expense.core.expense.pd.read_csv", return_value=data):
+        with tempfile.TemporaryDirectory() as directory:
+            expense = Expense.__new__(Expense)
+            expense.expense_history = Path(directory) / "history.log"
+            expense.expense_history.write_text(
+                "2024-04-01,食費,,1000\n"
+                "2024-04-02,交通費,電車,500\n"
+                "2024-04-02,交通費,電車,500\n",
+                encoding="utf-8",
+            )
             result = expense.get_recent_expenses(
                 3, drop_duplicates=False, with_date=True
             )
@@ -275,6 +288,10 @@ class TestMain(unittest.TestCase):
                 )
             )
             self.assertIn("外食,夕食,2000", expense.expense_history.read_text())
+            self.assertIn(
+                "2024-04-03T00:00:00.000000,外食,夕食,2000",
+                expense.expense_history.read_text(encoding="utf-8"),
+            )
             self.assertFalse(
                 expense.edit_expense(
                     {"expense_type": "食費", "expense_amount": 1000}, {}
@@ -293,11 +310,18 @@ class TestMain(unittest.TestCase):
             )
 
     def test_store_expense(self) -> None:
-        expense = Expense()
-        with patch("builtins.open", unittest.mock.mock_open()) as mock_open:
+        with tempfile.TemporaryDirectory() as directory:
+            expense = Expense.__new__(Expense)
+            expense.expense_history = Path(directory) / "history.log"
             expense.store_expense("食費", "メモ", 1000)
-            mock_open.assert_called_once_with(unittest.mock.ANY, "a")
-            mock_open().write.assert_called_once()
+            self.assertIn(
+                ",食費,メモ,1000\n",
+                expense.expense_history.read_text(encoding="utf-8"),
+            )
+            self.assertEqual(
+                expense._get_history_store().records()[0][1:],
+                ("食費", "メモ", 1000),
+            )
 
     def test_build_asset_allocation(self) -> None:
         df_items = pd.DataFrame(

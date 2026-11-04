@@ -14,6 +14,7 @@ from .termux_api import TermuxAPI
 from .notification import NotificationManager
 from .ocr import Ocr, get_latest_screenshot
 from .gspread_wrapper import GspreadHandler
+from .history_store import ExpenseHistoryStore
 
 logging.getLogger("asyncio").setLevel(logging.WARNING)
 log: logging.Logger = logging.getLogger("expense")
@@ -47,6 +48,18 @@ class Expense(Base):
         super().__init__()
         self.termux_api: TermuxAPI = TermuxAPI()
         self.notification: NotificationManager = NotificationManager()
+        self._history_store: ExpenseHistoryStore | None = None
+
+    def _get_history_store(self) -> ExpenseHistoryStore:
+        log.info("start '_get_history_store' method")
+        try:
+            store = getattr(self, "_history_store", None)
+            if store is None:
+                store = ExpenseHistoryStore(self.expense_history)
+                self._history_store = store
+            return store
+        finally:
+            log.info("end '_get_history_store' method")
 
     async def expense_main(self, args: argparse.Namespace) -> None:
         """
@@ -209,37 +222,23 @@ class Expense(Base):
         get frequent expenses
         """
         log.info("start 'get_frequent_expenses' method")
-        if not os.path.exists(self.expense_history):
-            return []
 
-        def parse_row(row: tuple[str, int]) -> dict:
-            data = row[0].strip().split(",")
-            if len(data) == 2:
-                return {
-                    "expense_type": data[0],
-                    "expense_memo": "",
-                    "expense_amount": int(data[1]),
-                }
-            elif len(data) == 3:
-                return {
-                    "expense_type": data[0],
-                    "expense_memo": data[1],
-                    "expense_amount": int(data[2]),
-                }
-            else:
-                return {}
-
-        try:
-            with open(self.expense_history, "r") as f:
-                lines = f.readlines()
-        except FileNotFoundError:
-            return []
-        lines = [",".join(line.split(",")[1:]) for line in lines]
-        aggregated_lines: list[tuple] = [
-            item for item in Counter(lines).most_common() if item[1] >= 2
+        expense_records = [
+            (expense_type, expense_memo, expense_amount)
+            for _, expense_type, expense_memo, expense_amount in self._get_history_store().records()
+        ]
+        aggregated_records = [
+            item
+            for item in Counter(expense_records).most_common()
+            if item[1] >= 2
         ]
         frequent_expenses: list[dict] = [
-            parse_row(row) for row in aggregated_lines[:num_items]
+            {
+                "expense_type": row[0][0],
+                "expense_memo": row[0][1],
+                "expense_amount": row[0][2],
+            }
+            for row in aggregated_records[:num_items]
         ]
         # log.debug(
         #     f"Frequent expenses: {json.dumps(frequent_expenses, indent=2, ensure_ascii=False)}"
@@ -257,12 +256,14 @@ class Expense(Base):
         get recent expenses
         """
         log.info("start 'get_recent_expenses' method")
-        try:
-            df = pd.read_csv(self.expense_history, header=None)
-        except FileNotFoundError:
-            return []
-        df.columns = pd.Index(
-            ["date", "expense_type", "expense_memo", "expense_amount"]
+        df = pd.DataFrame(
+            self._get_history_store().records(),
+            columns=[
+                "date",
+                "expense_type",
+                "expense_memo",
+                "expense_amount",
+            ],
         )
         df["expense_memo"] = df["expense_memo"].fillna("")
         df.sort_values(by="date", ascending=False, inplace=True)
@@ -298,19 +299,15 @@ class Expense(Base):
     ) -> list[dict[str, Any]]:
         """今日が登録日となる、未登録の月次支出候補を返す。"""
         today = today or datetime.date.today()
-        try:
-            df = pd.read_csv(
-                self.expense_history,
-                header=None,
-                names=[
-                    "datetime",
-                    "expense_type",
-                    "expense_memo",
-                    "expense_amount",
-                ],
-            )
-        except (FileNotFoundError, pd.errors.EmptyDataError):
-            return []
+        df = pd.DataFrame(
+            self._get_history_store().records(),
+            columns=[
+                "datetime",
+                "expense_type",
+                "expense_memo",
+                "expense_amount",
+            ],
+        )
 
         expense_type_config: dict[str, list[str]] = self.config.get(
             "expense", {}
@@ -486,10 +483,12 @@ class Expense(Base):
             and pd.Timestamp(expense_date).date() != datetime.date.today()
             else datetime.datetime.today().isoformat()
         )
-        with open(self.expense_history, "a") as f:
-            f.write(
-                f"{expense_date_iso},{expense_type},{expense_memo},{expense_amount}\n"
-            )
+        self._get_history_store().add(
+            expense_type,
+            expense_memo,
+            expense_amount,
+            expense_date_iso,
+        )
         log.debug(
             f"Stored expense: {expense_date_iso}, {expense_type}, {expense_memo}, {expense_amount}"
         )
@@ -507,36 +506,13 @@ class Expense(Base):
         delete expense
         """
         log.info("start 'delete_expense' method")
-        status = True
-        try:
-            df = pd.read_csv(self.expense_history, header=None)
-            columns = ["datetime", "type", "memo", "amount"]
-            df.columns = pd.Index(columns)
-            df.loc[:, "date"] = pd.to_datetime(df.loc[:, "datetime"]).dt.date
-        except FileNotFoundError:
-            log.debug(f"File not found. {self.expense_history}")
-            return False
-        condition = f"date == @pd.Timestamp('{target_date}').date()"
-        condition += " and type == @target_type" if target_type else ""
-        condition += " and memo == @target_memo" if target_memo else ""
-        condition += " and amount == @target_amount" if target_amount else ""
-        idx = df.query(condition).index.to_list()
-        if len(idx):
-            target_idx = idx[-1]
-            log.debug(f"Target index: {target_idx}")
-            target_row = ", ".join(
-                df.loc[target_idx, columns].squeeze().map(str)
-            )
-            df = df.drop(target_idx)
-            df.loc[:, columns].to_csv(
-                self.expense_history, index=False, header=False
-            )
-            log.debug(f"Deleted expense: {target_row}")
-        else:
+        status = self._get_history_store().delete(
+            target_date, target_type, target_amount, target_memo
+        )
+        if not status:
             log.debug(
                 f"Deleting expense Failed: records not found. ({target_date}, {target_type}, {target_memo}, {target_amount})"
             )
-            status = False
         log.info("end 'delete_expense' method")
         return status
 
@@ -583,47 +559,19 @@ class Expense(Base):
         log.debug(f"new_expense_amount: {new_expense_amount}")
         log.debug(f"new_expense_memo: {new_expense_memo}")
 
-        try:
-            df = pd.read_csv(self.expense_history, header=None)
-            columns = ["datetime", "type", "memo", "amount"]
-            df.columns = pd.Index(columns)
-            df.loc[:, "date"] = pd.to_datetime(df.loc[:, "datetime"]).dt.date
-        except FileNotFoundError:
-            log.debug(f"File not found. {self.expense_history}")
-            return False
-        condition = f"date == @pd.Timestamp('{target_date}').date()"
-        condition += " and type == @target_type" if target_type else ""
-        condition += " and memo == @target_memo" if target_memo else ""
-        condition += " and amount == @target_amount" if target_amount else ""
-        idx = df.query(condition).index.to_list()
-        if len(idx):
-            target_idx = idx[-1]
-            log.debug(f"Target index: {target_idx}")
-            target_row = ", ".join(
-                df.loc[target_idx, columns].squeeze().map(str)
-            )
-            log.debug(f"Target expense: {target_row}")
-            tar_dt = pd.Timestamp(df.loc[target_idx, "datetime"])
-            new_dt = pd.Timestamp(new_expense_date)
-            if tar_dt.date() != new_dt.date():
-                df.loc[target_idx, "datetime"] = new_dt.strftime(
-                    "%Y-%m-%dT%H:%M:%S.%f"
-                )
-            df.loc[target_idx, "type"] = new_expense_type
-            df.loc[target_idx, "memo"] = new_expense_memo
-            df.loc[target_idx, "amount"] = new_expense_amount
-            df.sort_values("datetime", inplace=True)
-            df.loc[:, columns].to_csv(
-                self.expense_history, index=False, header=False
-            )
-            edited_row = ", ".join(
-                df.loc[target_idx, columns].squeeze().map(str)
-            )
-            log.debug(f"Edited expense: {edited_row}")
-        else:
+        status = self._get_history_store().edit(
+            str(target_date),
+            str(target_type),
+            target_amount,
+            str(target_memo or ""),
+            str(new_expense_date),
+            str(new_expense_type),
+            new_expense_amount,
+            str(new_expense_memo or ""),
+        )
+        if not status:
             log.debug(
                 f"Editing expense Failed: records not found. ({target_date}, {target_type}, {target_memo}, {target_amount})"
             )
-            status = False
         log.info("end 'edit_expense' method")
         return status

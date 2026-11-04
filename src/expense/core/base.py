@@ -3,15 +3,39 @@ import json
 import shutil
 import pathlib
 import logging
+from contextlib import closing
 from typing import Any
 from importlib import resources
 from platformdirs import user_data_dir, user_cache_dir, user_config_dir
 
 HOME: pathlib.Path = pathlib.Path(os.getenv("HOME") or "~")
+log: logging.Logger = logging.getLogger("expense")
+
+
+def check_sqlite3() -> None:
+    """Ensure Python has a working SQLite module."""
+    log.info("start 'check_sqlite3' function")
+    try:
+        try:
+            import sqlite3
+        except ImportError as exc:
+            raise RuntimeError(
+                "Pythonのsqlite3モジュールが利用できません。"
+                "SQLite対応のPythonを使用してください。"
+            ) from exc
+
+        try:
+            with closing(sqlite3.connect(":memory:")) as connection:
+                connection.execute("SELECT sqlite_version()")
+        except sqlite3.Error as exc:
+            raise RuntimeError("SQLiteを初期化できません。") from exc
+    finally:
+        log.info("end 'check_sqlite3' function")
 
 
 class Base:
     def __init__(self) -> None:
+        check_sqlite3()
         self.app_name: str = "expense"
         self.log: logging.Logger = logging.getLogger(self.app_name)
         self.data_path: pathlib.Path = pathlib.Path(
