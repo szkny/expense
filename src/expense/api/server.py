@@ -1627,7 +1627,7 @@ def delete_process(
             finally:
                 _clear_record_cache()
         if status:
-            msg = "✅ 端末内の履歴に登録しました。"
+            msg = "✅ 端末内の履歴を削除しました。"
         else:
             msg = "🚫 家計簿の削除処理に失敗しました。"
         info = (
@@ -1718,7 +1718,7 @@ def edit_process(
             finally:
                 _clear_record_cache()
             if status:
-                msg = "✅ 端末内の履歴に登録しました。"
+                msg = "✅ 端末内の履歴を修正しました。"
             else:
                 msg = "🚫 家計簿の修正処理に失敗しました。"
             info = (
