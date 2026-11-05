@@ -748,9 +748,116 @@ def stream_asset_advice(force: bool = False) -> StreamingResponse:
     )
 
 
+def _stream_asset_advice_chat_events(
+    payload: dict[str, Any],
+    advice: Any,
+    messages: Any,
+    api_key: str,
+    model: str,
+) -> Any:
+    reply_parts: list[str] = []
+    sources: list[dict[str, str]] = []
+    source_urls: set[str] = set()
+    try:
+        for event_type, value in stream_asset_advice_chat_reply(
+            payload, advice, messages, api_key, model=model
+        ):
+            if event_type == "delta":
+                reply_parts.append(value)
+                yield "data: " + json.dumps(
+                    {
+                        "reply_html": render_asset_advice("".join(reply_parts)),
+                        "done": False,
+                    },
+                    ensure_ascii=False,
+                ) + "\n\n"
+            elif event_type == "citation" and len(sources) < 8:
+                url = value.get("url")
+                if not isinstance(url, str) or len(url) > 2048:
+                    continue
+                try:
+                    parsed_url = urlsplit(url)
+                except ValueError:
+                    continue
+                if (
+                    parsed_url.scheme != "https"
+                    or not parsed_url.hostname
+                    or url in source_urls
+                ):
+                    continue
+                title = value.get("title")
+                sources.append(
+                    {
+                        "title": (
+                            title[:200]
+                            if isinstance(title, str) and title.strip()
+                            else parsed_url.hostname
+                        ),
+                        "url": url,
+                    }
+                )
+                source_urls.add(url)
+        reply = "".join(reply_parts).strip()
+        if not reply:
+            raise AssetAdviceRequestError("OpenAI returned no chat reply.")
+        yield "data: " + json.dumps(
+            {
+                "reply_markdown": reply,
+                "reply_html": render_asset_advice(reply),
+                "sources": sources,
+                "done": True,
+            },
+            ensure_ascii=False,
+        ) + "\n\n"
+    except AssetAdviceConfigurationError as error:
+        yield "data: " + json.dumps(
+            {"error": str(error), "done": True}, ensure_ascii=False
+        ) + "\n\n"
+    except AssetAdviceRequestError:
+        log.exception("Failed to stream asset advisor chat reply.")
+        yield "data: " + json.dumps(
+            {
+                "error": "アドバイザーから返答を取得できませんでした。",
+                "code": "openai_unavailable",
+                "done": True,
+            },
+            ensure_ascii=False,
+        ) + "\n\n"
+
+
 @app.post("/api/asset_advice/chat", response_class=StreamingResponse)
 def chat_with_asset_advisor(body: dict[str, Any]) -> Response:
     """Answer a follow-up question using the current advice and asset data."""
+    validation_error = _validate_asset_advice_chat(body)
+    if validation_error is not None:
+        return validation_error
+
+    advice = body.get("advice")
+    messages = body.get("messages")
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": "OPENAI_API_KEYが設定されていません。",
+                "code": "missing_api_key",
+            },
+            headers={"Cache-Control": "no-store"},
+        )
+
+    payload, model = _get_asset_advice_payload()
+    return StreamingResponse(
+        _stream_asset_advice_chat_events(
+            payload, advice, messages, api_key, model
+        ),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+    )
+
+
+def _validate_asset_advice_chat(
+    body: dict[str, Any],
+) -> JSONResponse | None:
     advice = body.get("advice")
     messages = body.get("messages")
     if (
@@ -794,97 +901,7 @@ def chat_with_asset_advisor(body: dict[str, Any]) -> Response:
             content={"error": "質問を入力してから送信してください。"},
             headers={"Cache-Control": "no-store"},
         )
-
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        return JSONResponse(
-            status_code=503,
-            content={
-                "error": "OPENAI_API_KEYが設定されていません。",
-                "code": "missing_api_key",
-            },
-            headers={"Cache-Control": "no-store"},
-        )
-
-    payload, model = _get_asset_advice_payload()
-
-    def events() -> Any:
-        reply_parts: list[str] = []
-        sources: list[dict[str, str]] = []
-        source_urls: set[str] = set()
-        try:
-            for event_type, value in stream_asset_advice_chat_reply(
-                payload, advice, messages, api_key, model=model
-            ):
-                if event_type == "delta":
-                    reply_parts.append(value)
-                    yield "data: " + json.dumps(
-                        {
-                            "reply_html": render_asset_advice(
-                                "".join(reply_parts)
-                            ),
-                            "done": False,
-                        },
-                        ensure_ascii=False,
-                    ) + "\n\n"
-                elif event_type == "citation" and len(sources) < 8:
-                    url = value.get("url")
-                    if not isinstance(url, str) or len(url) > 2048:
-                        continue
-                    try:
-                        parsed_url = urlsplit(url)
-                    except ValueError:
-                        continue
-                    if (
-                        parsed_url.scheme != "https"
-                        or not parsed_url.hostname
-                        or url in source_urls
-                    ):
-                        continue
-                    title = value.get("title")
-                    sources.append(
-                        {
-                            "title": (
-                                title[:200]
-                                if isinstance(title, str) and title.strip()
-                                else parsed_url.hostname
-                            ),
-                            "url": url,
-                        }
-                    )
-                    source_urls.add(url)
-            reply = "".join(reply_parts).strip()
-            if not reply:
-                raise AssetAdviceRequestError("OpenAI returned no chat reply.")
-            yield "data: " + json.dumps(
-                {
-                    "reply_markdown": reply,
-                    "reply_html": render_asset_advice(reply),
-                    "sources": sources,
-                    "done": True,
-                },
-                ensure_ascii=False,
-            ) + "\n\n"
-        except AssetAdviceConfigurationError as error:
-            yield "data: " + json.dumps(
-                {"error": str(error), "done": True}, ensure_ascii=False
-            ) + "\n\n"
-        except AssetAdviceRequestError:
-            log.exception("Failed to stream asset advisor chat reply.")
-            yield "data: " + json.dumps(
-                {
-                    "error": "アドバイザーから返答を取得できませんでした。",
-                    "code": "openai_unavailable",
-                    "done": True,
-                },
-                ensure_ascii=False,
-            ) + "\n\n"
-
-    return StreamingResponse(
-        events(),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
-    )
+    return None
 
 
 def get_simulation_averages(
@@ -1452,6 +1469,74 @@ def register(
     )
 
 
+def _get_duplicate_ocr_result(
+    latest_ocr_data: dict[str, Any],
+    recent_screenshot: str,
+    server_tools: ServerTools,
+) -> tuple[str, str] | None:
+    if not latest_ocr_data or (
+        latest_ocr_data.get("screenshot_name") != recent_screenshot
+    ):
+        return None
+
+    log.info("OCR data already exists, skipping registration.")
+    expense_date = latest_ocr_data.get("expense_date")
+    expense_type = latest_ocr_data.get("expense_type")
+    expense_amount = int(latest_ocr_data.get("expense_amount"))
+    expense_memo = latest_ocr_data.get("expense_memo", "")
+    msg = "🚫 OCRデータは登録済のためスキップされました。"
+    info = (
+        f"[{expense_date}] "
+        f"{expense_type}: "
+        f"¥{expense_amount:,}"
+        f"{' -  '+expense_memo if expense_memo else ''}"
+    )
+    try:
+        server_tools.notification.notify(msg, info)
+    except Exception:
+        log.info("Notification failed.")
+    return msg, info
+
+
+def _register_ocr_result(
+    ocr_data: dict[str, Any], server_tools: ServerTools
+) -> tuple[str, str]:
+    expense_type = ocr_data.get("expense_type")
+    expense_amount = int(ocr_data.get("expense_amount"))
+    expense_memo = ocr_data.get("expense_memo", "")
+    expense_date = ocr_data.get("expense_date", "")
+    try:
+        server_tools.termux_api.toast("登録中..")
+    except Exception:
+        log.info("Toast notification failed.")
+    try:
+        server_tools.expense_handler.store_expense(
+            expense_type,
+            expense_memo,
+            expense_amount,
+            expense_date,
+        )
+    finally:
+        _clear_record_cache()
+    try:
+        with open(server_tools.cache_path / "ocr_data.json", "w") as cache_file:
+            json.dump(ocr_data, cache_file, ensure_ascii=False, indent=2)
+    except OSError:
+        log.exception("Failed to save OCR duplicate-prevention data.")
+    msg = "✅ 端末内の履歴に登録しました。"
+    info = (
+        f"[{expense_date}] "
+        f"{expense_type}: "
+        f"¥{expense_amount:,}"
+        f"{' -  '+expense_memo if expense_memo else ''}"
+    )
+    try:
+        server_tools.notification.notify(msg, info)
+    except Exception:
+        log.info("Notification failed.")
+    return msg, info
+
+
 @app.post("/ocr")
 def ocr_process(
     request: Request,
@@ -1468,29 +1553,12 @@ def ocr_process(
     try:
         recent_screenshot = os.path.basename(get_latest_screenshot())
         latest_ocr_data = server_tools.expense_handler.get_ocr_expense()
-        status = True
-        if len(latest_ocr_data) and (
-            latest_ocr_data.get("screenshot_name") == recent_screenshot
-        ):
-            log.info("OCR data already exists, skipping registration.")
-            expense_date = latest_ocr_data.get("expense_date")
-            expense_type = latest_ocr_data.get("expense_type")
-            expense_amount: int | str = int(
-                latest_ocr_data.get("expense_amount")
-            )
-            expense_memo = latest_ocr_data.get("expense_memo", "")
+        duplicate_result = _get_duplicate_ocr_result(
+            latest_ocr_data, recent_screenshot, server_tools
+        )
+        if duplicate_result is not None:
             status = False
-            msg = "🚫 OCRデータは登録済のためスキップされました。"
-            info = (
-                f"[{expense_date}] "
-                f"{expense_type}: "
-                f"¥{expense_amount:,}"
-                f"{' -  '+expense_memo if expense_memo else ''}"
-            )
-            try:
-                server_tools.notification.notify(msg, info)
-            except Exception:
-                log.info("Notification failed.")
+            msg, info = duplicate_result
         else:
             try:
                 ocr_data = ocr.main()
@@ -1500,51 +1568,7 @@ def ocr_process(
                 msg = "🚫 画像の読み取り処理に失敗ました。"
                 ocr_data = {}
             if ocr_data:
-                expense_type = ocr_data.get("expense_type")
-                expense_amount = int(ocr_data.get("expense_amount"))
-                expense_memo = ocr_data.get("expense_memo", "")
-                expense_date = ocr_data.get("expense_date", "")
-                try:
-                    server_tools.termux_api.toast("登録中..")
-                except Exception:
-                    log.info("Toast notification failed.")
-                try:
-                    server_tools.expense_handler.store_expense(
-                        expense_type,
-                        expense_memo,
-                        expense_amount,
-                        expense_date,
-                    )
-                finally:
-                    _clear_record_cache()
-                try:
-                    with open(
-                        server_tools.cache_path / "ocr_data.json", "w"
-                    ) as cache_file:
-                        json.dump(
-                            ocr_data,
-                            cache_file,
-                            ensure_ascii=False,
-                            indent=2,
-                        )
-                except OSError:
-                    log.exception(
-                        "Failed to save OCR duplicate-prevention data."
-                    )
-                msg = "✅ 端末内の履歴に登録しました。"
-                info = (
-                    f"[{expense_date}] "
-                    f"{expense_type}: "
-                    f"¥{expense_amount:,}"
-                    f"{' -  '+expense_memo if expense_memo else ''}"
-                )
-                try:
-                    server_tools.notification.notify(
-                        msg,
-                        info,
-                    )
-                except Exception:
-                    log.info("Notification failed.")
+                msg, info = _register_ocr_result(ocr_data, server_tools)
     except Exception:
         log.exception("Error occurred")
         status = False
