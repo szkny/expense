@@ -95,6 +95,7 @@ class Ocr(TermuxAPI):
                     "expense_type_classifier",
                     "--json",
                     f'{{"amount": {expense_amount}, "memo": "{expense_memo}"}}',
+                    "--predict-only",
                 ],
                 env=env,
             )
