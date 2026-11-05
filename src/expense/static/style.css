@@ -971,6 +971,10 @@ img.screenshot {
   font-size: 0.8rem;
 }
 
+.dark .sync-status-summary {
+  color: #8394a6;
+}
+
 .sync-status-summary[data-state="retrying"] {
   color: #b45309;
 }
