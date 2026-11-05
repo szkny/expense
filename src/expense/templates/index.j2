@@ -151,6 +151,26 @@
     {% endif %}
 
     <div class="card" data-card-key="record">
+      {% set sync_counts = sync_overview.counts %}
+      <div id="sheets-sync-status" class="sync-status-summary"
+        data-state="{% if sync_counts.retrying %}retrying{% elif sync_counts.syncing %}syncing{% elif sync_counts.pending %}pending{% else %}synced{% endif %}"
+        role="status" aria-live="polite">
+        <span id="sheets-sync-label">
+          {% if sync_counts.retrying %}
+          Sheets同期に失敗しました。自動で再試行します（{{ sync_counts.retrying }}件）
+          {% elif sync_counts.syncing %}
+          Sheets同期中（{{ sync_counts.syncing }}件）
+          {% elif sync_counts.pending %}
+          Sheets同期待ち（{{ sync_counts.pending }}件）
+          {% else %}
+          Sheets同期済み
+          {% endif %}
+        </span>
+        <button id="retry-sheets-sync" class="small-btn" type="button"
+          {% if not sync_counts.retrying %} hidden {% endif %}>
+          同期を再試行
+        </button>
+      </div>
       <h3 class="collapsible-trigger" data-key="record">
         <span> {{ icons.get("record_table", "🧾") }} 直近の支出履歴 ({{n_records}}件) </span>
         <span class="collapsible-toggle"></span>
@@ -220,8 +240,10 @@
             </thead>
             <tbody>
               {% for record in records %}
-              <tr>
-                <td>{{ record.date }}</td>
+              <tr data-record-id="{{ record.record_id }}" data-sync-status="{{ record.sync_status | default('synced') }}">
+                <td>{{ record.date }}<span class="sync-indicator" role="img"
+                    aria-label="{% if record.sync_status == 'retrying' %}Sheets同期に失敗し再試行中{% elif record.sync_status == 'pending' %}Sheets同期待ち{% elif record.sync_status == 'syncing' %}Sheets同期中{% else %}Sheets同期済み{% endif %}"
+                    title="{% if record.sync_status == 'retrying' %}Sheets同期に失敗し再試行中{% elif record.sync_status == 'pending' %}Sheets同期待ち{% elif record.sync_status == 'syncing' %}Sheets同期中{% else %}Sheets同期済み{% endif %}"></span></td>
                 <td>{{ record.expense_type }}</td>
                 <td>¥{{ "{:,}".format(record.expense_amount) }}</td>
                 <td class="memo">{{ record.expense_memo }}</td>

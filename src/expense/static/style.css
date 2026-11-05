@@ -961,6 +961,46 @@ img.screenshot {
   margin: 0;
 }
 
+.sync-status-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #4b5563;
+  font-size: 0.8rem;
+}
+
+.sync-status-summary[data-state="retrying"] {
+  color: #b45309;
+}
+
+.sync-indicator {
+  display: inline-block;
+  margin-inline-start: 0.35em;
+  font-size: 0.8em;
+}
+
+.sync-indicator::before {
+  content: "✓";
+  color: #15803d;
+}
+
+tr[data-sync-status="pending"] .sync-indicator::before {
+  content: "◷";
+  color: #b45309;
+}
+
+tr[data-sync-status="syncing"] .sync-indicator::before {
+  content: "↻";
+  color: #1d4ed8;
+}
+
+tr[data-sync-status="retrying"] .sync-indicator::before {
+  content: "!";
+  color: #b45309;
+}
+
 /* テーブル */
 .table-container {
   overflow-x: auto;

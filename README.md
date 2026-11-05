@@ -36,9 +36,19 @@ four-column `expense_history.log` file is retained as a CSV mirror; an existing
 CSV is imported once when the SQLite history database is first accessed. Do
 not edit the mirror directly after migration.
 
-Registration still waits for Google Sheets, and the UI does not yet show sync
-status. The planned next step is to make SQLite authoritative for registration
-and queue Sheets synchronization in the background.
+Web registration, editing, and deletion now commit to SQLite and enqueue a
+durable Sheets sync event in the same database transaction. A background worker
+started with the web server processes the queue; the UI shows per-record and
+overall sync status and supports retrying failed events. The worker records
+event IDs in the hidden `_expense_sync_log` worksheet in the same atomic Sheets
+batch as the data update, so an uncertain response can be retried safely.
+An exclusive lock in the application data directory prevents multiple server
+processes from syncing the same queue concurrently. Events remain queued while
+the web server is stopped. CLI registrations also queue events, which are
+processed the next time the web server runs. Each event is routed to the
+April-based fiscal-year workbook for its record date. An edit crossing fiscal
+years is synced as an idempotent deletion followed by an addition in the two
+workbooks; the queue retries the unfinished part if either step fails.
 
 ## Installation
 
@@ -152,6 +162,13 @@ model is configured with `asset_management.ai_advisor.model` and defaults to
       <td><code>string</code></td>
       <td><code>"INFO"</code></td>
       <td>Sets the logging level.</td>
+    </tr>
+    <tr>
+      <td><code>google_sheets</code></td>
+      <td><code>request_timeout_seconds</code></td>
+      <td><code>number</code></td>
+      <td><code>30</code></td>
+      <td>HTTP request timeout for Sheets API calls. Failed sync events remain queued and are retried.</td>
     </tr>
     <tr>
       <td rowspan="2"><code>termux_api</code></td>

@@ -2,6 +2,7 @@ const container = document.getElementById("home-content");
 const registerTrigger = document.querySelector(
   '.collapsible-trigger[data-key="register"]',
 );
+let syncStatusTimer;
 
 if (registerTrigger) {
   const registerContainer = document.getElementById("register-container");
@@ -66,6 +67,7 @@ async function loadHomeContent() {
       console.error("Failed to initialize the home page:", error);
     }
     loadSpreadsheetUrl();
+    startSyncStatusPolling();
   } catch (error) {
     if (container) {
       const card = document.createElement("div");
@@ -87,6 +89,72 @@ async function loadHomeContent() {
         container.replaceChildren(card);
       }
     }
+  }
+}
+
+function startSyncStatusPolling() {
+  if (syncStatusTimer) return;
+  const retryButton = document.getElementById("retry-sheets-sync");
+  retryButton?.addEventListener("click", async () => {
+    retryButton.disabled = true;
+    try {
+      await fetch("/api/sync/retry", { method: "POST" });
+      await refreshSyncStatus();
+    } finally {
+      retryButton.disabled = false;
+    }
+  });
+  refreshSyncStatus();
+  syncStatusTimer = setInterval(refreshSyncStatus, 3000);
+}
+
+async function refreshSyncStatus() {
+  try {
+    const response = await fetch("/api/sync/status", { cache: "no-store" });
+    if (!response.ok) return;
+    const overview = await response.json();
+    const counts = overview.counts || {};
+    const retrying = counts.retrying || 0;
+    const syncing = counts.syncing || 0;
+    const pending = counts.pending || 0;
+    const summary = document.getElementById("sheets-sync-status");
+    const label = document.getElementById("sheets-sync-label");
+    const retryButton = document.getElementById("retry-sheets-sync");
+
+    if (retrying) {
+      if (label)
+        label.textContent = `Sheets同期エラー。自動で再試行します（${retrying}件）`;
+      if (summary) summary.dataset.state = "retrying";
+    } else if (syncing) {
+      if (label) label.textContent = `Sheets同期中（${syncing}件）`;
+      if (summary) summary.dataset.state = "syncing";
+    } else if (pending) {
+      if (label) label.textContent = `Sheets同期待ち（${pending}件）`;
+      if (summary) summary.dataset.state = "pending";
+    } else {
+      if (label) label.textContent = "Sheets同期済み";
+      if (summary) summary.dataset.state = "synced";
+    }
+    if (retryButton) retryButton.hidden = retrying === 0;
+
+    for (const row of document.querySelectorAll("tr[data-record-id]")) {
+      const state = overview.records?.[row.dataset.recordId];
+      if (!state) continue;
+      row.dataset.syncStatus = state.status;
+      const indicator = row.querySelector(".sync-indicator");
+      if (!indicator) continue;
+      const stateLabel =
+        {
+          pending: "Sheets同期待ち",
+          syncing: "Sheets同期中",
+          retrying: "Sheets同期に失敗し再試行中",
+          synced: "Sheets同期済み",
+        }[state.status] || "Sheets同期状態不明";
+      indicator.setAttribute("aria-label", stateLabel);
+      indicator.title = stateLabel;
+    }
+  } catch {
+    // The page remains usable if the sync status endpoint is unavailable.
   }
 }
 

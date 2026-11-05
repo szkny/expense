@@ -61,6 +61,29 @@ class Expense(Base):
         finally:
             log.info("end '_get_history_store' method")
 
+    def _is_expense_type_configured(self, expense_type: str) -> bool:
+        log.debug("start '_is_expense_type_configured' method")
+        try:
+            config = getattr(self, "config", {})
+            expense_types = config.get("expense", {}).get("expense_types")
+            if not isinstance(expense_types, dict):
+                return False
+            return any(
+                expense_type in types
+                for types in expense_types.values()
+                if isinstance(types, list)
+            )
+        finally:
+            log.debug("end '_is_expense_type_configured' method")
+
+    @property
+    def history_store(self) -> ExpenseHistoryStore:
+        log.info("start 'history_store' property")
+        try:
+            return self._get_history_store()
+        finally:
+            log.info("end 'history_store' property")
+
     async def expense_main(self, args: argparse.Namespace) -> None:
         """
         main process for expense registration
@@ -191,11 +214,9 @@ class Expense(Base):
             loop.run_in_executor(
                 None, lambda: self.termux_api.toast("登録中..")
             )
-            handler = GspreadHandler(bookname)
-            handler.register_expense(expense_type, expense_amount, expense_memo)
             self.store_expense(expense_type, expense_memo, expense_amount)
             self.notification.notify(
-                "家計簿への登録が完了しました。",
+                "端末内の履歴に登録し、Sheets同期をキューに追加しました。",
                 f"{expense_type}{': '+expense_memo if expense_memo else ''}, ¥{expense_amount:,}",
             )
         except Exception as e:
@@ -251,20 +272,34 @@ class Expense(Base):
         num_items: int = 3,
         drop_duplicates: bool = True,
         with_date: bool = False,
+        with_sync_status: bool = False,
     ) -> list[dict]:
         """
         get recent expenses
         """
         log.info("start 'get_recent_expenses' method")
-        df = pd.DataFrame(
-            self._get_history_store().records(),
-            columns=[
-                "date",
-                "expense_type",
-                "expense_memo",
-                "expense_amount",
-            ],
-        )
+        if with_sync_status:
+            df = pd.DataFrame(
+                self._get_history_store().records_with_sync_status(),
+                columns=[
+                    "record_id",
+                    "date",
+                    "expense_type",
+                    "expense_memo",
+                    "expense_amount",
+                    "sync_status",
+                ],
+            )
+        else:
+            df = pd.DataFrame(
+                self._get_history_store().records(),
+                columns=[
+                    "date",
+                    "expense_type",
+                    "expense_memo",
+                    "expense_amount",
+                ],
+            )
         df["expense_memo"] = df["expense_memo"].fillna("")
         df.sort_values(by="date", ascending=False, inplace=True)
         if not with_date:
@@ -477,23 +512,29 @@ class Expense(Base):
         store expense
         """
         log.info("start 'store_expense' method")
-        expense_date_iso = (
-            pd.Timestamp(expense_date).strftime("%Y-%m-%dT%H:%M:%S.%f")
-            if expense_date
-            and pd.Timestamp(expense_date).date() != datetime.date.today()
-            else datetime.datetime.today().isoformat()
-        )
-        self._get_history_store().add(
-            expense_type,
-            expense_memo,
-            expense_amount,
-            expense_date_iso,
-        )
-        log.debug(
-            f"Stored expense: {expense_date_iso}, {expense_type}, {expense_memo}, {expense_amount}"
-        )
-        log.info("end 'store_expense' method")
-        return
+        try:
+            if not self._is_expense_type_configured(expense_type):
+                raise ValueError("支出タイプが設定にありません。")
+            expense_date_iso = (
+                pd.Timestamp(expense_date).strftime("%Y-%m-%dT%H:%M:%S.%f")
+                if expense_date
+                and pd.Timestamp(expense_date).date() != datetime.date.today()
+                else datetime.datetime.today().isoformat()
+            )
+            self._get_history_store().add(
+                expense_type,
+                expense_memo,
+                expense_amount,
+                expense_date_iso,
+            )
+            log.debug(
+                f"Stored expense: {expense_date_iso}, {expense_type}, {expense_memo}, {expense_amount}"
+            )
+        finally:
+            log.info("end 'store_expense' method")
+
+    def get_sync_overview(self, limit: int = 5000) -> dict[str, Any]:
+        return self._get_history_store().get_sync_overview(limit)
 
     def delete_expense(
         self,
@@ -506,6 +547,10 @@ class Expense(Base):
         delete expense
         """
         log.info("start 'delete_expense' method")
+        if not self._is_expense_type_configured(target_type):
+            log.debug("Failed to delete record with an unconfigured type.")
+            log.info("end 'delete_expense' method")
+            return False
         status = self._get_history_store().delete(
             target_date, target_type, target_amount, target_memo
         )
@@ -541,11 +586,20 @@ class Expense(Base):
         if not target_amount:
             log.debug("Failed to edit record. target_amount must be specified.")
             return False
+        if not self._is_expense_type_configured(str(target_type)):
+            log.debug("Failed to edit record with an unconfigured target type.")
+            log.info("end 'edit_expense' method")
+            return False
 
         new_expense_date = new_expense.get("expense_date", target_date)
         new_expense_type = new_expense.get("expense_type", target_type)
         new_expense_amount = new_expense.get("expense_amount", target_amount)
         new_expense_memo = new_expense.get("expense_memo", "")
+
+        if not self._is_expense_type_configured(str(new_expense_type)):
+            log.debug("Failed to edit record to an unconfigured type.")
+            log.info("end 'edit_expense' method")
+            return False
 
         target_amount = int(re.sub(r"[^\d]", "", str(target_amount)))
         new_expense_amount = int(re.sub(r"[^\d]", "", str(new_expense_amount)))

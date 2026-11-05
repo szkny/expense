@@ -30,7 +30,7 @@ class TestServiceWorkerRoute(unittest.TestCase):
         self.assertIn(
             "application/javascript", response.headers["content-type"]
         )
-        self.assertIn('const CACHE_NAME = "expense-cache-v10"', response.text)
+        self.assertIn('const CACHE_NAME = "expense-cache-v11"', response.text)
         self.assertIn(
             'requestUrl.pathname === "/api/asset_management/content"',
             response.text,
@@ -81,10 +81,23 @@ class TestRecurringExpenseDialog(unittest.TestCase):
             "icons": {},
             "theme": "light",
             "expense_date_range": ("2026-04-01", "2027-03-31"),
-            "n_records": 0,
+            "n_records": 1,
             "gspread_url": "",
             "items": [],
-            "records": [],
+            "records": [
+                {
+                    "record_id": 7,
+                    "date": "2026-04-14(火)",
+                    "expense_type": "食費",
+                    "expense_memo": "昼食",
+                    "expense_amount": 1200,
+                    "sync_status": "pending",
+                }
+            ],
+            "sync_overview": {
+                "counts": {"pending": 1, "syncing": 0, "retrying": 0},
+                "records": {"7": {"status": "pending", "error": ""}},
+            },
             "recurring_expenses": [
                 {
                     "expense_type": "通信費",
@@ -114,6 +127,10 @@ class TestRecurringExpenseDialog(unittest.TestCase):
         self.assertIn('data-today="2026-04-15"', response.text)
         self.assertIn('data-expense-type="通信費"', response.text)
         self.assertIn('name="expense_date" value="2026-04-15"', response.text)
+        self.assertIn(
+            'data-record-id="7" data-sync-status="pending"', response.text
+        )
+        self.assertIn("Sheets同期待ち（1件）", response.text)
 
 
 class TestHomeShell(unittest.TestCase):
@@ -156,6 +173,34 @@ class TestHomeShell(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"url": "https://example.test"})
         self.assertEqual(response.headers["cache-control"], "no-store")
+
+
+class TestSyncStatusRoutes(unittest.TestCase):
+    def test_status_route_returns_no_store_sync_summary(self) -> None:
+        tools = Mock(config={"web_ui": {"record_table": {"max_n_records": 20}}})
+        tools.expense_handler.get_sync_overview.return_value = {
+            "counts": {"pending": 2, "syncing": 1, "retrying": 0},
+            "records": {"7": {"status": "pending", "error": ""}},
+        }
+        with patch("expense.api.server.ServerTools", return_value=tools):
+            response = TestClient(app).get("/api/sync/status")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["cache-control"], "no-store")
+        self.assertEqual(response.json()["counts"]["pending"], 2)
+        tools.expense_handler.get_sync_overview.assert_called_once_with(20)
+
+    def test_retry_route_requeues_failed_events(self) -> None:
+        tools = Mock()
+        tools.expense_handler.history_store.retry_all_sync_events.return_value = (
+            3
+        )
+        with patch("expense.api.server.ServerTools", return_value=tools):
+            response = TestClient(app).post("/api/sync/retry")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"retried": 3})
+        tools.expense_handler.history_store.retry_all_sync_events.assert_called_once_with()
 
 
 class TestAssetManagementShell(unittest.TestCase):
@@ -402,7 +447,7 @@ class TestWriteEndpoints(unittest.TestCase):
 
         return response, clear_cache
 
-    def test_register_writes_to_sheets_and_history(self) -> None:
+    def test_register_saves_locally_without_waiting_for_sheets(self) -> None:
         tools = self.make_server_tools()
 
         response, clear_cache = self.post(
@@ -418,9 +463,7 @@ class TestWriteEndpoints(unittest.TestCase):
 
         self.assertEqual(response.status_code, 303)
         self.assertIn("status=True", response.headers["location"])
-        tools.gspread_handler.register_expense.assert_called_once_with(
-            "食費", 12345, "昼食", "2026-04-01"
-        )
+        tools.gspread_handler.register_expense.assert_not_called()
         tools.expense_handler.store_expense.assert_called_once_with(
             "食費", "昼食", 12345, "2026-04-01"
         )
@@ -446,7 +489,7 @@ class TestWriteEndpoints(unittest.TestCase):
         tools.expense_handler.store_expense.assert_not_called()
         clear_cache.assert_not_called()
 
-    def test_register_stops_after_sheets_failure_and_invalidates_cache(
+    def test_register_succeeds_when_sheets_is_unavailable(
         self,
     ) -> None:
         tools = self.make_server_tools()
@@ -466,8 +509,10 @@ class TestWriteEndpoints(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 303)
-        self.assertIn("status=False", response.headers["location"])
-        tools.expense_handler.store_expense.assert_not_called()
+        self.assertIn("status=True", response.headers["location"])
+        tools.expense_handler.store_expense.assert_called_once_with(
+            "食費", "昼食", 1000, "2026-04-01"
+        )
         clear_cache.assert_called_once_with()
 
     def test_delete_normalizes_date_and_amount(self) -> None:
@@ -486,17 +531,15 @@ class TestWriteEndpoints(unittest.TestCase):
 
         self.assertEqual(response.status_code, 303)
         self.assertIn("status=True", response.headers["location"])
-        tools.gspread_handler.delete_expense.assert_called_once_with(
-            "2026-04-01", "食費", 12345, "昼食"
-        )
+        tools.gspread_handler.delete_expense.assert_not_called()
         tools.expense_handler.delete_expense.assert_called_once_with(
             "2026-04-01", "食費", 12345, "昼食"
         )
         clear_cache.assert_called_once_with()
 
-    def test_delete_does_not_change_history_when_sheets_rejects(self) -> None:
+    def test_delete_reports_local_history_miss(self) -> None:
         tools = self.make_server_tools()
-        tools.gspread_handler.delete_expense.return_value = False
+        tools.expense_handler.delete_expense.return_value = False
 
         response, clear_cache = self.post(
             "/delete",
@@ -510,7 +553,10 @@ class TestWriteEndpoints(unittest.TestCase):
         )
 
         self.assertIn("status=False", response.headers["location"])
-        tools.expense_handler.delete_expense.assert_not_called()
+        tools.gspread_handler.delete_expense.assert_not_called()
+        tools.expense_handler.delete_expense.assert_called_once_with(
+            "2026-04-01", "食費", 1000, "昼食"
+        )
         clear_cache.assert_called_once_with()
 
     def test_edit_normalizes_both_records_and_invalidates_cache(self) -> None:
@@ -545,17 +591,15 @@ class TestWriteEndpoints(unittest.TestCase):
         }
         self.assertEqual(response.status_code, 303)
         self.assertIn("status=True", response.headers["location"])
-        tools.gspread_handler.edit_expense.assert_called_once_with(
-            target_expense=target, new_expense=new
-        )
+        tools.gspread_handler.edit_expense.assert_not_called()
         tools.expense_handler.edit_expense.assert_called_once_with(
             target_expense=target, new_expense=new
         )
         clear_cache.assert_called_once_with()
 
-    def test_edit_does_not_write_when_sheets_fails(self) -> None:
+    def test_edit_reports_local_history_miss(self) -> None:
         tools = self.make_server_tools()
-        tools.gspread_handler.edit_expense.return_value = False
+        tools.expense_handler.edit_expense.return_value = False
 
         response, clear_cache = self.post(
             "/edit",
@@ -573,7 +617,8 @@ class TestWriteEndpoints(unittest.TestCase):
         )
 
         self.assertIn("status=False", response.headers["location"])
-        tools.expense_handler.edit_expense.assert_not_called()
+        tools.gspread_handler.edit_expense.assert_not_called()
+        tools.expense_handler.edit_expense.assert_called_once()
         clear_cache.assert_called_once_with()
 
     def test_missing_register_fields_are_rejected_before_request_processing(
@@ -613,9 +658,7 @@ class TestWriteEndpoints(unittest.TestCase):
 
             self.assertEqual(response.status_code, 303)
             self.assertIn("status=True", response.headers["location"])
-            tools.gspread_handler.register_expense.assert_called_once_with(
-                "食費", 1234, "昼食", "2026-04-01"
-            )
+            tools.gspread_handler.register_expense.assert_not_called()
             tools.expense_handler.store_expense.assert_called_once_with(
                 "食費", "昼食", 1234, "2026-04-01"
             )
@@ -633,8 +676,8 @@ class TestWriteEndpoints(unittest.TestCase):
     def test_ocr_failure_does_not_write_history_and_clears_cache(self) -> None:
         tools = self.make_server_tools()
         tools.expense_handler.get_ocr_expense.return_value = {}
-        tools.gspread_handler.register_expense.side_effect = RuntimeError(
-            "Sheets unavailable"
+        tools.expense_handler.store_expense.side_effect = RuntimeError(
+            "SQLite unavailable"
         )
         ocr = Mock()
         ocr.main.return_value = {
@@ -657,7 +700,9 @@ class TestWriteEndpoints(unittest.TestCase):
 
             self.assertEqual(response.status_code, 303)
             self.assertIn("status=False", response.headers["location"])
-            tools.expense_handler.store_expense.assert_not_called()
+            tools.expense_handler.store_expense.assert_called_once_with(
+                "食費", "昼食", 1234, "2026-04-01"
+            )
             open_file.assert_not_called()
             clear_cache.assert_called_once_with()
 

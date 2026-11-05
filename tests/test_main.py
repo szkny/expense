@@ -244,6 +244,13 @@ class TestMain(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             expense = object.__new__(Expense)
             expense.expense_history = Path(directory) / "history.log"
+            expense.config = {
+                "expense": {
+                    "expense_types": {
+                        "fixed": ["食費", "交通費"],
+                    }
+                }
+            }
             expense.expense_history.write_text(
                 "2024-04-01T10:00:00.000000,食費,昼食,1000\n"
                 "2024-04-02T10:00:00.000000,交通費,電車,500\n"
@@ -267,6 +274,13 @@ class TestMain(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             expense = object.__new__(Expense)
             expense.expense_history = Path(directory) / "history.log"
+            expense.config = {
+                "expense": {
+                    "expense_types": {
+                        "fixed": ["食費", "外食"],
+                    }
+                }
+            }
             expense.expense_history.write_text(
                 "2024-04-01T10:00:00.000000,食費,昼食,1000\n"
             )
@@ -313,6 +327,9 @@ class TestMain(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             expense = Expense.__new__(Expense)
             expense.expense_history = Path(directory) / "history.log"
+            expense.config = {
+                "expense": {"expense_types": {"variable": ["食費"]}}
+            }
             expense.store_expense("食費", "メモ", 1000)
             self.assertIn(
                 ",食費,メモ,1000\n",
@@ -322,6 +339,38 @@ class TestMain(unittest.TestCase):
                 expense._get_history_store().records()[0][1:],
                 ("食費", "メモ", 1000),
             )
+
+    def test_store_expense_rejects_unconfigured_type_before_enqueue(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            expense = Expense.__new__(Expense)
+            expense.expense_history = Path(directory) / "history.log"
+            expense.config = {
+                "expense": {"expense_types": {"variable": ["食費"]}}
+            }
+
+            with self.assertRaisesRegex(
+                ValueError, "支出タイプが設定にありません"
+            ):
+                expense.store_expense("未設定", "メモ", 1000)
+
+            self.assertFalse(expense.expense_history.exists())
+
+    def test_store_expense_rejects_type_when_type_catalog_is_missing(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            expense = Expense.__new__(Expense)
+            expense.expense_history = Path(directory) / "history.log"
+            expense.config = {"expense": {}}
+
+            with self.assertRaisesRegex(
+                ValueError, "支出タイプが設定にありません"
+            ):
+                expense.store_expense("食費", "メモ", 1000)
+
+            self.assertFalse(expense.expense_history.exists())
 
     def test_build_asset_allocation(self) -> None:
         df_items = pd.DataFrame(

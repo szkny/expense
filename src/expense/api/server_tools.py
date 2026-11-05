@@ -269,10 +269,24 @@ class ServerTools(Base):
         )
         try:
             recent_expenses = self.expense_handler.get_recent_expenses(
-                max_n_records, drop_duplicates=False, with_date=True
+                max_n_records,
+                drop_duplicates=False,
+                with_date=True,
+                with_sync_status=True,
             )
         except Exception:
             recent_expenses = []
+
+        try:
+            sync_overview = self.expense_handler.get_sync_overview(
+                max_n_records
+            )
+        except Exception:
+            log.exception("Failed to get Sheets synchronization status.")
+            sync_overview = {
+                "counts": {"pending": 0, "syncing": 0, "retrying": 0},
+                "records": {},
+            }
 
         try:
             recurring_expenses = self.expense_handler.get_recurring_expenses()
@@ -309,6 +323,7 @@ class ServerTools(Base):
             "gspread_url": "",
             "items": items,
             "records": recent_expenses,
+            "sync_overview": sync_overview,
             "recurring_expenses": recurring_expenses,
             "screenshot_name": screenshot_name,
             "screenshot_base64": img_base64,

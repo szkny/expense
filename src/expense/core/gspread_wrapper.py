@@ -4,14 +4,36 @@ import logging
 import pandas as pd
 import datetime as dt
 from glob import glob
-from typing import Any
+from functools import wraps
+from typing import Any, Callable, ParamSpec, TypeVar
 from tenacity import retry, stop_after_attempt
 from google.oauth2 import service_account
+from gspread.utils import a1_to_rowcol
 
 from .base import Base
 from .expr_analyzer import expand_multiplication
 
 log: logging.Logger = logging.getLogger("expense")
+SYNC_LEDGER_TITLE = "_expense_sync_log"
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+def _log_method(
+    level: int = logging.DEBUG,
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    def decorate(func: Callable[P, R]) -> Callable[P, R]:
+        @wraps(func)
+        def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
+            log.log(level, "start '%s' method", func.__name__)
+            try:
+                return func(*args, **kwargs)
+            finally:
+                log.log(level, "end '%s' method", func.__name__)
+
+        return wrapped
+
+    return decorate
 
 
 def get_fiscal_year() -> int:
@@ -55,6 +77,12 @@ class GspreadHandler(Base):
             ],
         )
         self.client = gspread.authorize(credentials)
+        google_sheets_config: dict[str, Any] = self.config.get(
+            "google_sheets", {}
+        )
+        self.client.set_timeout(
+            float(google_sheets_config.get("request_timeout_seconds", 30))
+        )
         self.workbook = self.client.open(book_name)
         self.sheetname_list: list[str] = [
             "Jan",
@@ -206,6 +234,345 @@ class GspreadHandler(Base):
         finally:
             self.load_sheet()
             log.info("end 'register_expense' method")
+
+    def sync_expense_event(self, event: dict[str, Any]) -> None:
+        """Apply one queued expense operation exactly once to Sheets."""
+        log.info("start 'sync_expense_event' method")
+        try:
+            ledger = self._get_sync_ledger()
+            event_id = str(event["event_id"])
+            if event_id in ledger.col_values(1):
+                log.info("Sheets event was already applied.")
+                return
+
+            changes: dict[tuple[int, str], tuple[Any, str]] = {}
+            operation = event["operation"]
+            payload = event["payload"]
+            if operation == "add":
+                self._apply_expense_add(payload, changes)
+            elif operation == "delete":
+                self._apply_expense_delete(payload, changes)
+            elif operation == "edit":
+                self._apply_expense_delete(payload["before"], changes)
+                self._apply_expense_add(payload["after"], changes)
+            else:
+                raise ValueError(f"Unsupported sync operation: {operation}")
+
+            requests = [
+                self._cell_update_request(sheet_id, address, value)
+                for (sheet_id, address), (sheet, value) in changes.items()
+            ]
+            requests.append(
+                {
+                    "updateSheetProperties": {
+                        "properties": {
+                            "sheetId": ledger.id,
+                            "hidden": True,
+                        },
+                        "fields": "hidden",
+                    }
+                }
+            )
+            requests.append(
+                {
+                    "appendCells": {
+                        "sheetId": ledger.id,
+                        "rows": [
+                            {
+                                "values": [
+                                    {
+                                        "userEnteredValue": {
+                                            "stringValue": event_id
+                                        }
+                                    },
+                                    {
+                                        "userEnteredValue": {
+                                            "stringValue": str(operation)
+                                        }
+                                    },
+                                    {
+                                        "userEnteredValue": {
+                                            "stringValue": dt.datetime.now().isoformat(
+                                                timespec="seconds"
+                                            )
+                                        }
+                                    },
+                                ]
+                            }
+                        ],
+                        "fields": "userEnteredValue",
+                    }
+                }
+            )
+            self.workbook.batch_update({"requests": requests})
+        finally:
+            log.info("end 'sync_expense_event' method")
+
+    @_log_method(logging.INFO)
+    def _get_sync_ledger(self) -> gspread.Worksheet:
+        try:
+            return self.workbook.worksheet(SYNC_LEDGER_TITLE)
+        except gspread.WorksheetNotFound:
+            ledger = self.workbook.add_worksheet(
+                title=SYNC_LEDGER_TITLE, rows=1, cols=3
+            )
+            self.workbook.batch_update(
+                {
+                    "requests": [
+                        {
+                            "updateSheetProperties": {
+                                "properties": {
+                                    "sheetId": ledger.id,
+                                    "hidden": True,
+                                },
+                                "fields": "hidden",
+                            }
+                        },
+                        {
+                            "updateCells": {
+                                "start": {
+                                    "sheetId": ledger.id,
+                                    "rowIndex": 0,
+                                    "columnIndex": 0,
+                                },
+                                "rows": [
+                                    {
+                                        "values": [
+                                            {
+                                                "userEnteredValue": {
+                                                    "stringValue": "event_id"
+                                                }
+                                            },
+                                            {
+                                                "userEnteredValue": {
+                                                    "stringValue": "operation"
+                                                }
+                                            },
+                                            {
+                                                "userEnteredValue": {
+                                                    "stringValue": "synced_at"
+                                                }
+                                            },
+                                        ]
+                                    }
+                                ],
+                                "fields": "userEnteredValue",
+                            }
+                        },
+                    ]
+                }
+            )
+            return ledger
+
+    @staticmethod
+    @_log_method()
+    def _cell_update_request(
+        sheet_id: int, address: str, value: Any
+    ) -> dict[str, Any]:
+        row, column = a1_to_rowcol(address)
+        entered_value: dict[str, Any]
+        if isinstance(value, int):
+            entered_value = {"numberValue": value}
+        elif isinstance(value, str) and value.startswith("="):
+            entered_value = {"formulaValue": value}
+        else:
+            entered_value = {"stringValue": str(value)}
+        return {
+            "updateCells": {
+                "start": {
+                    "sheetId": sheet_id,
+                    "rowIndex": row - 1,
+                    "columnIndex": column - 1,
+                },
+                "rows": [{"values": [{"userEnteredValue": entered_value}]}],
+                "fields": "userEnteredValue",
+            }
+        }
+
+    @_log_method()
+    def _get_batch_cell_value(
+        self,
+        address: str,
+        changes: dict[tuple[int, str], tuple[Any, str]],
+    ) -> Any:
+        key = (self.sheet.id, address)
+        if key in changes:
+            return changes[key][1]
+        return self.sheet.acell(
+            address,
+            value_render_option=gspread.worksheet.ValueRenderOption.formula,
+        ).value
+
+    @_log_method()
+    def _set_batch_cell_value(
+        self,
+        address: str,
+        value: Any,
+        changes: dict[tuple[int, str], tuple[Any, str]],
+    ) -> None:
+        changes[(self.sheet.id, address)] = (self.sheet, value)
+
+    @_log_method()
+    def _apply_expense_add(
+        self,
+        expense: dict[str, Any],
+        changes: dict[tuple[int, str], tuple[Any, str]],
+    ) -> None:
+        self.load_sheet(str(expense["expense_date"]))
+        expense_type = str(expense["expense_type"])
+        amount = int(expense["expense_amount"])
+        memo = str(expense.get("expense_memo", ""))
+        amount_cell = self.get_monthly_income_cell(expense_type)
+        column = ""
+        if amount_cell is None:
+            column = self.get_column(str(expense["expense_date"]))
+            amount_cell = f"{column}{self.get_row(expense_type)}"
+        old_value = self._get_batch_cell_value(amount_cell, changes)
+        if old_value == 0:
+            new_value: Any = f"={amount}"
+        elif isinstance(old_value, int):
+            new_value = f"={old_value}+{amount}"
+        elif isinstance(old_value, str) and old_value:
+            new_value = f"{old_value}+{amount}"
+        else:
+            new_value = amount
+        self._set_batch_cell_value(amount_cell, new_value, changes)
+        if memo and column:
+            self._apply_memo_add(column, expense_type, memo, changes)
+
+    @_log_method()
+    def _apply_expense_delete(
+        self,
+        expense: dict[str, Any],
+        changes: dict[tuple[int, str], tuple[Any, str]],
+    ) -> None:
+        self.load_sheet(str(expense["expense_date"]))
+        expense_type = str(expense["expense_type"])
+        amount = int(expense["expense_amount"])
+        memo = str(expense.get("expense_memo", ""))
+        amount_cell = self.get_monthly_income_cell(expense_type)
+        column = ""
+        if amount_cell is None:
+            column = self.get_column(str(expense["expense_date"]))
+            amount_cell = f"{column}{self.get_row(expense_type)}"
+        old_value = self._get_batch_cell_value(amount_cell, changes)
+        new_value = self._amount_without(old_value, amount)
+        self._set_batch_cell_value(amount_cell, new_value, changes)
+        if memo and column:
+            self._apply_memo_delete(column, expense_type, memo, changes)
+
+    @staticmethod
+    @_log_method()
+    def _amount_without(value: Any, amount: int) -> int | str:
+        if isinstance(value, int):
+            if value == amount:
+                return 0
+            raise ValueError("Expense amount was not found in its sheet cell.")
+        if not isinstance(value, str):
+            raise ValueError("Expense amount cell has an unsupported value.")
+        if "*" in value:
+            value = expand_multiplication(value)
+        matches = list(re.finditer(rf"[=+] *{amount}(?!\d)", value))
+        if not matches:
+            raise ValueError(
+                "Expense amount was not found in its sheet formula."
+            )
+        match = matches[-1]
+        new_value = (value[: match.start()] + value[match.end() :]).strip()
+        if not new_value:
+            return 0
+        if new_value[0] == "+":
+            return "=" + new_value[1:]
+        return new_value
+
+    @_log_method()
+    def _memo_values(
+        self,
+        column: str,
+        changes: dict[tuple[int, str], tuple[Any, str]],
+        offset: int = 51,
+    ) -> list[tuple[str, Any]]:
+        cells = self.sheet.range(f"{column}{offset}:{column}{offset + 3}")
+        return [
+            (
+                cell.address,
+                (
+                    self._get_batch_cell_value(cell.address, changes)
+                    if (self.sheet.id, cell.address) in changes
+                    else cell.value
+                ),
+            )
+            for cell in cells
+        ]
+
+    @_log_method()
+    def _apply_memo_add(
+        self,
+        column: str,
+        expense_type: str,
+        memo: str,
+        changes: dict[tuple[int, str], tuple[Any, str]],
+        offset: int = 51,
+    ) -> None:
+        cells = self._memo_values(column, changes, offset)
+        matching = [
+            (address, value)
+            for address, value in cells
+            if isinstance(value, str) and expense_type in value
+        ]
+        if matching:
+            address, value = matching[0]
+            new_value = f"{value}, {memo}"
+        else:
+            empty_cell = next(
+                (
+                    (address, value)
+                    for address, value in cells
+                    if value in ("", None)
+                ),
+                None,
+            )
+            if empty_cell is None:
+                raise ValueError(
+                    "There is no room for another memo in the sheet."
+                )
+            address = empty_cell[0]
+            new_value = f"{expense_type}: {memo}"
+        self._set_batch_cell_value(address, new_value, changes)
+
+    @_log_method()
+    def _apply_memo_delete(
+        self,
+        column: str,
+        expense_type: str,
+        memo: str,
+        changes: dict[tuple[int, str], tuple[Any, str]],
+        offset: int = 51,
+    ) -> None:
+        cells = self._memo_values(column, changes, offset)
+        matching = [
+            (address, value)
+            for address, value in cells
+            if isinstance(value, str) and expense_type in value
+        ]
+        pattern = re.compile(
+            rf"({re.escape(expense_type)}:|,) *{re.escape(memo)}"
+        )
+        for address, value in matching:
+            matches = list(pattern.finditer(str(value)))
+            if not matches:
+                continue
+            match = matches[-1]
+            new_value = (
+                str(value)[: match.start()] + str(value)[match.end() :]
+            ).strip()
+            if not new_value:
+                new_value = ""
+            elif new_value.startswith(","):
+                new_value = expense_type + ":" + new_value[1:]
+            self._set_batch_cell_value(address, new_value, changes)
+            return
+        raise ValueError("Expense memo was not found in its sheet cell.")
 
     @retry(stop=stop_after_attempt(3))
     def get_todays_expenses(self, offset: int = 31) -> str:

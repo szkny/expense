@@ -1,3 +1,4 @@
+import asyncio
 import re
 import os
 import json
@@ -39,6 +40,7 @@ from ..core.asset_manager import AssetManager
 from ..core.ocr import Ocr, get_latest_screenshot
 from ..core.gspread_wrapper import GspreadHandler
 from ..core.notification import NotificationManager
+from ..core.sync_worker import SheetsSyncRouter, SheetsSyncWorker
 
 app: FastAPI = FastAPI()
 ServerTools.setup_app(app)
@@ -82,7 +84,10 @@ class _LazyGspreadHandler:
         return getattr(self._get_handler(), name)
 
 
-gspread_handler: Any = _LazyGspreadHandler(f"CF ({get_fiscal_year()}年度)")
+_expense_book_name = f"CF ({get_fiscal_year()}年度)"
+gspread_handler: Any = _LazyGspreadHandler(_expense_book_name)
+_sync_worker_task: asyncio.Task[None] | None = None
+_sync_worker: SheetsSyncWorker | None = None
 asset_manager: AssetManager = AssetManager()
 notification_manager: NotificationManager = NotificationManager()
 _df_cache_record: dict = {}
@@ -98,6 +103,39 @@ _ASSET_CACHE_TTL: dict[str, int] = {
     "df_items": 300,
     "df_records": 86400,
 }
+
+
+@app.on_event("startup")
+async def start_sheets_sync_worker() -> None:
+    log.info("start 'start_sheets_sync_worker' function")
+    global _sync_worker, _sync_worker_task
+    try:
+        if _sync_worker_task is not None:
+            return
+        server_tools = ServerTools(app, gspread_handler)
+        _sync_worker = SheetsSyncWorker(
+            server_tools.expense_handler.history_store,
+            SheetsSyncRouter(_LazyGspreadHandler),
+        )
+        _sync_worker_task = asyncio.create_task(_sync_worker.run())
+    finally:
+        log.info("end 'start_sheets_sync_worker' function")
+
+
+@app.on_event("shutdown")
+async def stop_sheets_sync_worker() -> None:
+    log.info("start 'stop_sheets_sync_worker' function")
+    global _sync_worker, _sync_worker_task
+    try:
+        if _sync_worker_task is None:
+            return
+        if _sync_worker is not None:
+            _sync_worker.stop()
+        await _sync_worker_task
+    finally:
+        _sync_worker = None
+        _sync_worker_task = None
+        log.info("end 'stop_sheets_sync_worker' function")
 
 
 def get_cached_records(
@@ -228,16 +266,18 @@ def get_cached_asset_history_records(
     """日次資産履歴をキャッシュして取得する。"""
     now = dt.datetime.now()
     timestamp = _df_cache_asset_history.get("timestamp", now)
-    if "df" in _df_cache_asset_history and (
-        now - timestamp
-    ).total_seconds() < _ASSET_HISTORY_CACHE_TTL:
+    if (
+        "df" in _df_cache_asset_history
+        and (now - timestamp).total_seconds() < _ASSET_HISTORY_CACHE_TTL
+    ):
         return _df_cache_asset_history["df"]
     with _df_cache_asset_table_lock:
         now = dt.datetime.now()
         timestamp = _df_cache_asset_history.get("timestamp", now)
-        if "df" not in _df_cache_asset_history or (
-            now - timestamp
-        ).total_seconds() >= _ASSET_HISTORY_CACHE_TTL:
+        if (
+            "df" not in _df_cache_asset_history
+            or (now - timestamp).total_seconds() >= _ASSET_HISTORY_CACHE_TTL
+        ):
             _df_cache_asset_history["df"] = (
                 asset_manager.get_daily_asset_history_data()
             )
@@ -361,6 +401,10 @@ def read_root(
             ),
             "today": dt.date.today().isoformat(),
             "items": ["[HEAD] 支出タイプ", *server_tools.expense_types],
+            "sync_overview": {
+                "counts": {"pending": 0, "syncing": 0, "retrying": 0},
+                "records": {},
+            },
             "plotly_version": plotly.__version__,
             "home_data_loading": True,
         },
@@ -387,6 +431,42 @@ def get_spreadsheet_url() -> JSONResponse:
         content={"url": gspread_handler.get_spreadsheet_url()},
         headers={"Cache-Control": "no-store"},
     )
+
+
+@app.get("/api/sync/status", response_class=JSONResponse)
+def get_sync_status() -> JSONResponse:
+    log.info("start 'get_sync_status' method")
+    try:
+        server_tools = ServerTools(app, gspread_handler)
+        max_n_records = (
+            server_tools.config.get("web_ui", {})
+            .get("record_table", {})
+            .get("max_n_records", 5000)
+        )
+        return JSONResponse(
+            content=server_tools.expense_handler.get_sync_overview(
+                max_n_records
+            ),
+            headers={"Cache-Control": "no-store"},
+        )
+    finally:
+        log.info("end 'get_sync_status' method")
+
+
+@app.post("/api/sync/retry", response_class=JSONResponse)
+def retry_sheets_sync() -> JSONResponse:
+    log.info("start 'retry_sheets_sync' method")
+    try:
+        server_tools = ServerTools(app, gspread_handler)
+        retried = (
+            server_tools.expense_handler.history_store.retry_all_sync_events()
+        )
+        return JSONResponse(
+            content={"retried": retried},
+            headers={"Cache-Control": "no-store"},
+        )
+    finally:
+        log.info("end 'retry_sheets_sync' method")
 
 
 @app.get("/api/ocr/latest", response_class=JSONResponse)
@@ -625,7 +705,12 @@ def stream_asset_advice(force: bool = False) -> StreamingResponse:
 
     def events() -> Any:
         try:
-            for advice_html, done, cached, generated_at in stream_daily_asset_advice(
+            for (
+                advice_html,
+                done,
+                cached,
+                generated_at,
+            ) in stream_daily_asset_advice(
                 payload,
                 asset_manager.cache_path,
                 os.getenv("OPENAI_API_KEY"),
@@ -770,9 +855,7 @@ def chat_with_asset_advisor(body: dict[str, Any]) -> Response:
                     source_urls.add(url)
             reply = "".join(reply_parts).strip()
             if not reply:
-                raise AssetAdviceRequestError(
-                    "OpenAI returned no chat reply."
-                )
+                raise AssetAdviceRequestError("OpenAI returned no chat reply.")
             yield "data: " + json.dumps(
                 {
                     "reply_markdown": reply,
@@ -1336,18 +1419,12 @@ def register(
             except Exception:
                 log.info("Toast notification failed.")
             try:
-                server_tools.gspread_handler.register_expense(
-                    expense_type,
-                    expense_amount_num,
-                    expense_memo,
-                    expense_date,
-                )
                 server_tools.expense_handler.store_expense(
                     expense_type, expense_memo, expense_amount_num, expense_date
                 )
             finally:
                 _clear_record_cache()
-            msg = "✅ 家計簿への登録が完了しました。"
+            msg = "✅ 端末内の履歴に登録しました。"
             info = (
                 f"[{expense_date}] "
                 f"{expense_type}: "
@@ -1432,24 +1509,29 @@ def ocr_process(
                 except Exception:
                     log.info("Toast notification failed.")
                 try:
-                    server_tools.gspread_handler.register_expense(
-                        expense_type,
-                        expense_amount,
-                        expense_memo,
-                        expense_date,
-                    )
-                    json.dump(
-                        ocr_data,
-                        open(server_tools.cache_path / "ocr_data.json", "w"),
-                        ensure_ascii=False,
-                        indent=2,
-                    )
                     server_tools.expense_handler.store_expense(
-                        expense_type, expense_memo, expense_amount, expense_date
+                        expense_type,
+                        expense_memo,
+                        expense_amount,
+                        expense_date,
                     )
                 finally:
                     _clear_record_cache()
-                msg = "✅ 家計簿への登録が完了しました。"
+                try:
+                    with open(
+                        server_tools.cache_path / "ocr_data.json", "w"
+                    ) as cache_file:
+                        json.dump(
+                            ocr_data,
+                            cache_file,
+                            ensure_ascii=False,
+                            indent=2,
+                        )
+                except OSError:
+                    log.exception(
+                        "Failed to save OCR duplicate-prevention data."
+                    )
+                msg = "✅ 端末内の履歴に登録しました。"
                 info = (
                     f"[{expense_date}] "
                     f"{expense_type}: "
@@ -1538,21 +1620,14 @@ def delete_process(
 
         if status:
             try:
-                if not server_tools.gspread_handler.delete_expense(
-                    expense_date,
-                    expense_type,
-                    expense_amount,
-                    expense_memo,
-                ):
-                    status = False
-                if status and not server_tools.expense_handler.delete_expense(
+                if not server_tools.expense_handler.delete_expense(
                     expense_date, expense_type, expense_amount, expense_memo
                 ):
                     status = False
             finally:
                 _clear_record_cache()
         if status:
-            msg = "✅ 家計簿の削除処理が完了しました。"
+            msg = "✅ 端末内の履歴に登録しました。"
         else:
             msg = "🚫 家計簿の削除処理に失敗しました。"
         info = (
@@ -1635,15 +1710,7 @@ def edit_process(
                 expense_memo=new_expense_memo,
             )
             try:
-                if (
-                    status
-                    and not server_tools.gspread_handler.edit_expense(
-                        target_expense=target_expense,
-                        new_expense=new_expense,
-                    )
-                ):
-                    status = False
-                if status and not server_tools.expense_handler.edit_expense(
+                if not server_tools.expense_handler.edit_expense(
                     target_expense=target_expense,
                     new_expense=new_expense,
                 ):
@@ -1651,7 +1718,7 @@ def edit_process(
             finally:
                 _clear_record_cache()
             if status:
-                msg = "✅ 家計簿の修正処理が完了しました。"
+                msg = "✅ 端末内の履歴に登録しました。"
             else:
                 msg = "🚫 家計簿の修正処理に失敗しました。"
             info = (
