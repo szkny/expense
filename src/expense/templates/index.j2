@@ -221,9 +221,9 @@
             <tbody>
               {% for record in records %}
               <tr data-record-id="{{ record.record_id }}" data-sync-status="{{ record.sync_status | default('synced') }}">
-                <td>{{ record.date }}<span class="sync-indicator" role="img"
+                <td><span class="sync-indicator" role="img"
                     aria-label="{% if record.sync_status == 'retrying' %}Sheets同期に失敗し再試行中{% elif record.sync_status == 'pending' %}Sheets同期待ち{% elif record.sync_status == 'syncing' %}Sheets同期中{% else %}Sheets同期済み{% endif %}"
-                    title="{% if record.sync_status == 'retrying' %}Sheets同期に失敗し再試行中{% elif record.sync_status == 'pending' %}Sheets同期待ち{% elif record.sync_status == 'syncing' %}Sheets同期中{% else %}Sheets同期済み{% endif %}"></span></td>
+                    title="{% if record.sync_status == 'retrying' %}Sheets同期に失敗し再試行中{% elif record.sync_status == 'pending' %}Sheets同期待ち{% elif record.sync_status == 'syncing' %}Sheets同期中{% else %}Sheets同期済み{% endif %}"></span>{{ record.date }}</td>
                 <td>{{ record.expense_type }}</td>
                 <td>¥{{ "{:,}".format(record.expense_amount) }}</td>
                 <td class="memo">{{ record.expense_memo }}</td>

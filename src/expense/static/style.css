@@ -1038,7 +1038,7 @@ img.screenshot {
 
 .sync-indicator {
   display: inline-block;
-  margin-inline-start: 0.35em;
+  margin-inline-end: 0.35em;
   font-size: 0.8em;
 }
 
