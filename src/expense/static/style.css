@@ -370,7 +370,7 @@ hr {
   max-height: 22rem;
   margin: 8px 0 12px;
   overflow-y: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior: auto;
   user-select: text;
   -webkit-user-select: text;
 }
