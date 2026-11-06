@@ -279,6 +279,7 @@ class TestAssetManagementShell(unittest.TestCase):
         self.assertIn("資産一覧", response.text)
         self.assertIn("TEST", response.text)
         self.assertIn('id="asset-advice-chat"', response.text)
+        self.assertIn('id="asset-advice-chat-open"', response.text)
         self.assertIn('id="asset-advice-chat-form"', response.text)
         self.assertIn('aria-label="会話をリセット"', response.text)
         self.assertIn("data-no-loader", response.text)

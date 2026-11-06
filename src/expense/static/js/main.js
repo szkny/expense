@@ -58,6 +58,7 @@ function initAssetAdviceChat(adviceContent) {
   const input = document.getElementById("asset-advice-chat-input");
   const sendButton = document.getElementById("asset-advice-chat-send");
   const resetButton = document.getElementById("asset-advice-chat-reset");
+  const openButton = document.getElementById("asset-advice-chat-open");
   if (
     !chat ||
     !messagesContainer ||
@@ -65,7 +66,8 @@ function initAssetAdviceChat(adviceContent) {
     !form ||
     !input ||
     !sendButton ||
-    !resetButton
+    !resetButton ||
+    !openButton
   ) {
     return { resetForAdviceReload: () => {}, setReady: () => {} };
   }
@@ -291,6 +293,7 @@ function initAssetAdviceChat(adviceContent) {
   const setReady = (value) => {
     ready = value;
     chat.hidden = !ready;
+    openButton.hidden = !ready;
     if (ready && history.length === 0) restoreHistory();
     updateControls();
   };
@@ -424,7 +427,7 @@ function initAssetAdviceChat(adviceContent) {
 
   return {
     resetForAdviceReload: () => {
-      ready = false;
+      setReady(false);
       reset(true);
     },
     setReady,
@@ -438,10 +441,29 @@ function initAssetAdvisor() {
   const content = document.getElementById("asset-advice-content");
   const dialog = document.getElementById("asset-advice-dialog");
   const dialogContent = document.getElementById("asset-advice-dialog-content");
+  const chatElement = document.getElementById("asset-advice-chat");
+  const chatOpenButton = document.getElementById("asset-advice-chat-open");
   const retryButton = document.getElementById("asset-advice-retry");
-  if (!card || !trigger || !status || !content || !retryButton) return;
+  if (
+    !card ||
+    !trigger ||
+    !status ||
+    !content ||
+    !dialog ||
+    !dialogContent ||
+    !chatElement ||
+    !chatOpenButton ||
+    !retryButton
+  ) {
+    return;
+  }
 
+  const chat = initAssetAdviceChat(content);
   let closingAdviceDialog = false;
+  const clearAdviceDialog = () => {
+    dialog?.classList.remove("is-chat");
+    dialogContent?.replaceChildren(chatElement);
+  };
   const closeAdviceDialog = () => {
     if (!dialog?.open || closingAdviceDialog) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -473,11 +495,18 @@ function initAssetAdvisor() {
     }, 550);
   };
 
-  const openAdviceDialog = () => {
-    if (!dialog || !dialogContent || content.hidden) return;
-    dialogContent.replaceChildren(
-      ...Array.from(content.childNodes, (node) => node.cloneNode(true)),
-    );
+  const openAdviceDialog = (showChat = false) => {
+    if (!dialog || !dialogContent || dialog.open) return;
+    if (showChat) {
+      if (!chatElement || chatElement.hidden) return;
+      dialogContent.replaceChildren(chatElement);
+    } else {
+      if (content.hidden) return;
+      dialogContent.replaceChildren(
+        ...Array.from(content.childNodes, (node) => node.cloneNode(true)),
+      );
+    }
+    dialog.classList.toggle("is-chat", showChat);
     dialog.showModal();
     requestAnimationFrame(() => {
       if (dialog.open && !closingAdviceDialog) {
@@ -494,13 +523,26 @@ function initAssetAdvisor() {
     event.preventDefault();
     openAdviceDialog();
   });
-  dialog?.addEventListener("click", closeAdviceDialog);
+  dialog.addEventListener("click", (event) => {
+    const chatArea = event.target.closest(".asset-advice-chat");
+    const chatControl = event.target.closest(
+      ".asset-advice-chat-form, .asset-advice-chat-reset",
+    );
+    if (
+      !dialog.classList.contains("is-chat") ||
+      event.target === dialog ||
+      (chatArea && !chatControl)
+    ) {
+      closeAdviceDialog();
+    }
+  });
+  dialog?.addEventListener("close", clearAdviceDialog);
   dialog?.addEventListener("cancel", (event) => {
     event.preventDefault();
     closeAdviceDialog();
   });
 
-  const chat = initAssetAdviceChat(content);
+  chatOpenButton.addEventListener("click", () => openAdviceDialog(true));
   let loading = false;
   const formatGeneratedAt = (generatedAt) => {
     const date = new Date(generatedAt);
@@ -559,7 +601,8 @@ function initAssetAdvisor() {
         content.innerHTML = previousAdvice.html;
       status.textContent = error.message;
       retryButton.hidden = false;
-      chat.setReady(Boolean(previousAdvice && !previousAdvice.hidden));
+      const chatReady = Boolean(previousAdvice && !previousAdvice.hidden);
+      chat.setReady(chatReady);
     } finally {
       loading = false;
     }

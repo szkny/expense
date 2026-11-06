@@ -274,6 +274,59 @@ hr {
   cursor: auto;
 }
 
+#asset-advice-dialog.is-chat .asset-advice-dialog-content {
+  display: flex;
+  height: calc(100vh - 8rem);
+  overflow: hidden;
+}
+
+#asset-advice-dialog.is-chat .asset-advice-chat {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  margin-top: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+#asset-advice-dialog.is-chat .asset-advice-chat-messages {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  margin: 8px 0 12px;
+}
+
+#asset-advice-dialog.is-chat .asset-advice-chat-messages:empty {
+  align-items: center;
+  justify-content: center;
+}
+
+#asset-advice-dialog.is-chat .asset-advice-chat-messages:empty::before {
+  max-width: 24rem;
+  color: #9ca3af;
+  content: "資産状況やアドバイスについてAIに質問してみましょう";
+  font-size: 0.95rem;
+  line-height: 1.6;
+  text-align: center;
+  pointer-events: none;
+}
+
+.asset-advice-chat-message table {
+  width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+}
+
+.asset-advice-chat-message th,
+.asset-advice-chat-message td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .dark #asset-advice-dialog {
   background: #1f2937;
   color: #f3f4f6;
@@ -345,9 +398,17 @@ hr {
 }
 
 .asset-advice-chat {
+  box-sizing: border-box;
+  max-width: 100%;
   margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid #e5e7eb;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #f9fafb;
+}
+
+.asset-advice-chat-open {
+  margin-top: 8px;
 }
 
 .asset-advice-chat-heading {
@@ -358,21 +419,24 @@ hr {
   margin-bottom: 8px;
 }
 
-.asset-advice-chat-heading h4 {
-  margin: 0;
-  color: #374151;
-}
-
 .asset-advice-chat-messages {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
   gap: 10px;
   max-height: 22rem;
   margin: 8px 0 12px;
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: auto;
   user-select: text;
   -webkit-user-select: text;
+}
+
+.asset-advice-chat-messages:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
 }
 
 .asset-advice-chat-messages:empty,
@@ -386,6 +450,8 @@ hr {
 }
 
 .asset-advice-chat-message {
+  box-sizing: border-box;
+  min-width: 0;
   max-width: min(90%, 38rem);
   padding: 10px 13px;
   border-radius: 16px;
@@ -553,15 +619,10 @@ hr {
   cursor: not-allowed;
 }
 
-.asset-advice-chat-status,
-.asset-advice-chat-notice {
+.asset-advice-chat-status {
   margin: 8px 0;
   color: #6b7280;
   font-size: 0.8rem;
-}
-
-.asset-advice-chat-notice {
-  margin-bottom: 0;
 }
 
 .visually-hidden {
@@ -577,11 +638,8 @@ hr {
 }
 
 .dark .asset-advice-chat {
-  border-top-color: #374151;
-}
-
-.dark .asset-advice-chat-heading h4 {
-  color: #f3f4f6;
+  border-color: #374151;
+  background: #111827;
 }
 
 .dark .asset-advice-chat-message.assistant,
@@ -595,7 +653,6 @@ hr {
 }
 
 .dark .asset-advice-chat-status,
-.dark .asset-advice-chat-notice,
 .dark .asset-advice-chat-message.pending {
   color: #9ca3af;
 }
