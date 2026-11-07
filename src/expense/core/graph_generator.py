@@ -926,7 +926,9 @@ class GraphGenerator(Base):
 
         self._update_layout(fig, theme)
         fig.update_layout(
-            title_text=f"支出内訳（{target_period.strftime('%Y年%-m月')}）",
+            title_text=(
+                f"支出内訳（{target_period.year}年{target_period.month}月）"
+            ),
             uniformtext=dict(minsize=14, mode="hide"),
             xaxis=dict(visible=False),
             yaxis=dict(visible=False),

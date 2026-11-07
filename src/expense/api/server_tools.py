@@ -301,7 +301,7 @@ class ServerTools(Base):
             df_records = df_records.query(
                 "expense_type not in @self.all_income_types and expense_type not in @self.exclude_types"
             )
-            df_records.loc[:, "date"] = pd.to_datetime(
+            df_records["date"] = pd.to_datetime(
                 df_records.loc[:, "date"].map(
                     lambda s: re.sub(r"[^\d\-]+", "", str(s))
                 )

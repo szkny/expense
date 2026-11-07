@@ -386,6 +386,45 @@ class GraphGeneratorDailyChartTest(unittest.TestCase):
         self.assertIn(previous_month.strftime("%Y-%m"), available_months)
 
 
+class GraphGeneratorPieChartTest(unittest.TestCase):
+    def test_title_formats_period_month_without_strftime_directive(
+        self,
+    ) -> None:
+        generator = GraphGenerator.__new__(GraphGenerator)
+        generator.fixed_types = []
+        generator.variable_types = ["食費"]
+        generator.expense_types = ["食費"]
+        generator.graph_color = {}
+        df = pd.DataFrame(
+            {
+                "month": ["2026-10"],
+                "expense_type": ["食費"],
+                "expense_amount": [1_200],
+                "expense_memo": ["昼食"],
+            }
+        )
+        df_records = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2026-10-05"]),
+                "expense_type": ["食費"],
+                "expense_amount": [1_200],
+            }
+        )
+
+        figure, _, _ = capture_chart_figure(
+            generator,
+            lambda data, include_plotlyjs=False: generator.generate_pie_chart(
+                data,
+                df_records,
+                target_month="2026-10",
+                include_plotlyjs=include_plotlyjs,
+            )[0],
+            df,
+        )
+
+        self.assertEqual(figure.layout.title.text, "支出内訳（2026年10月）")
+
+
 class GraphGeneratorSavingsRateTest(unittest.TestCase):
     def test_savings_rate_is_cash_flow_as_percentage_of_income(self) -> None:
         self.assertEqual(GraphGenerator._format_savings_rate(30, 100), "30.0%")

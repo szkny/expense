@@ -175,6 +175,64 @@ class TestHomeShell(unittest.TestCase):
         self.assertEqual(response.headers["cache-control"], "no-store")
 
 
+class TestGenerateCommons(unittest.TestCase):
+    def test_converts_string_typed_date_column(self) -> None:
+        server_tools = ServerTools.__new__(ServerTools)
+        server_tools.config = {"web_ui": {"record_table": {"max_n_records": 1}}}
+        server_tools.all_income_types = []
+        server_tools.exclude_types = []
+        server_tools.icons = {}
+        server_tools.generate_items = Mock(return_value=[])
+        server_tools.get_latest_screenshot_data = Mock(
+            return_value={
+                "screenshot_name": "",
+                "screenshot_base64": "",
+                "disable_ocr": True,
+            }
+        )
+        server_tools.expense_handler = Mock(
+            get_recent_expenses=Mock(
+                return_value=[
+                    {
+                        "date": "2026-08-05(水)",
+                        "expense_type": "食費",
+                        "expense_memo": "昼食",
+                        "expense_amount": 1200,
+                    }
+                ]
+            ),
+            get_sync_overview=Mock(return_value={"counts": {}, "records": {}}),
+            get_recurring_expenses=Mock(return_value=[]),
+        )
+
+        dataframe_constructor = pd.DataFrame
+        generate_report_summary = server_tools.generate_report_summary
+
+        def dataframe_with_string_date(data: Any) -> pd.DataFrame:
+            dataframe = dataframe_constructor(data)
+            dataframe["date"] = dataframe["date"].astype(pd.StringDtype())
+            return dataframe
+
+        with (
+            patch(
+                "expense.api.server_tools.pd.DataFrame",
+                side_effect=dataframe_with_string_date,
+            ),
+            patch.object(
+                server_tools,
+                "generate_report_summary",
+                wraps=generate_report_summary,
+            ) as report_summary,
+        ):
+            result = server_tools.generate_commons(Mock(cookies={}))
+
+        self.assertEqual(result["n_records"], 1)
+        df_records = report_summary.call_args.args[0]
+        self.assertTrue(
+            pd.api.types.is_datetime64_any_dtype(df_records["date"])
+        )
+
+
 class TestSyncStatusRoutes(unittest.TestCase):
     def test_status_route_returns_no_store_sync_summary(self) -> None:
         tools = Mock(config={"web_ui": {"record_table": {"max_n_records": 20}}})
