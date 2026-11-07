@@ -49,6 +49,7 @@ class TestMain(unittest.TestCase):
 
     def test_toast_timeout_is_ignored(self) -> None:
         termux_api = TermuxAPI()
+        termux_api.toast_enabled = True
         with patch(
             "expense.core.termux_api.subprocess.run",
             side_effect=subprocess.TimeoutExpired(
