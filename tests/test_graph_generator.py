@@ -436,6 +436,221 @@ class GraphGeneratorSavingsRateTest(unittest.TestCase):
         self.assertEqual(GraphGenerator._format_savings_rate(30, 0), "-")
 
 
+class GraphGeneratorAnnualFiscalSankeyTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.generator = GraphGenerator.__new__(GraphGenerator)
+        self.generator.income_types = ["給与", "雑所得"]
+        self.generator.all_income_types = ["給与", "雑所得", "賞与"]
+        self.generator.fixed_types = ["家賃"]
+        self.generator.variable_types = ["食費", "交通費"]
+        self.generator.graph_color = {"家賃": "#8844aa", "食費": "#22aa66"}
+
+    def test_builds_fiscal_year_flows_and_savings(self) -> None:
+        df = pd.DataFrame(
+            {
+                "date": pd.to_datetime(
+                    [
+                        "2024-03-31",
+                        "2024-04-01",
+                        "2024-04-02",
+                        "2025-03-31",
+                        "2025-04-01",
+                    ]
+                ),
+                "expense_type": ["給与", "給与", "食費", "賞与", "家賃"],
+                "expense_amount": [90_000, 300_000, 100_000, 50_000, 70_000],
+            }
+        )
+
+        figure, graph_html, _ = capture_chart_figure(
+            self.generator,
+            lambda data, include_plotlyjs=False: self.generator.generate_annual_fiscal_sankey_chart(
+                data, target_year="2024", include_plotlyjs=include_plotlyjs
+            )[
+                0
+            ],
+            df,
+        )
+
+        sankey = figure.data[0]
+        self.assertEqual(figure.layout.title.text, "2024年度の収支内訳")
+        self.assertEqual(
+            list(sankey.node.label),
+            [
+                "収入<br>¥350,000",
+                "食費<br>¥100,000",
+                "ｷｬｯｼｭﾌﾛｰ<br>¥250,000",
+            ],
+        )
+        self.assertEqual(list(sankey.link.source), [0, 0])
+        self.assertEqual(list(sankey.link.target), [1, 2])
+        self.assertEqual(list(sankey.link.value), [100_000, 250_000])
+        self.assertEqual(
+            list(sankey.link.customdata), [100_000 / 12, 250_000 / 12]
+        )
+        self.assertIn(
+            "%{target.label}<br>(¥%{customdata:,.0f}/月)",
+            sankey.link.hovertemplate,
+        )
+        self.assertEqual(graph_html, "<div>chart</div>")
+
+    def test_excludes_current_month_without_salary_record(
+        self,
+    ) -> None:
+        df = pd.DataFrame(
+            {
+                "date": pd.to_datetime(
+                    [
+                        "2024-04-01",
+                        "2024-04-02",
+                        "2024-11-01",
+                        "2024-11-16",
+                    ]
+                ),
+                "expense_type": ["給与", "食費", "雑所得", "食費"],
+                "expense_amount": [120_000, 80_000, 120_000, 500_000],
+            }
+        )
+
+        with patch("expense.core.graph_generator.dt") as mock_datetime:
+            mock_datetime.date.today.return_value = pd.Timestamp(
+                "2024-11-15"
+            ).date()
+            figure, _, _ = capture_chart_figure(
+                self.generator,
+                lambda data, include_plotlyjs=False: self.generator.generate_annual_fiscal_sankey_chart(
+                    data,
+                    target_year="2024",
+                    include_plotlyjs=include_plotlyjs,
+                )[
+                    0
+                ],
+                df,
+            )
+
+        self.assertEqual(list(figure.data[0].link.value), [80_000, 160_000])
+        self.assertEqual(
+            list(figure.data[0].link.customdata),
+            [80_000 / 7, 160_000 / 7],
+        )
+
+    def test_includes_current_month_with_salary_record(self) -> None:
+        df = pd.DataFrame(
+            {
+                "date": pd.to_datetime(
+                    ["2024-04-01", "2024-04-02", "2024-11-01"]
+                ),
+                "expense_type": ["給与", "食費", "給与"],
+                "expense_amount": [120_000, 80_000, 120_000],
+            }
+        )
+
+        with patch("expense.core.graph_generator.dt") as mock_datetime:
+            mock_datetime.date.today.return_value = pd.Timestamp(
+                "2024-11-15"
+            ).date()
+            figure, _, _ = capture_chart_figure(
+                self.generator,
+                lambda data, include_plotlyjs=False: self.generator.generate_annual_fiscal_sankey_chart(
+                    data,
+                    target_year="2024",
+                    include_plotlyjs=include_plotlyjs,
+                )[
+                    0
+                ],
+                df,
+            )
+
+        self.assertEqual(list(figure.data[0].link.customdata), [10_000, 20_000])
+
+    def test_represents_deficit_as_income_external_to_recorded_income(
+        self,
+    ) -> None:
+        df = pd.DataFrame(
+            {
+                "date": pd.to_datetime(
+                    ["2024-04-01", "2024-04-02", "2024-04-03"]
+                ),
+                "expense_type": ["給与", "食費", "交通費"],
+                "expense_amount": [100, 180, 20],
+            }
+        )
+
+        figure, _, _ = capture_chart_figure(
+            self.generator,
+            lambda data, include_plotlyjs=False: self.generator.generate_annual_fiscal_sankey_chart(
+                data, target_year="2024", include_plotlyjs=include_plotlyjs
+            )[
+                0
+            ],
+            df,
+        )
+
+        sankey = figure.data[0]
+        self.assertEqual(
+            list(sankey.node.label),
+            [
+                "収入<br>¥100",
+                "収入外・不足分<br>¥100",
+                "食費<br>¥180",
+                "交通費<br>¥20",
+            ],
+        )
+        self.assertEqual(list(sankey.link.source), [0, 1, 0, 1])
+        self.assertEqual(list(sankey.link.target), [2, 2, 3, 3])
+        self.assertEqual(list(sankey.link.value), [90, 90, 10, 10])
+        self.assertEqual(
+            list(sankey.link.customdata), [15, 15, 20 / 12, 20 / 12]
+        )
+        self.assertEqual(sum(sankey.link.value), 200)
+
+    def test_expense_only_year_has_no_zero_income_source(self) -> None:
+        df = pd.DataFrame(
+            {
+                "date": [pd.Timestamp("2024-04-01")],
+                "expense_type": ["食費"],
+                "expense_amount": [50_000],
+            }
+        )
+
+        figure, _, _ = capture_chart_figure(
+            self.generator,
+            lambda data, include_plotlyjs=False: self.generator.generate_annual_fiscal_sankey_chart(
+                data, target_year="2024", include_plotlyjs=include_plotlyjs
+            )[
+                0
+            ],
+            df,
+        )
+
+        sankey = figure.data[0]
+        self.assertEqual(
+            list(sankey.node.label),
+            ["収入外・不足分<br>¥50,000", "食費<br>¥50,000"],
+        )
+        self.assertEqual(list(sankey.link.source), [0])
+        self.assertEqual(list(sankey.link.target), [1])
+        self.assertEqual(list(sankey.link.value), [50_000])
+
+    def test_returns_empty_html_for_empty_or_unrecognized_data(self) -> None:
+        self.assertEqual(
+            self.generator.generate_annual_fiscal_sankey_chart(pd.DataFrame()),
+            ("", []),
+        )
+        self.assertEqual(
+            self.generator.generate_annual_fiscal_sankey_chart(
+                pd.DataFrame(
+                    {
+                        "date": ["2024-04-01"],
+                        "expense_type": ["対象外"],
+                        "expense_amount": [100],
+                    }
+                )
+            ),
+            ("", []),
+        )
+
+
 class GraphGeneratorIncomeHoverTest(unittest.TestCase):
     def test_income_hover_summary_contains_type_amount_and_memo(self) -> None:
         df_income = pd.DataFrame(

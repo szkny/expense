@@ -416,6 +416,51 @@ class TestAssetRecentlyHistoryChartRoute(unittest.TestCase):
         self.assertEqual(pd.Timestamp(graph_data["date"].iloc[-1]), today)
 
 
+class TestAnnualFiscalSankeyChartRoute(unittest.TestCase):
+    def test_passes_selected_year_and_theme_to_generator(self) -> None:
+        df_records = pd.DataFrame(
+            {
+                "date": [pd.Timestamp("2024-04-01")],
+                "expense_type": ["給与"],
+                "expense_amount": [300_000],
+            }
+        )
+        graph_generator = Mock()
+        graph_generator.generate_annual_fiscal_sankey_chart.return_value = (
+            "<div>sankey</div>",
+            ["2024"],
+        )
+        server_tools = Mock(graph_generator=graph_generator)
+
+        with (
+            patch("expense.api.server.ServerTools", return_value=server_tools),
+            patch(
+                "expense.api.server.get_cached_records",
+                return_value=(df_records, pd.DataFrame()),
+            ),
+            patch(
+                "expense.api.server.get_cached_graph",
+                side_effect=lambda *args: args[-1](),
+            ),
+        ):
+            client = TestClient(app)
+            client.cookies.set("theme", "dark")
+            response = client.get(
+                "/api/annual_fiscal_sankey_chart?year=2024",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(), {"html": "<div>sankey</div>", "years": ["2024"]}
+        )
+        graph_generator.generate_annual_fiscal_sankey_chart.assert_called_once_with(
+            df_records,
+            target_year="2024",
+            theme="dark",
+            include_plotlyjs=False,
+        )
+
+
 class TestLazyGspreadHandler(unittest.TestCase):
     def test_connects_on_first_use_and_retries(self) -> None:
         handler = Mock()

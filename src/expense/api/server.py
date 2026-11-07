@@ -1123,6 +1123,29 @@ def get_annual_fiscal_report_chart(
     return JSONResponse(content={"html": graph_html, "years": available_years})
 
 
+@app.get("/api/annual_fiscal_sankey_chart", response_class=JSONResponse)
+def get_annual_fiscal_sankey_chart(
+    request: Request, year: str | None = None
+) -> JSONResponse:
+    log.info("start 'get_annual_fiscal_sankey_chart' method")
+    server_tools = ServerTools(app, gspread_handler)
+    theme = request.cookies.get("theme", "light")
+    df_records, _ = get_cached_records(server_tools)
+    graph_html, available_years = get_cached_graph(
+        _df_cache_record,
+        _df_cache_record_lock,
+        ("annual_fiscal_sankey", theme, year or ""),
+        lambda: server_tools.graph_generator.generate_annual_fiscal_sankey_chart(
+            df_records,
+            target_year=year,
+            theme=theme,
+            include_plotlyjs=False,
+        ),
+    )
+    log.info("end 'get_annual_fiscal_sankey_chart' method")
+    return JSONResponse(content={"html": graph_html, "years": available_years})
+
+
 @app.get("/api/fiscal_asset_history_chart", response_class=JSONResponse)
 def get_fiscal_asset_history_chart(
     request: Request, year: str | None = None

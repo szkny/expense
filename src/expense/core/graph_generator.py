@@ -1410,6 +1410,218 @@ class GraphGenerator(Base):
         log.info("end 'generate_annual_fiscal_report_chart' method")
         return graph_html, available_year_strings
 
+    def _create_annual_fiscal_sankey_trace(
+        self,
+        income: float,
+        expenses: pd.Series,
+        elapsed_months: int,
+        theme: str,
+    ) -> tuple[go.Sankey, bool]:
+        total_expenses = float(expenses.sum())
+        source_labels: list[str] = []
+        income_source_index: int | None = None
+        if income > 0:
+            income_source_index = len(source_labels)
+            source_labels.append(f"収入<br>¥{income:,.0f}")
+        target_labels = [
+            f"{expense_type}<br>¥{amount:,.0f}"
+            for expense_type, amount in expenses.items()
+        ]
+        sources: list[int] = []
+        targets: list[int] = []
+        values: list[float] = []
+        monthly_values: list[float] = []
+        link_colors: list[str] = []
+        income_color = "#4466bb" if theme == "dark" else "#6699ee"
+        savings_color = "#baa44b" if theme == "dark" else "#d6ad22"
+        deficit_color = "#bb3333" if theme == "dark" else "#ee5555"
+        expense_colors = [
+            self.graph_color.get(expense_type, "#94a3b8")
+            for expense_type in expenses.index
+        ]
+
+        if income >= total_expenses:
+            for index, amount in enumerate(expenses.values, start=1):
+                sources.append(income_source_index or 0)
+                targets.append(index)
+                values.append(float(amount))
+                monthly_values.append(float(amount) / elapsed_months)
+                link_colors.append("rgba(102, 153, 238, 0.45)")
+            savings = income - total_expenses
+            if savings > 0:
+                savings_index = len(source_labels) + len(target_labels)
+                target_labels.append(f"ｷｬｯｼｭﾌﾛｰ<br>¥{savings:,.0f}")
+                sources.append(income_source_index or 0)
+                targets.append(savings_index)
+                values.append(savings)
+                monthly_values.append(savings / elapsed_months)
+                link_colors.append("rgba(214, 173, 34, 0.55)")
+            node_labels = source_labels + target_labels
+            node_colors = [income_color] + expense_colors
+            if savings > 0:
+                node_colors.append(savings_color)
+        else:
+            deficit = total_expenses - income
+            deficit_source_index = len(source_labels)
+            source_labels.append(f"収入外・不足分<br>¥{deficit:,.0f}")
+            node_labels = source_labels + target_labels
+            node_colors = (
+                ([income_color] if income_source_index is not None else [])
+                + [deficit_color]
+                + expense_colors
+            )
+            for index, amount in enumerate(expenses.values):
+                income_share = float(amount) * income / total_expenses
+                deficit_share = float(amount) - income_share
+                target_index = len(source_labels) + index
+                if income_share > 0:
+                    sources.append(income_source_index or 0)
+                    targets.append(target_index)
+                    values.append(income_share)
+                    monthly_values.append(float(amount) / elapsed_months)
+                    link_colors.append("rgba(102, 153, 238, 0.45)")
+                if deficit_share > 0:
+                    sources.append(deficit_source_index)
+                    targets.append(target_index)
+                    values.append(deficit_share)
+                    monthly_values.append(float(amount) / elapsed_months)
+                    link_colors.append("rgba(238, 85, 85, 0.45)")
+
+        sankey = go.Sankey(
+            arrangement="snap",
+            node=dict(
+                label=node_labels,
+                color=node_colors,
+                pad=18,
+                thickness=18,
+                line=dict(color="rgba(128, 128, 128, 0.35)", width=0.5),
+            ),
+            link=dict(
+                source=sources,
+                target=targets,
+                value=values,
+                customdata=monthly_values,
+                color=link_colors,
+                hovertemplate=(
+                    "%{target.label}<br>(¥%{customdata:,.0f}/月)"
+                    "<extra></extra>"
+                ),
+            ),
+            valueformat=",.0f",
+            valuesuffix="円",
+        )
+        return sankey, income < total_expenses
+
+    def generate_annual_fiscal_sankey_chart(
+        self,
+        df_records: pd.DataFrame,
+        target_year: str | None = None,
+        theme: str = "light",
+        include_plotlyjs: bool | str = True,
+    ) -> tuple[str, list[str]]:
+        """年度の収入から支出タイプ・貯蓄への流れを生成する。"""
+        log.info("start 'generate_annual_fiscal_sankey_chart' method")
+        if df_records.empty:
+            return "", []
+
+        df_sankey = df_records.copy()
+        df_sankey["date"] = pd.to_datetime(df_sankey["date"], errors="coerce")
+        df_sankey["expense_amount"] = pd.to_numeric(
+            df_sankey["expense_amount"], errors="coerce"
+        )
+        df_sankey.dropna(subset=["date", "expense_amount"], inplace=True)
+        expense_types = self.fixed_types + self.variable_types
+        included_types = self.all_income_types + expense_types
+        df_sankey = df_sankey.loc[
+            df_sankey["expense_type"].isin(included_types)
+        ].copy()
+        if df_sankey.empty:
+            return "", []
+
+        today = pd.Timestamp(dt.date.today())
+        fiscal_years = df_sankey["date"].dt.year - (
+            df_sankey["date"].dt.month < 4
+        ).astype(int)
+        current_fiscal_year = today.year - int(today.month < 4)
+        available_years = sorted(
+            set(fiscal_years.unique()) | {current_fiscal_year}, reverse=True
+        )
+        available_year_strings = [str(year) for year in available_years]
+        fiscal_year = (
+            int(target_year)
+            if target_year in available_year_strings
+            else available_years[0]
+        )
+        fiscal_start = pd.Timestamp(fiscal_year, 4, 1)
+        fiscal_end = (
+            today
+            if fiscal_year == current_fiscal_year
+            else pd.Timestamp(fiscal_year + 1, 3, 31)
+        )
+        elapsed_months = (
+            (fiscal_end.year - fiscal_start.year) * 12
+            + fiscal_end.month
+            - fiscal_start.month
+            + 1
+        )
+        df_sankey = df_sankey.loc[
+            (df_sankey["date"] >= fiscal_start)
+            & (df_sankey["date"] <= fiscal_end)
+        ]
+        if fiscal_year == current_fiscal_year:
+            has_current_month_salary = (
+                df_sankey["expense_type"].eq("給与")
+                & df_sankey["expense_amount"].gt(0)
+                & (df_sankey["date"].dt.to_period("M") == today.to_period("M"))
+            ).any()
+            if not has_current_month_salary:
+                elapsed_months = max(elapsed_months - 1, 1)
+
+        income = float(
+            df_sankey.loc[
+                df_sankey["expense_type"].isin(self.all_income_types),
+                "expense_amount",
+            ].sum()
+        )
+        income = max(income, 0.0)
+        expenses = (
+            df_sankey.loc[df_sankey["expense_type"].isin(expense_types)]
+            .groupby("expense_type", sort=False)["expense_amount"]
+            .sum()
+            .reindex(expense_types, fill_value=0)
+        )
+        expenses = expenses.loc[expenses > 0]
+        total_expenses = float(expenses.sum())
+        if income <= 0 and total_expenses <= 0:
+            return "", available_year_strings
+
+        sankey, has_deficit = self._create_annual_fiscal_sankey_trace(
+            income, expenses, elapsed_months, theme
+        )
+        fig = go.Figure(sankey)
+        self._update_layout(fig, theme)
+        fig.update_layout(
+            title=f"{fiscal_year}年度の収支内訳",
+            height=max(420, 42 * len(sankey.node.label)),
+            margin=dict(l=12, r=12, t=55, b=12),
+        )
+        if has_deficit:
+            fig.add_annotation(
+                text="※収入外の不足分は支出額に応じて按分",
+                x=1,
+                y=0,
+                xref="paper",
+                yref="paper",
+                xanchor="right",
+                yanchor="bottom",
+                showarrow=False,
+                font=dict(size=11),
+            )
+            fig.update_layout(margin=dict(l=12, r=12, t=55, b=32))
+        graph_html = self._figure_to_html(fig, include_plotlyjs)
+        log.info("end 'generate_annual_fiscal_sankey_chart' method")
+        return graph_html, available_year_strings
+
     def _add_fiscal_forecast_traces(
         self,
         fig: go.Figure,

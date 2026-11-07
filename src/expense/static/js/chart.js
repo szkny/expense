@@ -14,6 +14,13 @@ const allChartConfigs = {
       optionLabel: (year) => `${year}年度`,
     },
     {
+      id: "annual-fiscal-sankey",
+      endpoint: "/api/annual_fiscal_sankey_chart",
+      hasDropdown: true,
+      dateParam: "year",
+      optionLabel: (year) => `${year}年度`,
+    },
+    {
       id: "fiscal-asset-history",
       endpoint: "/api/fiscal_asset_history_chart",
       hasDropdown: true,
