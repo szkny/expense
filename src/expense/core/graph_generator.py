@@ -200,6 +200,15 @@ class GraphGenerator(Base):
         月別のDataFrameを生成
         """
         log.info("start 'generate_monthly_df' method")
+        if df.empty:
+            return pd.DataFrame(
+                columns=[
+                    "month",
+                    "expense_type",
+                    "expense_amount",
+                    "expense_memo",
+                ]
+            )
         df_new = df.copy()
         df_new.loc[:, "date"] = pd.to_datetime(df_new.loc[:, "date"])
         df_new.loc[:, "month"] = pd.to_datetime(

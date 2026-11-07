@@ -28,6 +28,20 @@ def capture_chart_figure(
     return figures[0], chart_html, render
 
 
+class GraphGeneratorMonthlyDataFrameTest(unittest.TestCase):
+    def test_empty_input_returns_monthly_columns(self) -> None:
+        generator = GraphGenerator.__new__(GraphGenerator)
+
+        monthly_df = generator.generate_monthly_df(pd.DataFrame())
+
+        self.assertTrue(monthly_df.empty)
+        self.assertEqual(
+            list(monthly_df.columns),
+            ["month", "expense_type", "expense_amount", "expense_memo"],
+        )
+        self.assertEqual(generator.generate_monthly_bar_chart(monthly_df), "")
+
+
 class GraphGeneratorYAxisTicksTest(unittest.TestCase):
     def test_values_below_one_hundred_million_use_man_unit(self) -> None:
         generator = GraphGenerator.__new__(GraphGenerator)
