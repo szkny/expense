@@ -113,6 +113,7 @@ class AssetManagerBatchGetTest(unittest.TestCase):
         )
         self.assertEqual(dataframes["df_summary"].iloc[0]["total"], 100.0)
         self.assertEqual(dataframes["df_items"].iloc[0]["ticker"], "VTI")
+        self.assertEqual(dataframes["df_items"].iloc[0]["num"], 1.0)
         self.assertEqual(dataframes["df_records"].iloc[0]["valuation"], 110.0)
         self.assertEqual(dataframes["df_stock"].iloc[0]["ticker"], "VTI")
 

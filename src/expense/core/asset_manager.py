@@ -466,7 +466,7 @@ class AssetManager(Base):
         df.columns = pd.Index(df.iloc[0], name=None)
         df = df.drop(0).replace("", pd.NA).replace("#N/A", "0").dropna()
         df = df.map(lambda s: re.sub("[$¥%,]", "", s))
-        df.iloc[:, 1:] = df.iloc[:, 1:].astype(float)
+        df = pd.concat([df.iloc[:, :1], df.iloc[:, 1:].astype(float)], axis=1)
         df.columns = pd.Index(
             [
                 "ticker",
@@ -516,7 +516,9 @@ class AssetManager(Base):
         df = df.map(lambda s: re.sub("[$¥%,+ー]", "", s))
         df = df.iloc[1:]
         df = df.replace("", pd.NA).replace("#N/A", pd.NA).dropna(how="all")
-        df.iloc[:, 1:] = df.iloc[:, 1:].astype("Float64")
+        df = pd.concat(
+            [df.iloc[:, :1], df.iloc[:, 1:].astype("Float64")], axis=1
+        )
         df.columns = pd.Index(
             [
                 "ticker",
@@ -545,7 +547,7 @@ class AssetManager(Base):
             ["date", "invest_amount", "valuation", "profit", "roi"]
         )
         df["date"] = pd.to_datetime(df["date"])
-        df.iloc[:, 1:] = df.iloc[:, 1:].astype(float)
+        df = pd.concat([df.iloc[:, :1], df.iloc[:, 1:].astype(float)], axis=1)
         return df
 
     @staticmethod
@@ -714,7 +716,9 @@ class AssetManager(Base):
             df = df.map(lambda s: re.sub("[$¥%,+ー]", "", s))
             df = df.iloc[1:]
             df = df.replace("", pd.NA).replace("#N/A", pd.NA).dropna(how="all")
-            df.iloc[:, 1:] = df.iloc[:, 1:].astype("Float64")
+            df = pd.concat(
+                [df.iloc[:, :1], df.iloc[:, 1:].astype("Float64")], axis=1
+            )
             df.columns = pd.Index(
                 [
                     "ticker",
@@ -776,7 +780,7 @@ class AssetManager(Base):
                 ]
             )
             df["date"] = pd.to_datetime(df["date"])
-            df.iloc[:, 1:] = df.iloc[:, 1:].astype(float)
+            df = pd.concat([df.iloc[:, :1], df.iloc[:, 1:].astype(float)], axis=1)
             # log.debug(f"df:\n{df}")
             return df
         except Exception:
