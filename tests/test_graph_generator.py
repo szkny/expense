@@ -490,7 +490,7 @@ class GraphGeneratorPieChartTest(unittest.TestCase):
         self.assertEqual(
             figure.layout.title.text,
             (
-                f"支出内訳（月平均 {first_period.year}年"
+                f"支出内訳（{first_period.year}年"
                 f"{first_period.month}月〜{previous_period.year}年"
                 f"{previous_period.month}月）"
             ),
@@ -572,7 +572,7 @@ class GraphGeneratorPieChartTest(unittest.TestCase):
         self.assertEqual(
             figure.layout.title.text,
             (
-                f"支出内訳（月平均 {first_included_period.year}年"
+                f"支出内訳（{first_included_period.year}年"
                 f"{first_included_period.month}月〜{previous_period.year}年"
                 f"{previous_period.month}月）"
             ),
