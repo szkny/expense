@@ -401,14 +401,16 @@ class GraphGeneratorDailyChartTest(unittest.TestCase):
 
 
 class GraphGeneratorPieChartTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.generator = GraphGenerator.__new__(GraphGenerator)
+        self.generator.fixed_types = []
+        self.generator.variable_types = ["食費", "家賃"]
+        self.generator.expense_types = ["食費", "家賃"]
+        self.generator.graph_color = {}
+
     def test_title_formats_period_month_without_strftime_directive(
         self,
     ) -> None:
-        generator = GraphGenerator.__new__(GraphGenerator)
-        generator.fixed_types = []
-        generator.variable_types = ["食費"]
-        generator.expense_types = ["食費"]
-        generator.graph_color = {}
         df = pd.DataFrame(
             {
                 "month": ["2026-10"],
@@ -426,17 +428,156 @@ class GraphGeneratorPieChartTest(unittest.TestCase):
         )
 
         figure, _, _ = capture_chart_figure(
-            generator,
-            lambda data, include_plotlyjs=False: generator.generate_pie_chart(
+            self.generator,
+            lambda data, include_plotlyjs=False: self.generator.generate_pie_chart(
                 data,
                 df_records,
                 target_month="2026-10",
                 include_plotlyjs=include_plotlyjs,
-            )[0],
+            )[
+                0
+            ],
             df,
         )
 
         self.assertEqual(figure.layout.title.text, "支出内訳（2026年10月）")
+
+    def test_monthly_average_excludes_current_month_and_uses_calendar_span(
+        self,
+    ) -> None:
+        current_period = pd.Timestamp.today().to_period("M")
+        first_period = current_period - 3
+        previous_period = current_period - 1
+        dates = [
+            first_period.start_time + pd.Timedelta(days=4),
+            previous_period.start_time + pd.Timedelta(days=4),
+            previous_period.start_time + pd.Timedelta(days=5),
+            current_period.start_time + pd.Timedelta(days=1),
+        ]
+        df_records = pd.DataFrame(
+            {
+                "date": dates,
+                "expense_type": ["食費", "食費", "家賃", "食費"],
+                "expense_amount": [300, 600, 300, 9_999],
+            }
+        )
+        df = pd.DataFrame(
+            {
+                "month": [current_period.strftime("%Y-%m")],
+                "expense_type": ["食費"],
+                "expense_amount": [9_999],
+                "expense_memo": ["今月"],
+            }
+        )
+
+        figure, _, _ = capture_chart_figure(
+            self.generator,
+            lambda data, include_plotlyjs=False: self.generator.generate_pie_chart(
+                data,
+                df_records,
+                target_month="average",
+                include_plotlyjs=include_plotlyjs,
+            )[
+                0
+            ],
+            df,
+        )
+
+        self.assertEqual(
+            dict(zip(figure.data[0].labels, figure.data[0].values)),
+            {"食費": 300, "家賃": 100},
+        )
+        self.assertEqual(
+            figure.layout.title.text,
+            (
+                f"支出内訳（月平均 {first_period.year}年"
+                f"{first_period.month}月〜{previous_period.year}年"
+                f"{previous_period.month}月）"
+            ),
+        )
+        self.assertIn("(3か月)", figure.layout.annotations[0].text)
+
+    def test_monthly_average_option_is_hidden_with_only_one_completed_month(
+        self,
+    ) -> None:
+        current_period = pd.Timestamp.today().to_period("M")
+        previous_period = current_period - 1
+        df_records = pd.DataFrame(
+            {
+                "date": [
+                    previous_period.start_time + pd.Timedelta(days=4),
+                    current_period.start_time + pd.Timedelta(days=1),
+                ],
+                "expense_type": ["食費", "食費"],
+                "expense_amount": [300, 400],
+            }
+        )
+        df = pd.DataFrame(
+            {
+                "month": [previous_period.strftime("%Y-%m")],
+                "expense_type": ["食費"],
+                "expense_amount": [300],
+                "expense_memo": [""],
+            }
+        )
+
+        _, available_months = self.generator.generate_pie_chart(
+            df, df_records, include_plotlyjs=False
+        )
+
+        self.assertNotIn("average", available_months)
+
+    def test_monthly_average_is_limited_to_the_latest_twelve_months(
+        self,
+    ) -> None:
+        current_period = pd.Timestamp.today().to_period("M")
+        first_included_period = current_period - 12
+        previous_period = current_period - 1
+        old_period = current_period - 15
+        df_records = pd.DataFrame(
+            {
+                "date": [
+                    old_period.start_time + pd.Timedelta(days=2),
+                    first_included_period.start_time + pd.Timedelta(days=2),
+                    previous_period.start_time + pd.Timedelta(days=2),
+                    current_period.start_time + pd.Timedelta(days=2),
+                ],
+                "expense_type": ["食費"] * 4,
+                "expense_amount": [900_000, 1_200, 1_200, 900_000],
+            }
+        )
+        df = pd.DataFrame(
+            {
+                "month": [current_period.strftime("%Y-%m")],
+                "expense_type": ["食費"],
+                "expense_amount": [900_000],
+                "expense_memo": ["今月"],
+            }
+        )
+
+        figure, _, _ = capture_chart_figure(
+            self.generator,
+            lambda data, include_plotlyjs=False: self.generator.generate_pie_chart(
+                data,
+                df_records,
+                target_month="average",
+                include_plotlyjs=include_plotlyjs,
+            )[
+                0
+            ],
+            df,
+        )
+
+        self.assertEqual(list(figure.data[0].values), [200])
+        self.assertEqual(
+            figure.layout.title.text,
+            (
+                f"支出内訳（月平均 {first_included_period.year}年"
+                f"{first_included_period.month}月〜{previous_period.year}年"
+                f"{previous_period.month}月）"
+            ),
+        )
+        self.assertIn("(12か月)", figure.layout.annotations[0].text)
 
 
 class GraphGeneratorSavingsRateTest(unittest.TestCase):

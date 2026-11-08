@@ -3,7 +3,13 @@ import { initAssetMasking } from "./ui.js";
 
 const allChartConfigs = {
   report: [
-    { id: "pie", endpoint: "/api/pie_chart", hasDropdown: true },
+    {
+      id: "pie",
+      endpoint: "/api/pie_chart",
+      hasDropdown: true,
+      optionLabel: (month) =>
+        month === "average" ? "月平均" : month.replace("-", "年") + "月",
+    },
     { id: "daily", endpoint: "/api/daily_chart", hasDropdown: true },
     { id: "bar", endpoint: "/api/bar_chart", hasDropdown: false },
     {

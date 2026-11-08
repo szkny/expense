@@ -19,6 +19,8 @@ log: logging.Logger = logging.getLogger("expense")
 class GraphGenerator(Base):
     _FORECAST_HALF_LIFE_DAYS = 90
     _AVERAGE_DAYS_PER_MONTH = 365.0 / 12.0
+    _MONTHLY_AVERAGE_OPTION = "average"
+    _MAX_MONTHLY_AVERAGE_MONTHS = 12
 
     def __init__(
         self,
@@ -865,7 +867,11 @@ class GraphGenerator(Base):
             "expense_type in @self.fixed_types or expense_type in @self.variable_types",
             inplace=True,
         )
-        date_index = pd.to_datetime(_df_records["date"])
+        _df_records["date"] = pd.to_datetime(
+            _df_records["date"], errors="coerce"
+        )
+        _df_records.dropna(subset=["date"], inplace=True)
+        date_index = _df_records["date"]
         _, t_month_end = self._get_month_boundaries(dt.datetime.today())
         date_index = date_index[date_index <= t_month_end]
         unique_months = sorted(
@@ -874,29 +880,90 @@ class GraphGenerator(Base):
         )
         available_months = [m.strftime("%Y-%m") for m in unique_months]
 
+        today = pd.Timestamp(dt.date.today())
+        current_period = today.to_period("M")
+        completed_records = _df_records.loc[
+            _df_records["date"] < current_period.start_time
+        ].copy()
+        first_completed_period = (
+            completed_records["date"].min().to_period("M")
+            if not completed_records.empty
+            else None
+        )
+        average_end_period = current_period - 1
+        average_start_period = (
+            max(
+                first_completed_period,
+                average_end_period - (self._MAX_MONTHLY_AVERAGE_MONTHS - 1),
+            )
+            if first_completed_period is not None
+            else None
+        )
+        completed_periods = (
+            average_end_period.ordinal - average_start_period.ordinal + 1
+            if average_start_period is not None
+            else 0
+        )
+        has_monthly_average = completed_periods >= 2
+        if has_monthly_average:
+            available_months.append(self._MONTHLY_AVERAGE_OPTION)
+
         if not unique_months:
             return "", []
 
         target_month_str = target_month if target_month else available_months[0]
         log.debug(f"target_month_str: {target_month_str}")
-        target_period = pd.Period(target_month_str, "M")
-
-        t = target_period.to_timestamp()
-        df_pie_this_month = df_pie.loc[
-            df_pie.loc[:, "month"] == t.strftime("%Y-%m")
-        ]
-
-        if df_pie_this_month.empty:
-            log.info(
-                f"DataFrame (df_pie_this_month of {target_period}) is empty, skipping graph generation."
-            )
+        is_monthly_average = (
+            target_month_str == self._MONTHLY_AVERAGE_OPTION
+            and has_monthly_average
+        )
+        if (
+            target_month_str == self._MONTHLY_AVERAGE_OPTION
+            and not is_monthly_average
+        ):
             return "", available_months
 
-        month_start, month_end = self._get_month_boundaries(t)
-        df_records_this_month = self._prepare_graph_dataframe(
-            _df_records, month_start, month_end
-        )
-        n_records = df_records_this_month.shape[0]
+        if is_monthly_average:
+            assert average_start_period is not None
+            completed_records = completed_records.loc[
+                completed_records["date"] >= average_start_period.start_time
+            ]
+            completed_records["expense_amount"] = pd.to_numeric(
+                completed_records["expense_amount"], errors="coerce"
+            )
+            df_pie_this_month = completed_records.groupby(
+                "expense_type", as_index=False
+            ).agg(expense_amount=("expense_amount", "sum"))
+            df_pie_this_month["expense_amount"] /= completed_periods
+            df_pie_this_month["expense_memo"] = "<br>"
+            period_label = (
+                f"{average_start_period.year}年"
+                f"{average_start_period.month}月〜"
+                f"{average_end_period.year}年"
+                f"{average_end_period.month}月"
+            )
+            n_records = completed_periods
+        else:
+            target_period = pd.Period(target_month_str, "M")
+            t = target_period.to_timestamp()
+            df_pie_this_month = df_pie.loc[
+                df_pie.loc[:, "month"] == t.strftime("%Y-%m")
+            ]
+
+            if df_pie_this_month.empty:
+                log.info(
+                    "DataFrame (df_pie_this_month of "
+                    f"{target_period}) is empty, skipping graph generation."
+                )
+                return "", available_months
+
+            month_start, month_end = self._get_month_boundaries(t)
+            df_records_this_month = self._prepare_graph_dataframe(
+                _df_records, month_start, month_end
+            )
+            n_records = df_records_this_month.shape[0]
+            period_label = f"{target_period.year}年{target_period.month}月"
+
         total_amount = df_pie_this_month["expense_amount"].sum()
 
         fig = px.pie(
@@ -924,7 +991,11 @@ class GraphGenerator(Base):
             y=0.5,
             xref="paper",
             yref="paper",
-            text=f"合計<br>¥{total_amount: ,.0f}<br>({int(n_records)}件)",
+            text=(
+                f"月平均<br>¥{total_amount: ,.0f}<br>({n_records}か月)"
+                if is_monthly_average
+                else f"合計<br>¥{total_amount: ,.0f}<br>({int(n_records)}件)"
+            ),
             showarrow=False,
             align="center",
             font=dict(
@@ -935,9 +1006,7 @@ class GraphGenerator(Base):
 
         self._update_layout(fig, theme)
         fig.update_layout(
-            title_text=(
-                f"支出内訳（{target_period.year}年{target_period.month}月）"
-            ),
+            title_text=f"支出内訳（{period_label}）",
             uniformtext=dict(minsize=14, mode="hide"),
             xaxis=dict(visible=False),
             yaxis=dict(visible=False),
