@@ -632,9 +632,9 @@ class GraphGeneratorAnnualFiscalSankeyTest(unittest.TestCase):
         self.assertEqual(
             list(sankey.node.label),
             [
-                "収入<br>¥350,000",
-                "食費<br>¥100,000",
-                "ｷｬｯｼｭﾌﾛｰ<br>¥250,000",
+                "収入<br>¥350,000 (100.0%)",
+                "食費<br>¥100,000 (28.6%)",
+                "ｷｬｯｼｭﾌﾛｰ<br>¥250,000 (71.4%)",
             ],
         )
         self.assertEqual(list(sankey.link.source), [0, 0])
@@ -745,10 +745,10 @@ class GraphGeneratorAnnualFiscalSankeyTest(unittest.TestCase):
         self.assertEqual(
             list(sankey.node.label),
             [
-                "収入<br>¥100",
-                "収入外・不足分<br>¥100",
-                "食費<br>¥180",
-                "交通費<br>¥20",
+                "収入<br>¥100 (100.0%)",
+                "収入外・不足分<br>¥100 (100.0%)",
+                "食費<br>¥180 (180.0%)",
+                "交通費<br>¥20 (20.0%)",
             ],
         )
         self.assertEqual(list(sankey.link.source), [0, 1, 0, 1])
@@ -781,7 +781,10 @@ class GraphGeneratorAnnualFiscalSankeyTest(unittest.TestCase):
         sankey = figure.data[0]
         self.assertEqual(
             list(sankey.node.label),
-            ["収入外・不足分<br>¥50,000", "食費<br>¥50,000"],
+            [
+                "収入外・不足分<br>¥50,000 (100.0%)",
+                "食費<br>¥50,000 (100.0%)",
+            ],
         )
         self.assertEqual(list(sankey.link.source), [0])
         self.assertEqual(list(sankey.link.target), [1])

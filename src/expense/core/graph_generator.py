@@ -1496,13 +1496,21 @@ class GraphGenerator(Base):
         theme: str,
     ) -> tuple[go.Sankey, bool]:
         total_expenses = float(expenses.sum())
+        percentage_base = income if income > 0 else total_expenses
+
+        def format_node_label(label: str, amount: float) -> str:
+            percentage = (
+                amount / percentage_base * 100 if percentage_base > 0 else 0.0
+            )
+            return f"{label}<br>¥{amount:,.0f} ({percentage:.1f}%)"
+
         source_labels: list[str] = []
         income_source_index: int | None = None
         if income > 0:
             income_source_index = len(source_labels)
-            source_labels.append(f"収入<br>¥{income:,.0f}")
+            source_labels.append(format_node_label("収入", income))
         target_labels = [
-            f"{expense_type}<br>¥{amount:,.0f}"
+            format_node_label(expense_type, float(amount))
             for expense_type, amount in expenses.items()
         ]
         sources: list[int] = []
@@ -1528,7 +1536,7 @@ class GraphGenerator(Base):
             savings = income - total_expenses
             if savings > 0:
                 savings_index = len(source_labels) + len(target_labels)
-                target_labels.append(f"ｷｬｯｼｭﾌﾛｰ<br>¥{savings:,.0f}")
+                target_labels.append(format_node_label("ｷｬｯｼｭﾌﾛｰ", savings))
                 sources.append(income_source_index or 0)
                 targets.append(savings_index)
                 values.append(savings)
@@ -1541,7 +1549,7 @@ class GraphGenerator(Base):
         else:
             deficit = total_expenses - income
             deficit_source_index = len(source_labels)
-            source_labels.append(f"収入外・不足分<br>¥{deficit:,.0f}")
+            source_labels.append(format_node_label("収入外・不足分", deficit))
             node_labels = source_labels + target_labels
             node_colors = (
                 ([income_color] if income_source_index is not None else [])
