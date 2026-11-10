@@ -5,13 +5,19 @@ function getNumericValue(value) {
   return Number.isFinite(numericValue) ? numericValue : null;
 }
 
-function getAxisTickSettings(ymin, ymax) {
-  if (ymax < 10000) {
-    return { "yaxis.tickvals": null, "yaxis.ticktext": null };
+function getAxisTickSettings(ymin, ymax, axisId) {
+  const maxAbsValue = Math.max(Math.abs(ymin), Math.abs(ymax));
+  if (maxAbsValue < 10000) {
+    return {
+      [`${axisId}.tickvals`]: null,
+      [`${axisId}.ticktext`]: null,
+      [`${axisId}.tickprefix`]: "¥",
+      [`${axisId}.tickformat`]: ",",
+    };
   }
 
-  const unit = ymax >= 100000000 ? 100000000 : 10000;
-  const suffix = ymax >= 100000000 ? "億" : "万";
+  const unit = maxAbsValue >= 100000000 ? 100000000 : 10000;
+  const suffix = maxAbsValue >= 100000000 ? "億" : "万";
   const rawStep = (ymax - ymin) / 5;
   const power = 10 ** Math.floor(Math.log10(rawStep));
   const ratio = rawStep / power;
@@ -27,7 +33,7 @@ function getAxisTickSettings(ymin, ymax) {
 
   for (
     let value = Math.floor(ymin / tickStep) * tickStep;
-    value <= ymax * 1.01;
+    value <= ymax + tickStep * 0.01;
     value += tickStep
   ) {
     tickvals.push(value);
@@ -47,16 +53,17 @@ function getAxisTickSettings(ymin, ymax) {
   });
 
   return {
-    "yaxis.tickvals": tickvals,
-    "yaxis.ticktext": ticktext,
-    "yaxis.tickprefix": null,
-    "yaxis.tickformat": null,
+    [`${axisId}.tickvals`]: tickvals,
+    [`${axisId}.ticktext`]: ticktext,
+    [`${axisId}.tickprefix`]: null,
+    [`${axisId}.tickformat`]: null,
   };
 }
 
-function getVisibleYRange(graphDiv, xRangeOverride) {
+function getVisibleYRange(graphDiv, xRangeOverride, traceAxis) {
   const xaxis = graphDiv._fullLayout?.xaxis || graphDiv.layout?.xaxis;
-  const yaxis = graphDiv._fullLayout?.yaxis || graphDiv.layout?.yaxis;
+  const axisId = traceAxis === "y" ? "yaxis" : `yaxis${traceAxis.slice(1)}`;
+  const yaxis = graphDiv._fullLayout?.[axisId] || graphDiv.layout?.[axisId];
   const isLog = yaxis?.type === "log";
   const rawXRange = xRangeOverride || xaxis?.range;
   const xRange = rawXRange?.map((value) => new Date(value).getTime());
@@ -70,7 +77,8 @@ function getVisibleYRange(graphDiv, xRangeOverride) {
     if (
       trace.visible === false ||
       trace.visible === "legendonly" ||
-      trace.name === "値ラベル"
+      trace.name === "値ラベル" ||
+      (trace.yaxis || "y") !== traceAxis
     ) {
       continue;
     }
@@ -121,6 +129,10 @@ function getVisibleYRange(graphDiv, xRangeOverride) {
   }
 
   if (!hasValue) return null;
+  if (traceAxis !== "y") {
+    ymin = Math.min(ymin, 0);
+    ymax = Math.max(ymax, 0);
+  }
   if (isLog) {
     return [Math.log10(ymin / 1.2), Math.log10(ymax * 1.2)];
   }
@@ -132,18 +144,20 @@ function getVisibleYRange(graphDiv, xRangeOverride) {
   return [ymin - lowerMargin, ymax + margin];
 }
 
-function updateYaxis(graphDiv, xRange) {
-  const range = getVisibleYRange(graphDiv, xRange);
+function updateYaxis(graphDiv, xRange, axisId, traceAxis) {
+  const range = getVisibleYRange(graphDiv, xRange, traceAxis);
   if (!range) return;
   const [ymin, ymax] = range;
-  const isLog =
-    (graphDiv._fullLayout?.yaxis || graphDiv.layout?.yaxis)?.type === "log";
+  const axis = graphDiv._fullLayout?.[axisId] || graphDiv.layout?.[axisId];
+  const isLog = axis?.type === "log";
   const tickYmin = isLog ? 10 ** ymin : ymin;
   const tickYmax = isLog ? 10 ** ymax : ymax;
   Plotly.relayout(graphDiv, {
-    "yaxis.range": range,
-    "yaxis.autorange": false,
-    ...getAxisTickSettings(tickYmin, tickYmax),
+    [`${axisId}.range`]: range,
+    [`${axisId}.autorange`]: false,
+    ...(axisId === "yaxis2"
+      ? getAxisTickSettings(tickYmin, tickYmax, axisId)
+      : {}),
   });
 }
 
@@ -161,7 +175,12 @@ window.attachPlotlyYAxisAutoscale = function attachPlotlyYAxisAutoscale(
   graphDiv.__expenseYAxisAutoscaleAttached = true;
 
   const scheduleUpdate = (xRange) =>
-    window.requestAnimationFrame(() => updateYaxis(graphDiv, xRange));
+    window.requestAnimationFrame(() => {
+      updateYaxis(graphDiv, xRange, "yaxis", "y");
+      if (graphDiv._fullLayout?.yaxis2 || graphDiv.layout?.yaxis2) {
+        updateYaxis(graphDiv, xRange, "yaxis2", "y2");
+      }
+    });
   graphDiv.on("plotly_restyle", () => {
     window.setTimeout(() => scheduleUpdate(), 0);
   });

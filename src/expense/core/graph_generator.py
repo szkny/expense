@@ -563,25 +563,21 @@ class GraphGenerator(Base):
         )
 
     def _get_yaxis_range(
-        self, fig: go.Figure, ymax_override: float | None
+        self,
+        fig: go.Figure,
+        ymax_override: float | None,
+        axis_name: str = "yaxis",
     ) -> tuple[float, float] | None:
         """Get y-axis range from override or figure layout."""
+        axis = getattr(fig.layout, axis_name)
         if ymax_override is not None:
             ymax = ymax_override
             ymin = 0.0
-            if (
-                fig.layout.yaxis
-                and fig.layout.yaxis.range
-                and fig.layout.yaxis.range[0] is not None
-            ):
-                ymin = fig.layout.yaxis.range[0]
+            if axis and axis.range and axis.range[0] is not None:
+                ymin = axis.range[0]
             return ymin, ymax
-        elif (
-            fig.layout.yaxis
-            and fig.layout.yaxis.range
-            and fig.layout.yaxis.range[1] is not None
-        ):
-            yrange: tuple[float, float] = fig.layout.yaxis.range
+        elif axis and axis.range and axis.range[1] is not None:
+            yrange: tuple[float, float] = axis.range
             return yrange
         return None
 
@@ -617,22 +613,28 @@ class GraphGenerator(Base):
             return f"{opr}¥{val_in_unit:,.1f}{suffix}"
 
     def _format_yaxis_ticks(
-        self, fig: go.Figure, ymax_override: float | None = None
+        self,
+        fig: go.Figure,
+        ymax_override: float | None = None,
+        axis_name: str = "yaxis",
     ) -> dict[str, Any]:
         """
         Format y-axis ticks to use '万' or '億' units.
         """
         try:
-            range_val = self._get_yaxis_range(fig, ymax_override)
+            range_val = self._get_yaxis_range(fig, ymax_override, axis_name)
             if not range_val:
                 return {}
             ymin, ymax = range_val
 
-            if ymax < 10000:
+            max_abs_value = max(abs(ymin), abs(ymax))
+            if max_abs_value < 10000:
                 return {}
 
             unit, suffix = (
-                (100_000_000, "億") if ymax >= 100_000_000 else (10_000, "万")
+                (100_000_000, "億")
+                if max_abs_value >= 100_000_000
+                else (10_000, "万")
             )
 
             tick_step = self._calculate_tick_step(ymin, ymax)
@@ -645,7 +647,7 @@ class GraphGenerator(Base):
 
             tickvals = []
             val = start
-            while val <= ymax * 1.01:
+            while val <= ymax + tick_step * 0.01:
                 tickvals.append(val)
                 val += tick_step
 
@@ -2912,6 +2914,7 @@ class GraphGenerator(Base):
                 x=df_graph["date"],
                 y=values,
                 name="ドローダウン",
+                legendgroup="drawdown_rate",
                 mode="lines",
                 line=dict(
                     width=2,
@@ -2923,24 +2926,15 @@ class GraphGenerator(Base):
                     if theme == "dark"
                     else "rgba(204, 68, 68, 0.18)"
                 ),
-                customdata=df_graph["drawdown_amount"].map(
-                    lambda value: (
-                        f"-¥{abs(value):,.0f}"
-                        if value < 0
-                        else f"¥{value:,.0f}"
-                    )
-                ),
-                hovertemplate=(
-                    "<b>ドローダウン %{y:.2%}</b><br>"
-                    "金額 %{customdata}<extra></extra>"
-                ),
-                showlegend=False,
+                hovertemplate="<b>ドローダウン %{y:.2%}</b><extra></extra>",
+                showlegend=True,
             )
         )
         fig.add_trace(
             go.Scatter(
                 x=major_drawdowns["date"],
                 y=major_drawdowns["drawdown"],
+                legendgroup="drawdown_rate",
                 text=major_drawdowns["drawdown"].map(
                     lambda value: f"{value:.2%}"
                 ),
@@ -2953,6 +2947,22 @@ class GraphGenerator(Base):
                 ),
                 hoverinfo="skip",
                 showlegend=False,
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=df_graph["date"],
+                y=df_graph["drawdown_amount"],
+                yaxis="y2",
+                name="金額ドローダウン",
+                legendgroup="drawdown_amount",
+                mode="lines",
+                visible="legendonly",
+                line=dict(
+                    width=1.5,
+                    color="#3b82f6" if theme == "dark" else "#2277bb",
+                ),
+                hovertemplate="金額ドローダウン: ¥%{y:,.0f}<extra></extra>",
             )
         )
         fig.add_annotation(
@@ -2972,10 +2982,32 @@ class GraphGenerator(Base):
         fig.add_hline(y=0, line_width=1, line_dash="dot", line_color="#888888")
         self._update_layout(fig, theme)
         latest_date = df_graph["date"].max()
+        visible_amounts = df_graph.loc[
+            df_graph["date"] >= latest_date - pd.DateOffset(months=6),
+            "drawdown_amount",
+        ]
+        amount_min = min(float(visible_amounts.min()), 0.0)
+        amount_max = max(float(visible_amounts.max()), 0.0)
+        amount_margin = max(
+            (amount_max - amount_min) * 0.2,
+            max(abs(amount_min), abs(amount_max), 1.0) * 0.01,
+        )
         fig.update_layout(
             title="資産ドローダウンの推移",
             hovermode="x unified",
             dragmode="pan",
+            yaxis2=dict(
+                overlaying="y",
+                side="right",
+                range=[
+                    amount_min - amount_margin,
+                    amount_max + amount_margin,
+                ],
+                autorange=False,
+                tickprefix="¥",
+                tickformat=",",
+                fixedrange=True,
+            ),
             xaxis=dict(
                 range=[
                     latest_date - pd.DateOffset(months=6),
@@ -2983,11 +3015,17 @@ class GraphGenerator(Base):
                 ],
                 fixedrange=False,
             ),
+            margin=dict(l=10, r=65, t=50, b=0),
         )
-        fig.update_yaxes(
-            fixedrange=True,
-            tickprefix="",
-            tickformat=".1%",
+        fig.update_layout(
+            yaxis2=self._format_yaxis_ticks(fig, axis_name="yaxis2")
+        )
+        fig.update_layout(
+            yaxis=dict(
+                fixedrange=True,
+                tickprefix="",
+                tickformat=".1%",
+            ),
         )
         graph_html = self._figure_to_html(
             fig,

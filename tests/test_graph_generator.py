@@ -231,9 +231,25 @@ class GraphGeneratorAssetDrawdownTest(unittest.TestCase):
         trace = figure.data[0]
         self.assertEqual(trace.y[0], 0.0)
         self.assertAlmostEqual(trace.y[1], -1 / 11)
-        self.assertEqual(list(trace.customdata), ["¥0", "-¥10"])
-        self.assertIn("金額 %{customdata}", trace.hovertemplate)
+        self.assertIsNone(trace.customdata)
+        self.assertEqual(
+            trace.hovertemplate, "<b>ドローダウン %{y:.2%}</b><extra></extra>"
+        )
+        self.assertTrue(trace.showlegend)
+        self.assertEqual(trace.legendgroup, "drawdown_rate")
         self.assertEqual(trace.mode, "lines")
+        labels_trace = figure.data[1]
+        self.assertEqual(labels_trace.legendgroup, trace.legendgroup)
+        amount_trace = figure.data[2]
+        self.assertEqual(amount_trace.name, "金額ドローダウン")
+        self.assertEqual(amount_trace.yaxis, "y2")
+        self.assertEqual(amount_trace.visible, "legendonly")
+        self.assertEqual(list(amount_trace.y), [0.0, -10.0])
+        self.assertEqual(figure.layout.yaxis.tickformat, ".1%")
+        self.assertEqual(figure.layout.yaxis.tickprefix, "")
+        self.assertEqual(figure.layout.yaxis2.side, "right")
+        self.assertEqual(figure.layout.yaxis2.tickprefix, "¥")
+        self.assertFalse(figure.layout.yaxis2.title.text)
         self.assertEqual(figure.layout.annotations[0].text, "-9.09%")
         self.assertEqual(figure.data[1].mode, "text")
         self.assertEqual(list(figure.data[1].text), [])
@@ -242,6 +258,23 @@ class GraphGeneratorAssetDrawdownTest(unittest.TestCase):
         self.assertTrue(render.call_args.kwargs["config"]["scrollZoom"])
         self.assertTrue(render.call_args.kwargs["clear_hover_on_leave"])
         self.assertEqual(graph_html, "<div>chart</div>")
+
+    def test_formats_negative_amount_axis_ticks_in_man_units(self) -> None:
+        generator = GraphGenerator.__new__(GraphGenerator)
+        df = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2026-10-01", "2026-10-02"]),
+                "invest_amount": [1_000_000, 1_000_000],
+                "valuation": [2_000_000, 500_000],
+                "profit": [1_000_000, -500_000],
+            }
+        )
+
+        figure, _, _ = capture_chart_figure(
+            generator, generator.generate_asset_drawdown_history_chart, df
+        )
+
+        self.assertIn("-¥150万", figure.layout.yaxis2.ticktext)
 
     def test_labels_deepest_drawdown_in_each_significant_decline(self) -> None:
         generator = GraphGenerator.__new__(GraphGenerator)
