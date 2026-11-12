@@ -7,10 +7,9 @@ import datetime as dt
 import threading
 import time
 from functools import lru_cache
-from typing import Any
+from typing import Any, Callable, cast
 from urllib.parse import urlsplit
 import pandas as pd
-from typing import Callable
 import plotly
 from plotly.offline import get_plotlyjs
 
@@ -25,7 +24,7 @@ from fastapi.responses import (
 )
 
 from .server_tools import ServerTools
-from .graph_cache import get_cached_graph
+from .graph_cache import get_cached_graph, get_cached_value
 from .asset_advisor import (
     AssetAdviceConfigurationError,
     AssetAdviceRequestError,
@@ -141,23 +140,35 @@ async def stop_sheets_sync_worker() -> None:
 def get_cached_records(
     server_tools: ServerTools,
 ) -> pd.DataFrame:
+    return get_cached_records_with_monthly_cache(server_tools)[0]
+
+
+def get_cached_records_with_monthly_cache(
+    server_tools: ServerTools,
+) -> tuple[pd.DataFrame, dict]:
     log.info("start 'get_cached_records' method")
     try:
         if _is_record_cache_valid():
             log.debug(f"returning cache DataFrame (< {_RECORD_CACHE_TTL}s)")
-            return _get_record_cache_dataframe()
+            return _get_record_cache_snapshot()
 
         with _df_cache_record_lock:
             if _is_record_cache_valid():
                 log.debug("returning cache DataFrame after waiting for refresh")
-                return _get_record_cache_dataframe()
+                return _get_record_cache_snapshot()
 
             log.debug("generate new DataFrame")
             df_records = get_dataframes(server_tools)
+            monthly_df_cache: dict = {}
             _df_cache_record["df_records"] = df_records
+            _df_cache_record["record_snapshot"] = (
+                df_records,
+                monthly_df_cache,
+            )
             _df_cache_record["graph_html"] = {}
+            _df_cache_record["monthly_df"] = monthly_df_cache
             _df_cache_record["timestamp"] = dt.datetime.now()
-            return df_records
+            return _get_record_cache_snapshot()
     finally:
         log.info("end 'get_cached_records' method")
 
@@ -172,8 +183,32 @@ def _is_record_cache_valid() -> bool:
     return cache_life_time < _RECORD_CACHE_TTL
 
 
-def _get_record_cache_dataframe() -> pd.DataFrame:
-    return pd.DataFrame(_df_cache_record.get("df_records"))
+def _get_record_cache_snapshot() -> tuple[pd.DataFrame, dict]:
+    snapshot = _df_cache_record["record_snapshot"]
+    cached_records, monthly_df_cache = snapshot
+    return pd.DataFrame(cached_records), monthly_df_cache
+
+
+def get_cached_monthly_df(
+    server_tools: ServerTools,
+    df_records: pd.DataFrame,
+    monthly_df_cache: dict,
+) -> pd.DataFrame:
+    """同じレコードスナップショットの月別集計を一度だけ生成する。"""
+    monthly_df = cast(
+        pd.DataFrame,
+        get_cached_value(
+            _df_cache_record,
+            _df_cache_record_lock,
+            "monthly_df",
+            ("monthly_df",),
+            lambda: server_tools.graph_generator.generate_monthly_df(
+                df_records
+            ),
+            value_cache=monthly_df_cache,
+        ),
+    )
+    return monthly_df
 
 
 def _clear_record_cache() -> None:
@@ -1036,13 +1071,15 @@ def get_pie_chart(request: Request, month: str | None = None) -> JSONResponse:
     log.info("start 'get_pie_chart' method")
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
-    df_records = get_cached_records(server_tools)
+    df_records, monthly_df_cache = get_cached_records_with_monthly_cache(
+        server_tools
+    )
     graph_html, available_months = get_cached_graph(
         _df_cache_record,
         _df_cache_record_lock,
         ("pie", theme, month or ""),
         lambda: server_tools.graph_generator.generate_pie_chart(
-            server_tools.graph_generator.generate_monthly_df(df_records),
+            get_cached_monthly_df(server_tools, df_records, monthly_df_cache),
             df_records,
             target_month=month,
             theme=theme,
@@ -1083,13 +1120,15 @@ def get_monthly_bar_chart(request: Request) -> HTMLResponse:
     log.info("start 'get_monthly_bar_chart' method")
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
-    df_records = get_cached_records(server_tools)
+    df_records, monthly_df_cache = get_cached_records_with_monthly_cache(
+        server_tools
+    )
     graph_html = get_cached_graph(
         _df_cache_record,
         _df_cache_record_lock,
         ("bar", theme),
         lambda: server_tools.graph_generator.generate_monthly_bar_chart(
-            server_tools.graph_generator.generate_monthly_df(df_records),
+            get_cached_monthly_df(server_tools, df_records, monthly_df_cache),
             theme=theme,
             include_plotlyjs=False,
         ),

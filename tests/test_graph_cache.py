@@ -3,7 +3,7 @@ import threading
 import unittest
 from unittest.mock import Mock
 
-from expense.api.graph_cache import get_cached_graph
+from expense.api.graph_cache import get_cached_graph, get_cached_value
 
 
 class TestCachedGraph(unittest.TestCase):
@@ -123,6 +123,89 @@ class TestCachedGraph(unittest.TestCase):
             self.assertEqual(old_graph.result(), "old")
 
         self.assertEqual(cache["graph_html"], {("bar",): "new"})
+
+
+class TestCachedValue(unittest.TestCase):
+    def test_same_key_uses_one_in_flight_generation(self) -> None:
+        cache: dict = {"monthly_df": {}}
+        lock = threading.Lock()
+        started = threading.Event()
+        release = threading.Event()
+
+        def generate() -> str:
+            started.set()
+            if not release.wait(timeout=2):
+                raise TimeoutError("test generation was not released")
+            return "monthly data"
+
+        generator = Mock(side_effect=generate)
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            first = executor.submit(
+                get_cached_value,
+                cache,
+                lock,
+                "monthly_df",
+                ("monthly_df",),
+                generator,
+            )
+            self.assertTrue(started.wait(timeout=1))
+            second = executor.submit(
+                get_cached_value,
+                cache,
+                lock,
+                "monthly_df",
+                ("monthly_df",),
+                generator,
+            )
+            release.set()
+
+            self.assertEqual(first.result(), "monthly data")
+            self.assertEqual(second.result(), "monthly data")
+
+        generator.assert_called_once_with()
+
+    def test_old_snapshot_is_not_cached_after_invalidation(self) -> None:
+        cache: dict = {"monthly_df": {}}
+        lock = threading.Lock()
+        old_values = cache["monthly_df"]
+        started = threading.Event()
+        release = threading.Event()
+
+        def generate_old() -> str:
+            started.set()
+            if not release.wait(timeout=2):
+                raise TimeoutError("test generation was not released")
+            return "old monthly data"
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            old_value = executor.submit(
+                get_cached_value,
+                cache,
+                lock,
+                "monthly_df",
+                ("monthly_df",),
+                generate_old,
+                old_values,
+            )
+            self.assertTrue(started.wait(timeout=1))
+            with lock:
+                cache["monthly_df"] = {}
+
+            new_value = executor.submit(
+                get_cached_value,
+                cache,
+                lock,
+                "monthly_df",
+                ("monthly_df",),
+                lambda: "new monthly data",
+            )
+            self.assertEqual(new_value.result(timeout=1), "new monthly data")
+            release.set()
+            self.assertEqual(old_value.result(), "old monthly data")
+
+        self.assertEqual(
+            cache["monthly_df"], {("monthly_df",): "new monthly data"}
+        )
 
 
 if __name__ == "__main__":

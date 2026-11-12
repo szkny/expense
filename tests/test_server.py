@@ -526,6 +526,32 @@ class TestLazyGspreadHandler(unittest.TestCase):
 
 
 class TestRecordCache(unittest.TestCase):
+    def test_cached_monthly_dataframe_is_shared_for_record_snapshot(
+        self,
+    ) -> None:
+        cache: dict = {"monthly_df": {}}
+        cached_records = pd.DataFrame({"date": [pd.Timestamp("2026-04-01")]})
+        cache["df_records"] = cached_records
+        cache["record_snapshot"] = (cached_records, cache["monthly_df"])
+        expected = pd.DataFrame({"month": ["2026-04"]})
+        graph_generator = Mock()
+        graph_generator.generate_monthly_df.return_value = expected
+        server_tools = Mock(graph_generator=graph_generator)
+
+        with patch.object(server, "_df_cache_record", cache):
+            df_records, monthly_df_cache = server._get_record_cache_snapshot()
+            first = server.get_cached_monthly_df(
+                server_tools, df_records, monthly_df_cache
+            )
+            second = server.get_cached_monthly_df(
+                server_tools, df_records, monthly_df_cache
+            )
+
+        self.assertIs(first, expected)
+        self.assertIs(second, expected)
+        self.assertEqual(df_records.attrs, {})
+        graph_generator.generate_monthly_df.assert_called_once_with(df_records)
+
     def test_record_cache_can_be_cleared(self) -> None:
         _df_cache_record["graph_html"] = {("bar",): "<div>graph</div>"}
         _df_cache_record["timestamp"] = "not-a-real-timestamp"

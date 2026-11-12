@@ -3,22 +3,31 @@ import threading
 from typing import Any, Callable
 
 
-def get_cached_graph(
+def get_cached_value(
     cache: dict,
     lock: threading.Lock,
+    namespace: str,
     key: tuple[Any, ...],
     generator: Callable[[], Any],
+    value_cache: dict | None = None,
 ) -> Any:
-    """同じデータスナップショットから生成したグラフHTMLを再利用する。"""
+    """同じキャッシュスナップショットの値生成を一度にまとめる。"""
     with lock:
-        graph_html = cache.setdefault("graph_html", {})
-        if key in graph_html:
-            return graph_html[key]
+        values = (
+            value_cache
+            if value_cache is not None
+            else cache.setdefault(namespace, {})
+        )
+        if key in values:
+            return values[key]
 
-        if cache.get("_graph_inflight_graph_html") is not graph_html:
-            cache["_graph_inflight_graph_html"] = graph_html
-            cache["_graph_inflight"] = {}
-        inflight: dict[tuple[Any, ...], Future[Any]] = cache["_graph_inflight"]
+        inflight_by_namespace = cache.setdefault("_singleflight", {})
+        state_key = (namespace, id(values))
+        state = inflight_by_namespace.get(state_key)
+        if state is None or state["values"] is not values:
+            state = {"values": values, "futures": {}}
+            inflight_by_namespace[state_key] = state
+        inflight: dict[tuple[Any, ...], Future[Any]] = state["futures"]
         future = inflight.get(key)
         is_generator = future is None
         if future is None:
@@ -29,24 +38,38 @@ def get_cached_graph(
         return future.result()
 
     try:
-        generated_html = generator()
+        generated_value = generator()
     except BaseException as error:
         with lock:
-            current_inflight = cache.get("_graph_inflight", {})
-            if current_inflight.get(key) is future:
-                current_inflight.pop(key)
+            current_state = cache.get("_singleflight", {}).get(state_key)
+            if current_state is state and inflight.get(key) is future:
+                inflight.pop(key)
+                if not inflight:
+                    cache["_singleflight"].pop(state_key)
         future.set_exception(error)
         raise
 
     with lock:
-        if cache.get("graph_html") is graph_html:
-            result = graph_html.setdefault(key, generated_html)
+        if cache.get(namespace) is values:
+            result = values.setdefault(key, generated_value)
         else:
             # データ更新後に古いスナップショットの結果を保存しない。
-            result = generated_html
-        current_inflight = cache.get("_graph_inflight", {})
-        if current_inflight.get(key) is future:
-            current_inflight.pop(key)
+            result = generated_value
+        current_state = cache.get("_singleflight", {}).get(state_key)
+        if current_state is state and inflight.get(key) is future:
+            inflight.pop(key)
+            if not inflight:
+                cache["_singleflight"].pop(state_key)
 
     future.set_result(result)
     return result
+
+
+def get_cached_graph(
+    cache: dict,
+    lock: threading.Lock,
+    key: tuple[Any, ...],
+    generator: Callable[[], Any],
+) -> Any:
+    """同じデータスナップショットから生成したグラフHTMLを再利用する。"""
+    return get_cached_value(cache, lock, "graph_html", key, generator)
