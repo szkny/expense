@@ -140,25 +140,24 @@ async def stop_sheets_sync_worker() -> None:
 
 def get_cached_records(
     server_tools: ServerTools,
-) -> tuple[pd.DataFrame, pd.DataFrame]:
+) -> pd.DataFrame:
     log.info("start 'get_cached_records' method")
     try:
         if _is_record_cache_valid():
             log.debug(f"returning cache DataFrame (< {_RECORD_CACHE_TTL}s)")
-            return _get_record_cache_dataframes()
+            return _get_record_cache_dataframe()
 
         with _df_cache_record_lock:
             if _is_record_cache_valid():
                 log.debug("returning cache DataFrame after waiting for refresh")
-                return _get_record_cache_dataframes()
+                return _get_record_cache_dataframe()
 
             log.debug("generate new DataFrame")
-            df_records, df_annual = get_dataframes(server_tools)
+            df_records = get_dataframes(server_tools)
             _df_cache_record["df_records"] = df_records
-            _df_cache_record["df_annual"] = df_annual
             _df_cache_record["graph_html"] = {}
             _df_cache_record["timestamp"] = dt.datetime.now()
-            return df_records, df_annual
+            return df_records
     finally:
         log.info("end 'get_cached_records' method")
 
@@ -173,11 +172,8 @@ def _is_record_cache_valid() -> bool:
     return cache_life_time < _RECORD_CACHE_TTL
 
 
-def _get_record_cache_dataframes() -> tuple[pd.DataFrame, pd.DataFrame]:
-    return (
-        pd.DataFrame(_df_cache_record.get("df_records")),
-        pd.DataFrame(_df_cache_record.get("df_annual")),
-    )
+def _get_record_cache_dataframe() -> pd.DataFrame:
+    return pd.DataFrame(_df_cache_record.get("df_records"))
 
 
 def _clear_record_cache() -> None:
@@ -1007,7 +1003,7 @@ def simulator(
 
 def get_dataframes(
     server_tools: ServerTools,
-) -> tuple[pd.DataFrame, pd.DataFrame]:
+) -> pd.DataFrame:
     log.info("start 'get_dataframes' method")
     max_n_records = (
         server_tools.config.get("web_ui", {})
@@ -1031,9 +1027,8 @@ def get_dataframes(
             errors="coerce",
         )
         df_records.dropna(subset=["date"], inplace=True)
-    df_annual = server_tools.gspread_handler.get_annual_fiscal_table()
     log.info("end 'get_dataframes' method")
-    return df_records, df_annual
+    return df_records
 
 
 @app.get("/api/pie_chart", response_class=JSONResponse)
@@ -1041,7 +1036,7 @@ def get_pie_chart(request: Request, month: str | None = None) -> JSONResponse:
     log.info("start 'get_pie_chart' method")
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
-    df_records, _ = get_cached_records(server_tools)
+    df_records = get_cached_records(server_tools)
     graph_html, available_months = get_cached_graph(
         _df_cache_record,
         _df_cache_record_lock,
@@ -1065,7 +1060,7 @@ def get_daily_chart(request: Request, month: str | None = None) -> JSONResponse:
     log.info("start 'get_daily_chart' method")
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
-    df_records, _ = get_cached_records(server_tools)
+    df_records = get_cached_records(server_tools)
     graph_html, available_months = get_cached_graph(
         _df_cache_record,
         _df_cache_record_lock,
@@ -1088,7 +1083,7 @@ def get_monthly_bar_chart(request: Request) -> HTMLResponse:
     log.info("start 'get_monthly_bar_chart' method")
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
-    df_records, _ = get_cached_records(server_tools)
+    df_records = get_cached_records(server_tools)
     graph_html = get_cached_graph(
         _df_cache_record,
         _df_cache_record_lock,
@@ -1110,7 +1105,7 @@ def get_annual_fiscal_report_chart(
     log.info("start 'get_annual_fiscal_report_chart' method")
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
-    df_records, _ = get_cached_records(server_tools)
+    df_records = get_cached_records(server_tools)
     graph_html, available_years = get_cached_graph(
         _df_cache_record,
         _df_cache_record_lock,
@@ -1130,7 +1125,7 @@ def get_annual_fiscal_sankey_chart(
     log.info("start 'get_annual_fiscal_sankey_chart' method")
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
-    df_records, _ = get_cached_records(server_tools)
+    df_records = get_cached_records(server_tools)
     graph_html, available_years = get_cached_graph(
         _df_cache_record,
         _df_cache_record_lock,
@@ -1153,7 +1148,7 @@ def get_fiscal_asset_history_chart(
     log.info("start 'get_fiscal_asset_history_chart' method")
     server_tools = ServerTools(app, gspread_handler)
     theme = request.cookies.get("theme", "light")
-    df_records, _ = get_cached_records(server_tools)
+    df_records = get_cached_records(server_tools)
     graph_html, available_years = get_cached_graph(
         _df_cache_record,
         _df_cache_record_lock,

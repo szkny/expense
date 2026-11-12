@@ -17,6 +17,7 @@ from expense.api.server import (
     _df_cache_record,
     _is_local_only_type,
     app,
+    get_dataframes,
     get_simulation_averages,
 )
 from expense.api.server_tools import ServerTools
@@ -436,7 +437,7 @@ class TestAnnualFiscalSankeyChartRoute(unittest.TestCase):
             patch("expense.api.server.ServerTools", return_value=server_tools),
             patch(
                 "expense.api.server.get_cached_records",
-                return_value=(df_records, pd.DataFrame()),
+                return_value=df_records,
             ),
             patch(
                 "expense.api.server.get_cached_graph",
@@ -459,6 +460,37 @@ class TestAnnualFiscalSankeyChartRoute(unittest.TestCase):
             theme="dark",
             include_plotlyjs=False,
         )
+
+
+class TestGraphRecordDataframe(unittest.TestCase):
+    def test_does_not_fetch_unused_annual_sheet_data(self) -> None:
+        server_tools = Mock()
+        server_tools.config = {"web_ui": {"record_table": {"max_n_records": 3}}}
+        server_tools.exclude_types = ["除外"]
+        server_tools.expense_handler.get_recent_expenses.return_value = [
+            {
+                "date": "2026-04-01(水)",
+                "expense_type": "食費",
+                "expense_memo": "昼食",
+                "expense_amount": 1200,
+            },
+            {
+                "date": "2026-04-02(木)",
+                "expense_type": "除外",
+                "expense_memo": "対象外",
+                "expense_amount": 100,
+            },
+        ]
+
+        records = get_dataframes(server_tools)
+
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records.iloc[0]["expense_type"], "食費")
+        self.assertEqual(records.iloc[0]["date"], pd.Timestamp("2026-04-01"))
+        server_tools.expense_handler.get_recent_expenses.assert_called_once_with(
+            3, drop_duplicates=False, with_date=True
+        )
+        server_tools.gspread_handler.get_annual_fiscal_table.assert_not_called()
 
 
 class TestLazyGspreadHandler(unittest.TestCase):
