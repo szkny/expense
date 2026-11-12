@@ -125,8 +125,20 @@ export async function fetchAndRenderChart(config, params = {}, force = false) {
   )
     return;
 
-  container.classList.add("loading");
-  container.innerHTML = '<div class="spinner"></div>';
+  const hasPreviousChart = container.dataset.loaded === "true";
+  let loadingOverlay = null;
+  if (!hasPreviousChart) {
+    container.classList.add("loading");
+    container.innerHTML = '<div class="spinner"></div>';
+  } else {
+    container.classList.add("chart-refreshing");
+    loadingOverlay = document.createElement("div");
+    loadingOverlay.className = "chart-loading-overlay";
+    loadingOverlay.setAttribute("role", "status");
+    loadingOverlay.setAttribute("aria-label", "グラフを更新中");
+    loadingOverlay.innerHTML = '<div class="spinner"></div>';
+    container.appendChild(loadingOverlay);
+  }
 
   let url = config.endpoint;
   const urlParams = new URLSearchParams();
@@ -168,6 +180,7 @@ export async function fetchAndRenderChart(config, params = {}, force = false) {
 
     container.dataset.loaded = "true";
     container.classList.remove("loading");
+    container.classList.remove("chart-refreshing");
     if (config.id === "asset-summary") {
       initAssetMasking();
     }
@@ -177,7 +190,12 @@ export async function fetchAndRenderChart(config, params = {}, force = false) {
       new Function(scripts[i].innerHTML)();
     }
   } catch (error) {
-    container.innerHTML = "<p>Error loading graph.</p>";
+    if (!hasPreviousChart) {
+      container.innerHTML = "<p>Error loading graph.</p>";
+    }
+    container.classList.remove("loading");
+    container.classList.remove("chart-refreshing");
+    loadingOverlay?.remove();
     console.error("Fetch error for " + url + ":", error);
   }
 }
