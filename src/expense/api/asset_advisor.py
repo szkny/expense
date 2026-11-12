@@ -4,6 +4,7 @@ import math
 import pathlib
 import threading
 import urllib.error
+import urllib.parse
 import urllib.request
 from collections.abc import Iterator
 from typing import Any
@@ -15,6 +16,7 @@ _OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 DEFAULT_MODEL = "gpt-5-nano"
 _MAX_OUTPUT_TOKENS = 2000
 _MAX_CHAT_OUTPUT_TOKENS = 3000
+_DAILY_ADVICE_VERSION = 2
 _cache_lock = threading.Lock()
 _ADVICE_MARKDOWN = MarkdownIt("js-default", {"html": False}).disable("image")
 _DAILY_ADVICE_ANGLES = (
@@ -118,12 +120,23 @@ def _extract_response_text(response: dict[str, Any]) -> str:
         reason = details.get("reason", "unknown")
         raise AssetAdviceRequestError(f"OpenAI response incomplete ({reason}).")
 
-    text = "\n".join(
-        content.get("text", "")
+    content_items = [
+        content
         for item in response.get("output", [])
         if item.get("type") == "message"
         for content in item.get("content", [])
         if content.get("type") == "output_text"
+    ]
+    text = "\n".join(content.get("text", "") for content in content_items)
+    text = _append_citation_links(
+        text,
+        [
+            annotation
+            for content in content_items
+            for annotation in content.get("annotations", [])
+            if isinstance(annotation, dict)
+            and annotation.get("type") == "url_citation"
+        ],
     ).strip()
     if not text:
         status = str(response.get("status", "unknown"))[:40]
@@ -139,6 +152,38 @@ def _extract_response_text(response: dict[str, Any]) -> str:
     return text
 
 
+def _append_citation_links(text: str, citations: list[dict[str, Any]]) -> str:
+    sources: list[tuple[str, str]] = []
+    seen_urls: set[str] = set()
+    for citation in citations:
+        url = citation.get("url")
+        if not isinstance(url, str) or len(url) > 2048 or url in seen_urls:
+            continue
+        try:
+            parsed_url = urllib.parse.urlsplit(url)
+        except ValueError:
+            continue
+        if parsed_url.scheme != "https" or not parsed_url.hostname:
+            continue
+        title = citation.get("title")
+        title = title.strip() if isinstance(title, str) else ""
+        title = title or parsed_url.hostname
+        title = title.replace("\r", " ").replace("\n", " ")
+        escaped_title = "".join(
+            f"\\{character}" if character in "\\`*_{}[]()#+-.!|>" else character
+            for character in title
+        )
+        escaped_url = urllib.parse.quote(url, safe=":/?#@!$&'()*+,;=-._~%")
+        sources.append((escaped_title, escaped_url))
+        seen_urls.add(url)
+
+    if not sources:
+        return text
+    source_lines = ["\n\n### 参考ニュース"]
+    source_lines.extend(f"- [{title}](<{url}>)" for title, url in sources)
+    return text + "".join(source_lines)
+
+
 def _request_body(
     payload: dict[str, Any], model: str, stream: bool = False
 ) -> dict[str, Any]:
@@ -150,7 +195,8 @@ def _request_body(
         "model": model,
         "instructions": (
             "あなたはプロフェッショナルな資産管理アドバイザーです。"
-            "入力された資産データだけを根拠に、日本語、Markdownで簡潔にアドバイスしてください。"
+            "入力された資産データとweb_searchで確認した公開情報を根拠に、"
+            "日本語、Markdownで簡潔にアドバイスしてください。"
             "MarkdownはトピックごとにH2タグの見出しを設け、太字、箇条書き、表などを使った分かりやすい表現を心がけてください。"
             "語り口は知的で親しみやすい投資コーチ。毎回同じ定型文に頼らず、"
             "入力のdaily_advice_angleを今日の主な切り口として反映してください。"
@@ -164,6 +210,14 @@ def _request_body(
             "invest_amountは円、price_dollarは米ドル、weight/roiはパーセントです。"
             "monthly_asset_historyは月次の資産推移、"
             "recent_daily_asset_historyは直近の日次資産推移です。"
+            "今日のアドバイスを作る前にweb_searchを必ず使い、"
+            "保有銘柄・資産クラスに関係する直近のニュースを確認してください。"
+            "検索語には銘柄名、ティッカー、発行体、資産クラスなどの公開情報だけを使い、"
+            "保有数量、取得額、価格、評価額、損益、比率、資産履歴などの個人情報を"
+            "含めないでください。ニュースの発表日と内容を確認し、"
+            "アドバイスに関係する場合だけ要点を使ってください。"
+            "該当する新しいニュースが見つからない場合は、ニュースを作らずその旨を短く示してください。"
+            "検索結果を使った場合は、回答に対応する出典を参考ニュースとしてリンクで示してください。"
             "\n\n"
             "出力は次の5つのH2見出しをこの順番で必ず含めてください。"
             "「今日のアドバイス」「今週の振り返り」「過去データからの小さな発見」"
@@ -194,7 +248,7 @@ def _request_body(
             "直近の評価額変動が順調であれば、その調子を維持しましょう、のような感じで後押しし、"
             "下落局面ではコーチとして狼狽売りしないようにメンタルケアのコメントをしてください。"
             "\n\n"
-            "データにない市場ニュースやユーザー属性を推測せず、将来の利益を保証せず、"
+            "検索で確認できない市場ニュースやユーザー属性を推測せず、将来の利益を保証せず、"
             "断定的な売買指示を避けてください。"
             "重要な偏りや推移が確認された場合はアラートとしてユーザーに報告してください。"
             "最後に投資判断はユーザー自身が行う旨を短く添えてください。"
@@ -202,6 +256,8 @@ def _request_body(
         "input": json.dumps(data, ensure_ascii=False, allow_nan=False),
         "max_output_tokens": _MAX_OUTPUT_TOKENS,
         "store": False,
+        "tools": [{"type": "web_search", "search_context_size": "medium"}],
+        "tool_choice": "required",
     }
     if model.startswith("gpt-5"):
         body["reasoning"] = {"effort": "low"}
@@ -340,6 +396,7 @@ def get_daily_asset_advice(
             if not force and (
                 cached.get("date") == advice_date
                 and cached.get("model") == model
+                and cached.get("advice_version") == _DAILY_ADVICE_VERSION
                 and isinstance(cached.get("advice"), str)
             ):
                 return cached["advice"], True
@@ -380,6 +437,7 @@ def get_daily_asset_advice(
                 {
                     "date": advice_date,
                     "model": model,
+                    "advice_version": _DAILY_ADVICE_VERSION,
                     "advice": advice,
                     "generated_at": _generated_at(),
                 },
@@ -430,9 +488,15 @@ def _iter_response_events(response: Any) -> Iterator[tuple[str, Any]]:
 
 def _iter_response_deltas(response: Any) -> Iterator[str]:
     """Yield text deltas from an OpenAI Responses API SSE stream."""
+    citations: list[dict[str, Any]] = []
     for event_type, value in _iter_response_events(response):
         if event_type == "delta":
             yield value
+        elif event_type == "citation":
+            citations.append(value)
+    citation_text = _append_citation_links("", citations)
+    if citation_text:
+        yield citation_text
 
 
 def stream_daily_asset_advice(
@@ -453,6 +517,7 @@ def stream_daily_asset_advice(
             if not force and (
                 cached.get("date") == advice_date
                 and cached.get("model") == model
+                and cached.get("advice_version") == _DAILY_ADVICE_VERSION
                 and isinstance(cached.get("advice"), str)
             ):
                 yield (
@@ -504,6 +569,7 @@ def stream_daily_asset_advice(
                 {
                     "date": advice_date,
                     "model": model,
+                    "advice_version": _DAILY_ADVICE_VERSION,
                     "advice": advice,
                     "generated_at": generated_at,
                 },

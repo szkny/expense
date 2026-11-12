@@ -13,9 +13,11 @@ from expense.api.asset_advisor import (
     AssetAdviceConfigurationError,
     AssetAdviceRequestError,
     _request_body,
+    _extract_response_text,
     get_daily_asset_advice,
     render_asset_advice,
     stream_asset_advice_chat_reply,
+    stream_daily_asset_advice,
 )
 from expense.api import server
 
@@ -74,6 +76,11 @@ class TestDailyAssetAdvice(unittest.TestCase):
         self.assertEqual(request_body["max_output_tokens"], 2000)
         self.assertEqual(request_body["reasoning"], {"effort": "low"})
         self.assertEqual(request_body["store"], False)
+        self.assertEqual(
+            request_body["tools"],
+            [{"type": "web_search", "search_context_size": "medium"}],
+        )
+        self.assertEqual(request_body["tool_choice"], "required")
         request_input = json.loads(request_body["input"])
         self.assertIn("daily_investment_quote", request_input)
         self.assertIn("daily_advice_angle", request_input)
@@ -97,12 +104,134 @@ class TestDailyAssetAdvice(unittest.TestCase):
             "裏付けるデータがなければ事実のように扱わず",
             request_body["instructions"],
         )
+        self.assertIn("web_searchを必ず使い", request_body["instructions"])
+        self.assertIn(
+            "保有数量、取得額、価格、評価額", request_body["instructions"]
+        )
+        self.assertIn("検索結果を使った場合", request_body["instructions"])
         cached_data = json.loads(
             (self.cache_path / "asset_advice.json").read_text(encoding="utf-8")
         )
         self.assertEqual(cached_data["date"], self.today.isoformat())
         self.assertEqual(cached_data["model"], "gpt-5-nano")
+        self.assertEqual(cached_data["advice_version"], 2)
         self.assertNotIn("holdings", cached_data)
+
+    def test_rebuilds_daily_cache_without_news_search_version(self) -> None:
+        self.cache_path.joinpath("asset_advice.json").write_text(
+            json.dumps(
+                {
+                    "date": self.today.isoformat(),
+                    "model": "gpt-5-nano",
+                    "advice": "ニュース検索前の助言",
+                }
+            ),
+            encoding="utf-8",
+        )
+        response_body = {
+            "output": [
+                {
+                    "type": "message",
+                    "content": [{"type": "output_text", "text": "更新後"}],
+                }
+            ]
+        }
+        with patch(
+            "expense.api.asset_advisor.urllib.request.urlopen",
+            return_value=io.BytesIO(json.dumps(response_body).encode()),
+        ) as urlopen:
+            advice, cached = get_daily_asset_advice(
+                self.payload,
+                self.cache_path,
+                "test-key",
+                today=self.today,
+            )
+
+        self.assertEqual(advice, "更新後")
+        self.assertFalse(cached)
+        urlopen.assert_called_once()
+
+    def test_adds_verified_news_citations_to_advice(self) -> None:
+        response_body = {
+            "output": [
+                {
+                    "type": "message",
+                    "content": [
+                        {
+                            "type": "output_text",
+                            "text": "## 今日のアドバイス\nニュースを確認しました。",
+                            "annotations": [
+                                {
+                                    "type": "url_citation",
+                                    "url": "https://news.example.test/story",
+                                    "title": "市場ニュース",
+                                },
+                                {
+                                    "type": "url_citation",
+                                    "url": "javascript:alert(1)",
+                                    "title": "不正な出典",
+                                },
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+
+        advice = _extract_response_text(response_body)
+
+        self.assertIn(
+            "[市場ニュース](<https://news.example.test/story>)", advice
+        )
+        self.assertNotIn("不正な出典", advice)
+
+    def test_streaming_advice_uses_news_search_and_includes_citations(
+        self,
+    ) -> None:
+        response_events = [
+            {
+                "type": "response.output_text.delta",
+                "delta": "## 今日のアドバイス\nニュースを確認しました。",
+            },
+            {
+                "type": "response.output_text.annotation.added",
+                "annotation": {
+                    "type": "url_citation",
+                    "url": "https://news.example.test/story",
+                    "title": "市場ニュース",
+                },
+            },
+        ]
+        response_stream = (
+            "".join(
+                "data: " + json.dumps(event, ensure_ascii=False) + "\n\n"
+                for event in response_events
+            )
+            + "data: [DONE]\n\n"
+        )
+        with patch(
+            "expense.api.asset_advisor.urllib.request.urlopen",
+            return_value=io.BytesIO(response_stream.encode()),
+        ) as urlopen:
+            events = list(
+                stream_daily_asset_advice(
+                    self.payload,
+                    self.cache_path,
+                    "test-key",
+                    today=self.today,
+                )
+            )
+
+        self.assertIn(
+            '<a href="https://news.example.test/story">市場ニュース</a>',
+            events[-1][0],
+        )
+        request_body = json.loads(urlopen.call_args.args[0].data)
+        self.assertEqual(
+            request_body["tools"],
+            [{"type": "web_search", "search_context_size": "medium"}],
+        )
+        self.assertEqual(request_body["stream"], True)
 
     def test_daily_advice_angle_changes_with_the_date(self) -> None:
         today = json.loads(

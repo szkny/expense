@@ -138,12 +138,15 @@ comment is cached on the server. Chat history is stored in the browser tab's
 session storage so it survives page reloads, and is cleared when the tab is
 closed, the chat is reset, or the advice is regenerated. The stored history
 remains on the device and is sent to OpenAI again with each follow-up question.
-The chat can use OpenAI's hosted web search for questions that need current
-public information; cited sources are shown as links. Search queries should not
-contain personal portfolio amounts or holdings. OpenAI Responses requests set
-`store` to `false`. Markdown is rendered with raw HTML and images disabled. The
-model is configured with `asset_management.ai_advisor.model` and defaults to
-`gpt-5-nano`. OpenAI API and web search usage may incur charges.
+Daily advice uses OpenAI's hosted web search to check recent news related to
+portfolio holdings, and displays cited sources as links. Chat can also use web
+search for questions that need current public information. Search queries may
+use public asset identifiers such as ticker symbols, but must not contain
+personal portfolio amounts, quantities, prices, or performance. OpenAI
+Responses requests set `store` to `false`. Markdown is rendered with raw HTML
+and images disabled. The model is configured with
+`asset_management.ai_advisor.model` and defaults to `gpt-5-nano`. OpenAI API and
+web search usage may incur charges.
 
 <table>
   <thead>
