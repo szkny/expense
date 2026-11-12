@@ -114,6 +114,114 @@ function renderChartPlaceholder(container) {
   container.appendChild(placeholder);
 }
 
+function getChartCacheKey(config) {
+  const theme = document.documentElement.classList.contains("dark")
+    ? "dark"
+    : "light";
+  return `expense:chart:v1:${location.pathname}:${theme}:${config.id}`;
+}
+
+function readCachedChart(config) {
+  try {
+    const cached = JSON.parse(
+      sessionStorage.getItem(getChartCacheKey(config)) || "null",
+    );
+    if (
+      !cached ||
+      typeof cached.html !== "string" ||
+      !Array.isArray(cached.options) ||
+      !cached.params ||
+      typeof cached.params !== "object"
+    ) {
+      return null;
+    }
+    return cached;
+  } catch {
+    return null;
+  }
+}
+
+function saveChartCache(config, html, options, params) {
+  try {
+    sessionStorage.setItem(
+      getChartCacheKey(config),
+      JSON.stringify({ html, options, params }),
+    );
+  } catch {
+    // A full or unavailable session store must not interrupt graph rendering.
+  }
+}
+
+function showChartLoadingOverlay(container) {
+  const overlay = document.createElement("div");
+  overlay.className = "chart-loading-overlay";
+  overlay.setAttribute("role", "status");
+  overlay.setAttribute("aria-label", "グラフを更新中");
+  overlay.innerHTML = '<div class="spinner"></div>';
+
+  return {
+    attach: () => {
+      container.classList.add("chart-refreshing");
+      container.appendChild(overlay);
+    },
+    remove: () => {
+      container.classList.remove("chart-refreshing");
+      overlay.remove();
+    },
+  };
+}
+
+async function runChartScripts(container) {
+  const scripts = container.getElementsByTagName("script");
+  if (scripts.length > 0) await ensurePlotlyLoaded();
+  for (let i = 0; i < scripts.length; i++) {
+    new Function(scripts[i].innerHTML)();
+  }
+}
+
+async function restoreCachedChart(config) {
+  const container = document.getElementById(`${config.id}-chart-container`);
+  const cached = readCachedChart(config);
+  if (!container || !cached) return null;
+
+  if (cached.html) {
+    container.innerHTML = cached.html;
+  } else {
+    renderChartPlaceholder(container);
+  }
+  container.classList.remove("loading");
+  container.dataset.loaded = "true";
+
+  if (config.hasDropdown) {
+    const param = config.dateParam || "month";
+    setupDropdownAndReload(
+      config,
+      cached.options,
+      cached.params[param] || cached.options[0],
+    );
+  } else {
+    setupReloadButtonOnly(config);
+  }
+
+  const loadingOverlay = showChartLoadingOverlay(container);
+  loadingOverlay.attach();
+  try {
+    await runChartScripts(container);
+  } catch (error) {
+    console.error("Failed to restore cached graph:", config.id, error);
+  } finally {
+    loadingOverlay.remove();
+  }
+  return cached;
+}
+
+async function loadChartWithCache(config, params = {}) {
+  const cached = await restoreCachedChart(config);
+  const refreshParams =
+    cached && Object.keys(params).length === 0 ? cached.params : params;
+  await fetchAndRenderChart(config, refreshParams, Boolean(cached));
+}
+
 export async function fetchAndRenderChart(config, params = {}, force = false) {
   if (Object.keys(params).length === 0 && config.defaultParams) {
     params = config.defaultParams();
@@ -131,13 +239,8 @@ export async function fetchAndRenderChart(config, params = {}, force = false) {
     container.classList.add("loading");
     container.innerHTML = '<div class="spinner"></div>';
   } else {
-    container.classList.add("chart-refreshing");
-    loadingOverlay = document.createElement("div");
-    loadingOverlay.className = "chart-loading-overlay";
-    loadingOverlay.setAttribute("role", "status");
-    loadingOverlay.setAttribute("aria-label", "グラフを更新中");
-    loadingOverlay.innerHTML = '<div class="spinner"></div>';
-    container.appendChild(loadingOverlay);
+    loadingOverlay = showChartLoadingOverlay(container);
+    loadingOverlay.attach();
   }
 
   let url = config.endpoint;
@@ -160,16 +263,25 @@ export async function fetchAndRenderChart(config, params = {}, force = false) {
     const response = await fetch(url);
     if (!response.ok) throw new Error("Network response was not ok");
 
+    let html;
+    let options = [];
+    let cacheParams = { ...params };
     if (config.hasDropdown) {
       const data = await response.json();
-      if (data.html) {
-        container.innerHTML = data.html;
+      html = data.html || "";
+      options = data.months || data.years || [];
+      const param = config.dateParam || "month";
+      if (!cacheParams[param] && options.length > 0) {
+        cacheParams[param] = options[0];
+      }
+      if (html) {
+        container.innerHTML = html;
       } else {
         renderChartPlaceholder(container);
       }
-      setupDropdownAndReload(config, data.months || data.years || []);
+      setupDropdownAndReload(config, options, cacheParams[param]);
     } else {
-      const html = await response.text();
+      html = await response.text();
       if (html) {
         container.innerHTML = html;
       } else {
@@ -177,24 +289,20 @@ export async function fetchAndRenderChart(config, params = {}, force = false) {
       }
       setupReloadButtonOnly(config);
     }
-
+    loadingOverlay?.attach();
     container.dataset.loaded = "true";
     container.classList.remove("loading");
-    container.classList.remove("chart-refreshing");
     if (config.id === "asset-summary") {
       initAssetMasking();
     }
-    const scripts = container.getElementsByTagName("script");
-    if (scripts.length > 0) await ensurePlotlyLoaded();
-    for (let i = 0; i < scripts.length; i++) {
-      new Function(scripts[i].innerHTML)();
-    }
+    await runChartScripts(container);
+    saveChartCache(config, html, options, cacheParams);
+    loadingOverlay?.remove();
   } catch (error) {
     if (!hasPreviousChart) {
       container.innerHTML = "<p>Error loading graph.</p>";
     }
     container.classList.remove("loading");
-    container.classList.remove("chart-refreshing");
     loadingOverlay?.remove();
     console.error("Fetch error for " + url + ":", error);
   }
@@ -216,7 +324,7 @@ function setupReloadButtonOnly(config) {
   controlsContainer.appendChild(btn);
 }
 
-function setupDropdownAndReload(config, months) {
+function setupDropdownAndReload(config, months, selectedValue) {
   const controlsContainer = document.getElementById(
     `${config.id}-chart-controls`,
   );
@@ -228,25 +336,29 @@ function setupDropdownAndReload(config, months) {
     select = document.createElement("select");
     select.id = `${config.id}-month-select`;
 
-    const currentMonth = months[0];
-    months.forEach((month) => {
-      const option = document.createElement("option");
-      option.value = month;
-      option.textContent = config.optionLabel
-        ? config.optionLabel(month)
-        : month.replace("-", "年") + "月";
-      if (month === currentMonth) {
-        option.selected = true;
-      }
-      select.appendChild(option);
-    });
-
     select.addEventListener("change", (e) => {
       const param = config.dateParam || "month";
       fetchAndRenderChart(config, { [param]: e.target.value });
     });
 
     controlsContainer.appendChild(select);
+  }
+
+  if (select && months.length > 0) {
+    const currentValue = selectedValue || select.value;
+    const currentMonth = months.includes(currentValue)
+      ? currentValue
+      : months[0];
+    select.replaceChildren();
+    months.forEach((month) => {
+      const option = document.createElement("option");
+      option.value = month;
+      option.textContent = config.optionLabel
+        ? config.optionLabel(month)
+        : month.replace("-", "年") + "月";
+      option.selected = month === currentMonth;
+      select.appendChild(option);
+    });
   }
 
   if (!controlsContainer.querySelector(".btn-reload")) {
@@ -453,7 +565,7 @@ export function initializeCharts() {
     allChartConfigs.report.forEach((config) => {
       const container = document.getElementById(`${config.id}-chart-container`);
       if (!container) return;
-      loadWhenNearViewport(container, () => fetchAndRenderChart(config));
+      loadWhenNearViewport(container, () => loadChartWithCache(config));
     });
   }
 
@@ -470,7 +582,7 @@ export function initializeCharts() {
         if (!container) return;
 
         const loadChart = () =>
-          fetchAndRenderChart(
+          loadChartWithCache(
             config,
             config.id === "asset-monthly-history" ? getSimulationParams() : {},
           );
