@@ -408,6 +408,23 @@ function initTradingViewChart() {
   });
 }
 
+function loadWhenNearViewport(container, loadChart) {
+  if (!("IntersectionObserver" in window)) {
+    loadChart();
+    return;
+  }
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      observer.disconnect();
+      loadChart();
+    },
+    { rootMargin: "300px" },
+  );
+  observer.observe(container);
+}
+
 export function initializeCharts() {
   const reportContainer = document.getElementById("report-container");
   const assetChartContainer = document.getElementById("asset-chart-container");
@@ -415,7 +432,11 @@ export function initializeCharts() {
   if (!reportContainer && !assetChartContainer) return;
 
   if (reportContainer) {
-    allChartConfigs.report.forEach((config) => fetchAndRenderChart(config));
+    allChartConfigs.report.forEach((config) => {
+      const container = document.getElementById(`${config.id}-chart-container`);
+      if (!container) return;
+      loadWhenNearViewport(container, () => fetchAndRenderChart(config));
+    });
   }
 
   if (assetChartContainer) {
@@ -435,20 +456,7 @@ export function initializeCharts() {
             config,
             config.id === "asset-monthly-history" ? getSimulationParams() : {},
           );
-        if (!("IntersectionObserver" in window)) {
-          loadChart();
-          return;
-        }
-
-        const observer = new IntersectionObserver(
-          (entries) => {
-            if (!entries.some((entry) => entry.isIntersecting)) return;
-            observer.disconnect();
-            loadChart();
-          },
-          { rootMargin: "300px" },
-        );
-        observer.observe(container);
+        loadWhenNearViewport(container, loadChart);
       });
       const tradingViewContainer = document.getElementById(
         "asset-tradingview-chart-container",
