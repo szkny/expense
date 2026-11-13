@@ -1014,6 +1014,13 @@ img.screenshot {
   color: #6b7280;
 }
 
+.chart-cache-status {
+  margin: 8px 0;
+  color: #6b7280;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
 .chart-refreshing {
   position: relative;
 }

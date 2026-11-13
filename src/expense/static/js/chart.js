@@ -70,6 +70,8 @@ const allChartConfigs = {
   ],
 };
 
+const CHART_CACHE_PREFIX = "expense:chart:";
+const CHART_CACHE_TTL = 30 * 24 * 60 * 60 * 1000;
 let plotlyLoadPromise;
 
 function ensurePlotlyLoaded() {
@@ -118,16 +120,42 @@ function getChartCacheKey(config) {
   const theme = document.documentElement.classList.contains("dark")
     ? "dark"
     : "light";
-  return `expense:chart:v1:${location.pathname}:${theme}:${config.id}`;
+  return `${CHART_CACHE_PREFIX}v2:${location.pathname}:${theme}:${config.id}`;
+}
+
+function cleanupExpiredChartCaches() {
+  try {
+    const now = Date.now();
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (!key || !key.startsWith(CHART_CACHE_PREFIX)) continue;
+
+      try {
+        const cached = JSON.parse(localStorage.getItem(key) || "null");
+        const age = now - cached?.savedAt;
+        if (!Number.isFinite(age) || age < 0 || age > CHART_CACHE_TTL) {
+          localStorage.removeItem(key);
+        }
+      } catch {
+        localStorage.removeItem(key);
+      }
+    }
+  } catch {
+    // Graph rendering must continue when browser storage is unavailable.
+  }
 }
 
 function readCachedChart(config) {
   try {
     const cached = JSON.parse(
-      sessionStorage.getItem(getChartCacheKey(config)) || "null",
+      localStorage.getItem(getChartCacheKey(config)) || "null",
     );
+    const age = Date.now() - cached?.savedAt;
     if (
       !cached ||
+      !Number.isFinite(age) ||
+      age < 0 ||
+      age > CHART_CACHE_TTL ||
       typeof cached.html !== "string" ||
       !Array.isArray(cached.options) ||
       !cached.params ||
@@ -142,14 +170,25 @@ function readCachedChart(config) {
 }
 
 function saveChartCache(config, html, options, params) {
+  const savedAt = Date.now();
   try {
-    sessionStorage.setItem(
+    localStorage.setItem(
       getChartCacheKey(config),
-      JSON.stringify({ html, options, params }),
+      JSON.stringify({ html, options, params, savedAt }),
     );
   } catch {
-    // A full or unavailable session store must not interrupt graph rendering.
+    // A full or unavailable local store must not interrupt graph rendering.
   }
+  return savedAt;
+}
+
+function showCachedChartStatus(container, savedAt) {
+  container.querySelector(".chart-cache-status")?.remove();
+  const status = document.createElement("p");
+  status.className = "chart-cache-status";
+  status.setAttribute("role", "status");
+  status.textContent = `更新できませんでした。前回のデータを表示しています（${new Date(Number(savedAt)).toLocaleString("ja-JP")}）`;
+  container.appendChild(status);
 }
 
 function showChartLoadingOverlay(container) {
@@ -191,6 +230,7 @@ async function restoreCachedChart(config) {
   }
   container.classList.remove("loading");
   container.dataset.loaded = "true";
+  container.dataset.cacheSavedAt = String(cached.savedAt);
 
   if (config.hasDropdown) {
     const param = config.dateParam || "month";
@@ -296,11 +336,15 @@ export async function fetchAndRenderChart(config, params = {}, force = false) {
       initAssetMasking();
     }
     await runChartScripts(container);
-    saveChartCache(config, html, options, cacheParams);
+    container.dataset.cacheSavedAt = String(
+      saveChartCache(config, html, options, cacheParams),
+    );
     loadingOverlay?.remove();
   } catch (error) {
     if (!hasPreviousChart) {
       container.innerHTML = "<p>Error loading graph.</p>";
+    } else if (container.dataset.cacheSavedAt) {
+      showCachedChartStatus(container, container.dataset.cacheSavedAt);
     }
     container.classList.remove("loading");
     loadingOverlay?.remove();
@@ -556,6 +600,7 @@ function loadWhenNearViewport(container, loadChart) {
 }
 
 export function initializeCharts() {
+  cleanupExpiredChartCaches();
   const reportContainer = document.getElementById("report-container");
   const assetChartContainer = document.getElementById("asset-chart-container");
 
