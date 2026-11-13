@@ -31,7 +31,7 @@ class TestServiceWorkerRoute(unittest.TestCase):
         self.assertIn(
             "application/javascript", response.headers["content-type"]
         )
-        self.assertIn('const CACHE_NAME = "expense-cache-v11"', response.text)
+        self.assertIn('const CACHE_NAME = "expense-cache-v12"', response.text)
         self.assertIn(
             'requestUrl.pathname === "/api/asset_management/content"',
             response.text,
