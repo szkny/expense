@@ -191,6 +191,15 @@ function showCachedChartStatus(container, savedAt) {
   container.appendChild(status);
 }
 
+function showChartRenderErrorStatus(container) {
+  container.querySelector(".chart-cache-status")?.remove();
+  const status = document.createElement("p");
+  status.className = "chart-cache-status";
+  status.setAttribute("role", "status");
+  status.textContent = "グラフの描画に失敗しました。再読み込みしてください。";
+  container.appendChild(status);
+}
+
 function showChartLoadingOverlay(container) {
   const overlay = document.createElement("div");
   overlay.className = "chart-loading-overlay";
@@ -249,6 +258,9 @@ async function restoreCachedChart(config) {
     await runChartScripts(container);
   } catch (error) {
     console.error("Failed to restore cached graph:", config.id, error);
+    delete container.dataset.loaded;
+    delete container.dataset.cacheSavedAt;
+    return null;
   } finally {
     loadingOverlay.remove();
   }
@@ -274,6 +286,7 @@ export async function fetchAndRenderChart(config, params = {}, force = false) {
     return;
 
   const hasPreviousChart = container.dataset.loaded === "true";
+  let chartReplaced = false;
   let loadingOverlay = null;
   if (!hasPreviousChart) {
     container.classList.add("loading");
@@ -319,6 +332,7 @@ export async function fetchAndRenderChart(config, params = {}, force = false) {
       } else {
         renderChartPlaceholder(container);
       }
+      chartReplaced = true;
       setupDropdownAndReload(config, options, cacheParams[param]);
     } else {
       html = await response.text();
@@ -327,6 +341,7 @@ export async function fetchAndRenderChart(config, params = {}, force = false) {
       } else {
         renderChartPlaceholder(container);
       }
+      chartReplaced = true;
       setupReloadButtonOnly(config);
     }
     loadingOverlay?.attach();
@@ -343,6 +358,10 @@ export async function fetchAndRenderChart(config, params = {}, force = false) {
   } catch (error) {
     if (!hasPreviousChart) {
       container.innerHTML = "<p>Error loading graph.</p>";
+    } else if (chartReplaced) {
+      delete container.dataset.loaded;
+      delete container.dataset.cacheSavedAt;
+      showChartRenderErrorStatus(container);
     } else if (container.dataset.cacheSavedAt) {
       showCachedChartStatus(container, container.dataset.cacheSavedAt);
     }
