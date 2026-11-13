@@ -25,19 +25,53 @@ class TestSheetsSyncWorker(unittest.IsolatedAsyncioTestCase):
     async def test_failure_is_persisted_for_retry_without_losing_event(
         self,
     ) -> None:
-        event = {"event_id": "event-2", "operation": "edit"}
+        event = {
+            "event_id": "event-2",
+            "operation": "edit",
+            "attempts": 3,
+        }
         store = Mock(claim_next_sync_event=Mock(return_value=event))
         handler = Mock(
             sync_expense_event=Mock(side_effect=TimeoutError("private details"))
         )
         worker = SheetsSyncWorker(store, handler)
 
-        self.assertTrue(await worker.process_once())
+        with self.assertLogs("expense", level="WARNING") as captured:
+            self.assertTrue(await worker.process_once())
 
         store.retry_sync_event.assert_called_once_with(
             "event-2", "TimeoutError"
         )
         store.complete_sync_event.assert_not_called()
+        message = "\n".join(captured.output)
+        self.assertIn("event_id=event-2", message)
+        self.assertIn("operation=edit", message)
+        self.assertIn("attempt=3", message)
+        self.assertIn("error=TimeoutError", message)
+        self.assertIn("detail=omitted", message)
+        self.assertNotIn("private details", message)
+
+    async def test_failure_logs_safe_known_value_error_detail(self) -> None:
+        event = {"event_id": "event-3", "operation": "delete", "attempts": 1}
+        store = Mock(claim_next_sync_event=Mock(return_value=event))
+        handler = Mock(
+            sync_expense_event=Mock(
+                side_effect=ValueError(
+                    "Expense amount was not found in its sheet formula."
+                )
+            )
+        )
+        worker = SheetsSyncWorker(store, handler)
+
+        with self.assertLogs("expense", level="WARNING") as captured:
+            self.assertTrue(await worker.process_once())
+
+        message = "\n".join(captured.output)
+        self.assertIn(
+            "detail=Expense amount was not found in its sheet formula.",
+            message,
+        )
+        self.assertIn(" at=", message)
 
     async def test_empty_queue_does_not_call_sheets(self) -> None:
         store = Mock(claim_next_sync_event=Mock(return_value=None))

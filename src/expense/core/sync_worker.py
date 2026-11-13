@@ -2,11 +2,20 @@ import asyncio
 import datetime as dt
 import fcntl
 import logging
+import traceback
 from pathlib import Path
 from typing import Any, Callable, Protocol, TextIO
 
 
 log: logging.Logger = logging.getLogger("expense")
+
+_SAFE_SYNC_ERROR_DETAILS = {
+    "Expense amount was not found in its sheet cell.",
+    "Expense amount cell has an unsupported value.",
+    "Expense amount was not found in its sheet formula.",
+    "There is no room for another memo in the sheet.",
+    "Expense memo was not found in its sheet cell.",
+}
 
 
 class SyncStore(Protocol):
@@ -233,8 +242,29 @@ class SheetsSyncWorker:
                     event_id,
                     type(exc).__name__,
                 )
+                frames = traceback.extract_tb(exc.__traceback__)
+                failure_location = "unknown"
+                if frames:
+                    frame = frames[-1]
+                    failure_location = (
+                        f"{Path(frame.filename).name}:{frame.lineno} "
+                        f"({frame.name})"
+                    )
+                error_detail = (
+                    str(exc)
+                    if isinstance(exc, ValueError)
+                    and str(exc) in _SAFE_SYNC_ERROR_DETAILS
+                    else "omitted"
+                )
                 log.warning(
-                    "Sheets sync event will retry (%s).", type(exc).__name__
+                    "Sheets sync event will retry: event_id=%s operation=%s "
+                    "attempt=%s error=%s detail=%s at=%s.",
+                    event_id,
+                    event.get("operation", "unknown"),
+                    event.get("attempts", "unknown"),
+                    type(exc).__name__,
+                    error_detail,
+                    failure_location,
                 )
                 return True
             finally:
