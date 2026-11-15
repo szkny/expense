@@ -1304,6 +1304,13 @@ class GraphGenerator(Base):
             if fiscal_year == current_fiscal_year
             else pd.Timestamp(fiscal_year + 1, 3, 31)
         )
+        elapsed_months = (
+            (fiscal_end.year - fiscal_start.year) * 12
+            + fiscal_end.month
+            - fiscal_start.month
+            + 1
+        )
+        remaining_months = max(12 - elapsed_months, 1)
         df_annual = df_annual.loc[
             (df_annual["date"] >= fiscal_start)
             & (df_annual["date"] <= fiscal_end)
@@ -1376,9 +1383,13 @@ class GraphGenerator(Base):
             ),
         ]
 
-        def signed_amount(amount: int) -> str:
+        def signed_amount(amount: int | float) -> str:
             operator = "+" if amount >= 0 else "-"
             return f"{operator}¥{abs(amount):,.0f}"
+
+        def monthly_amount(amount: int, months: int) -> str:
+            formatted_amount = signed_amount(amount / months).removeprefix("+")
+            return f"({formatted_amount}/月)"
 
         def amount_label(label: str, amount: int, prefix: str = "") -> str:
             return f"{prefix}{label}<br>{signed_amount(amount)}"
@@ -1414,8 +1425,12 @@ class GraphGenerator(Base):
                     (
                         f"{label}<br>実績: {signed_amount(amount)} "
                         f"({actual_savings_rate})"
+                        f"<br>{monthly_amount(amount, elapsed_months)}"
                         if label == "ｷｬｯｼｭﾌﾛｰ"
-                        else f"{label}<br>実績: {signed_amount(amount)}"
+                        else (
+                            f"{label}<br>実績: {signed_amount(amount)}"
+                            f"<br>{monthly_amount(amount, elapsed_months)}"
+                        )
                     )
                     + "<extra></extra>"
                     for label, amount in zip(labels, actual)
@@ -1446,11 +1461,17 @@ class GraphGenerator(Base):
                     (
                         f"{label}<br>年間予測: {signed_amount(total)} "
                         f"({forecast_savings_rate})"
+                        f"<br>{monthly_amount(total, 12)}"
                         f"<br>残り予測: {signed_amount(amount)} "
                         f"({remaining_savings_rate})"
+                        f"<br>{monthly_amount(amount, remaining_months)}"
                         if label == "ｷｬｯｼｭﾌﾛｰ"
-                        else f"{label}<br>年間予測: {signed_amount(total)}"
-                        f"<br>残り予測: {signed_amount(amount)}"
+                        else (
+                            f"{label}<br>年間予測: {signed_amount(total)}"
+                            f"<br>{monthly_amount(total, 12)}"
+                            f"<br>残り予測: {signed_amount(amount)}"
+                            f"<br>{monthly_amount(amount, remaining_months)}"
+                        )
                     )
                     + "<extra></extra>"
                     for label, total, amount in zip(

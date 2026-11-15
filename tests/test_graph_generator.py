@@ -624,6 +624,58 @@ class GraphGeneratorSavingsRateTest(unittest.TestCase):
         self.assertEqual(GraphGenerator._format_savings_rate(30, 0), "-")
 
 
+class GraphGeneratorAnnualFiscalReportTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.generator = GraphGenerator.__new__(GraphGenerator)
+        self.generator.all_income_types = ["給与"]
+        self.generator.forecast_income_types = ["給与"]
+        self.generator.fixed_types = ["家賃"]
+        self.generator.variable_types = ["食費"]
+        self.generator.graph_color = {}
+
+    def test_hover_text_includes_monthly_actual_and_forecast_amounts(
+        self,
+    ) -> None:
+        df = pd.DataFrame(
+            {
+                "date": pd.to_datetime(
+                    ["2024-04-01", "2024-04-02", "2024-11-01", "2024-11-02"]
+                ),
+                "expense_type": ["給与", "家賃", "給与", "家賃"],
+                "expense_amount": [300_000, 100_000, 60_000, 40_000],
+            }
+        )
+
+        with patch("expense.core.graph_generator.dt") as mock_datetime:
+            mock_datetime.date.today.return_value = pd.Timestamp(
+                "2024-11-15"
+            ).date()
+            figure, _, _ = capture_chart_figure(
+                self.generator,
+                lambda data, include_plotlyjs=False: self.generator.generate_annual_fiscal_report_chart(
+                    data,
+                    target_year="2024",
+                    include_plotlyjs=include_plotlyjs,
+                )[
+                    0
+                ],
+                df,
+            )
+
+        actual_hover = figure.data[0].hovertemplate
+        self.assertIn("実績: +¥360,000<br>(¥45,000/月)", actual_hover[0])
+        self.assertIn("実績: -¥140,000<br>(-¥17,500/月)", actual_hover[1])
+        self.assertIn("実績: +¥220,000", actual_hover[2])
+        self.assertIn("<br>(¥27,500/月)", actual_hover[2])
+
+        forecast_hover = figure.data[1].hovertemplate
+        self.assertIn("年間予測:", forecast_hover[0])
+        self.assertIn("残り予測:", forecast_hover[0])
+        self.assertIn("<br>(¥", forecast_hover[0])
+        self.assertIn("<br>(-¥", forecast_hover[1])
+        self.assertIn("<br>(¥", forecast_hover[2])
+
+
 class GraphGeneratorAnnualFiscalSankeyTest(unittest.TestCase):
     def setUp(self) -> None:
         self.generator = GraphGenerator.__new__(GraphGenerator)
