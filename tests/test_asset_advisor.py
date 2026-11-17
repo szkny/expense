@@ -84,6 +84,7 @@ class TestDailyAssetAdvice(unittest.TestCase):
         request_input = json.loads(request_body["input"])
         self.assertIn("daily_investment_quote", request_input)
         self.assertIn("daily_advice_angle", request_input)
+        self.assertIn("今日の市場概況", request_body["instructions"])
         self.assertIn("今日のアドバイス", request_body["instructions"])
         self.assertIn("今週の振り返り", request_body["instructions"])
         self.assertIn(
@@ -91,6 +92,10 @@ class TestDailyAssetAdvice(unittest.TestCase):
         )
         self.assertIn("投資の格言", request_body["instructions"])
         self.assertIn("今日の問い", request_body["instructions"])
+        self.assertLess(
+            request_body["instructions"].index("「今日の市場概況」"),
+            request_body["instructions"].index("「今日のアドバイス」"),
+        )
         self.assertIn("機知ある一言", request_body["instructions"])
         self.assertIn(
             "ユーザーや損失を笑いの対象にしない",
@@ -114,7 +119,7 @@ class TestDailyAssetAdvice(unittest.TestCase):
         )
         self.assertEqual(cached_data["date"], self.today.isoformat())
         self.assertEqual(cached_data["model"], "gpt-5-nano")
-        self.assertEqual(cached_data["advice_version"], 2)
+        self.assertEqual(cached_data["advice_version"], 3)
         self.assertNotIn("holdings", cached_data)
 
     def test_rebuilds_daily_cache_without_news_search_version(self) -> None:
