@@ -336,6 +336,11 @@ export async function fetchAndRenderChart(config, params = {}, force = false) {
       setupDropdownAndReload(config, options, cacheParams[param]);
     } else {
       html = await response.text();
+      if (!html && hasPreviousChart) {
+        showCachedChartStatus(container, container.dataset.cacheSavedAt);
+        loadingOverlay?.remove();
+        return;
+      }
       if (html) {
         container.innerHTML = html;
       } else {

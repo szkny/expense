@@ -147,7 +147,8 @@ class GraphGeneratorAssetRecentlyHistoryTest(unittest.TestCase):
         self.assertEqual(list(trace.y), [50, 100, 200, 300, 400])
         self.assertEqual(trace.mode, "lines+markers")
         self.assertEqual(
-            trace.hovertemplate, "評価額 ¥%{y:,.0f}<extra></extra>"
+            trace.hovertemplate,
+            "評価額 ¥%{y:,.0f}<br>%{customdata[0]}<extra></extra>",
         )
         self.assertEqual(
             pd.Timestamp(figure.layout.xaxis.range[0]),
@@ -165,6 +166,34 @@ class GraphGeneratorAssetRecentlyHistoryTest(unittest.TestCase):
         self.assertTrue(render.call_args.kwargs["clear_hover_on_leave"])
         self.assertEqual(graph_html, "<div>chart</div>")
 
+    def test_shows_weekly_and_monthly_amount_and_percentage_changes(
+        self,
+    ) -> None:
+        generator = GraphGenerator.__new__(GraphGenerator)
+        today = pd.Timestamp.today().normalize()
+        month_ago = today - pd.DateOffset(months=1)
+        week_ago = today - pd.Timedelta(days=7)
+        df = pd.DataFrame(
+            {
+                "date": [
+                    month_ago - pd.Timedelta(days=1),
+                    month_ago,
+                    week_ago - pd.Timedelta(days=1),
+                    today,
+                ],
+                "valuation": [10_000, 12_000, 14_000, 18_000],
+            }
+        )
+
+        figure, _, _ = capture_chart_figure(
+            generator, generator.generate_asset_recently_history_chart, df
+        )
+
+        self.assertEqual(
+            list(figure.data[0].customdata[-1]),
+            ["前週比: +¥4,000 (+28.6%)<br>前月比: +¥6,000 (+50.0%)"],
+        )
+
     def test_constant_values_get_a_nonzero_y_axis_range(self) -> None:
         generator = GraphGenerator.__new__(GraphGenerator)
         today = pd.Timestamp.today().normalize()
@@ -175,6 +204,10 @@ class GraphGeneratorAssetRecentlyHistoryTest(unittest.TestCase):
         )
 
         self.assertEqual(list(figure.layout.yaxis.range), [99, 101])
+        self.assertEqual(
+            list(figure.data[0].customdata[-1]),
+            ["前週比: -<br>前月比: -"],
+        )
 
     def test_returns_empty_html_when_no_recent_records(self) -> None:
         generator = GraphGenerator.__new__(GraphGenerator)

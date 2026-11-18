@@ -117,6 +117,76 @@ class AssetManagerBatchGetTest(unittest.TestCase):
         self.assertEqual(dataframes["df_records"].iloc[0]["valuation"], 110.0)
         self.assertEqual(dataframes["df_stock"].iloc[0]["ticker"], "VTI")
 
+    def test_invalid_sheet_data_does_not_discard_other_asset_data(self) -> None:
+        table = [
+            [
+                "ticker",
+                "num",
+                "acquisition",
+                "price_dollar",
+                "price",
+                "invest_amount",
+                "valuation",
+                "profit",
+                "weight",
+                "roi",
+            ],
+            [
+                "TEST",
+                "1",
+                "100",
+                "1",
+                "150",
+                "100",
+                "150",
+                "50",
+                "100",
+                "50",
+            ],
+        ]
+        stock_info = [
+            [
+                "No",
+                "ticker",
+                "price",
+                "change_pct",
+                "change_pct_weekly",
+                "change_pct_monthly",
+                "drawdown",
+                "change_pct_yen",
+                "change_yen",
+                "valuation",
+                "profit",
+                "roi",
+                "チャート1",
+                "チャート2",
+            ],
+            [
+                "1",
+                "TEST",
+                "読み込んでいます...",
+                "1",
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "150",
+                "50",
+                "50",
+            ],
+        ]
+        manager = object.__new__(AssetManager)
+        manager.workbook = FakeWorkbook(
+            [{"values": table}, {"values": stock_info}]
+        )
+
+        dataframes = manager.get_asset_data({"df_items", "df_stock"})
+
+        self.assertIn("df_items", dataframes)
+        self.assertNotIn("df_stock", dataframes)
+        self.assertEqual(dataframes["df_items"].iloc[0]["ticker"], "TEST")
+
     def test_get_asset_data_requests_only_selected_ranges(self) -> None:
         manager = object.__new__(AssetManager)
         manager.workbook = FakeWorkbook(

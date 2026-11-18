@@ -2317,6 +2317,46 @@ class GraphGenerator(Base):
         df_graph = df_graph.drop_duplicates(subset=["date"], keep="last")
         if df_graph.empty:
             return ""
+
+        def format_change(current: float, previous: float) -> str:
+            if pd.isna(previous):
+                return "-"
+            difference = current - previous
+            amount = f"{'+' if difference >= 0 else '-'}¥{abs(difference):,.0f}"
+            percentage = (
+                f"{difference / previous:+.1%}" if previous != 0 else "-"
+            )
+            return f"{amount} ({percentage})"
+
+        for period, offset in (
+            ("weekly", pd.Timedelta(days=7)),
+            ("monthly", pd.DateOffset(months=1)),
+        ):
+            reference = df_graph[["date", "valuation"]].copy()
+            reference["date"] += offset
+            reference.rename(
+                columns={"valuation": f"{period}_valuation"},
+                inplace=True,
+            )
+            df_graph = pd.merge_asof(
+                df_graph,
+                reference.sort_values("date"),
+                on="date",
+                direction="backward",
+            )
+            df_graph[f"{period}_change"] = [
+                format_change(current, previous)
+                for current, previous in zip(
+                    df_graph["valuation"], df_graph[f"{period}_valuation"]
+                )
+            ]
+
+        df_graph["change_summary"] = (
+            "前週比: "
+            + df_graph["weekly_change"]
+            + "<br>前月比: "
+            + df_graph["monthly_change"]
+        )
         df_visible = df_graph.loc[df_graph["date"].between(start_date, today)]
         if df_visible.empty:
             return ""
@@ -2330,7 +2370,10 @@ class GraphGenerator(Base):
                 line=dict(
                     width=2, color="#4466cc" if theme == "dark" else "#3355bb"
                 ),
-                hovertemplate="評価額 ¥%{y:,.0f}<extra></extra>",
+                customdata=df_graph[["change_summary"]],
+                hovertemplate=(
+                    "評価額 ¥%{y:,.0f}<br>%{customdata[0]}<extra></extra>"
+                ),
             )
         )
         self._update_layout(fig, theme)

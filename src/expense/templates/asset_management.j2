@@ -37,6 +37,11 @@
         <p>資産データを読み込んでいます...</p>
       </div>
       {% else %}
+    {% if asset_data_stale %}
+    <p class="asset-advice-notice" role="status">
+      最新の資産情報を取得できませんでした。前回のキャッシュまたはブラウザーに保存されたグラフを表示しています。
+    </p>
+    {% endif %}
     {% if allocation_adjustments %}
     <div class="msg" id="success-msg">
       アセットアロケーションに調整が必要な項目があります。

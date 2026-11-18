@@ -633,17 +633,25 @@ class AssetManager(Base):
             dataframes: dict[str, pd.DataFrame] = {}
             for spec, value_range in zip(selected_specs, value_ranges):
                 key, _, rows, columns = spec
-                values = self._flatten_values(
-                    value_range.get("values", []), rows, columns
-                )
-                if key == "df_summary":
-                    dataframes[key] = self._parse_header_data(values)
-                elif key == "df_items":
-                    dataframes[key] = self._parse_table_data(values)
-                elif key == "df_records":
-                    dataframes[key] = self._parse_monthly_history_data(values)
-                else:
-                    dataframes[key] = self._parse_stock_info_data(values)
+                try:
+                    values = self._flatten_values(
+                        value_range.get("values", []), rows, columns
+                    )
+                    if key == "df_summary":
+                        dataframes[key] = self._parse_header_data(values)
+                    elif key == "df_items":
+                        dataframes[key] = self._parse_table_data(values)
+                    elif key == "df_records":
+                        dataframes[key] = self._parse_monthly_history_data(
+                            values
+                        )
+                    else:
+                        dataframes[key] = self._parse_stock_info_data(values)
+                except Exception:
+                    log.exception(
+                        "Failed to parse asset data for %s; skipping range.",
+                        key,
+                    )
             return dataframes
         finally:
             log.info("end 'get_asset_data' method")

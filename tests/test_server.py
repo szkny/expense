@@ -1,6 +1,7 @@
 import unittest
 import datetime as dt
 import json
+import threading
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -284,6 +285,89 @@ class TestAssetManagementShell(unittest.TestCase):
         self.assertNotIn("window.Plotly", response.text)
         get_asset_table.assert_not_called()
         asset_manager.get_spreadsheet_url.assert_not_called()
+
+    def test_asset_cache_survives_a_failed_refresh(self) -> None:
+        stale_time = dt.datetime.now() - dt.timedelta(days=2)
+        cached_graphs = {("asset-pie", "light"): "<div>cached</div>"}
+        cache = {
+            "df_summary": pd.DataFrame(),
+            "df_items": pd.DataFrame(
+                [{"ticker": "現金(日本円)", "valuation": 100}]
+            ),
+            "df_records": pd.DataFrame(),
+            "df_stock": pd.DataFrame(),
+            "graph_html": cached_graphs,
+        }
+        for key in ("df_summary", "df_items", "df_records", "df_stock"):
+            cache[f"{key}_timestamp"] = stale_time
+        asset_manager = Mock()
+        asset_manager.get_asset_data.side_effect = RuntimeError(
+            "Google Sheets unavailable"
+        )
+
+        with (
+            patch("expense.api.server._df_cache_asset_table", cache),
+            patch(
+                "expense.api.server._ASSET_CACHE_TTL",
+                {
+                    key: 1
+                    for key in (
+                        "df_summary",
+                        "df_items",
+                        "df_records",
+                        "df_stock",
+                    )
+                },
+            ),
+        ):
+            _, df_items, _, df_stock = server.get_cached_asset_table(
+                asset_manager
+            )
+
+        self.assertTrue(cache["stale"])
+        self.assertEqual(df_items.iloc[0]["ticker"], "現金(日本円)")
+        self.assertEqual(df_stock.iloc[0]["ticker"], "JPY")
+        self.assertIs(cache["graph_html"], cached_graphs)
+        asset_manager.get_asset_data.assert_called_once()
+
+    def test_asset_content_renders_cached_graph_slots_without_sheet_data(
+        self,
+    ) -> None:
+        server_tools = Mock(
+            templates=app.state.templates,
+            icons={},
+            config={"asset_management": {"allocation": {}}},
+        )
+        asset_manager = Mock()
+        asset_manager.get_asset_data.side_effect = RuntimeError(
+            "Google Sheets unavailable"
+        )
+
+        with (
+            patch("expense.api.server.ServerTools", return_value=server_tools),
+            patch("expense.api.server.asset_manager", asset_manager),
+            patch("expense.api.server._df_cache_asset_table", {}),
+            patch(
+                "expense.api.server._df_cache_asset_table_lock",
+                threading.Lock(),
+            ),
+            patch(
+                "expense.api.server._ASSET_CACHE_TTL",
+                {
+                    "df_summary": 30,
+                    "df_stock": 30,
+                    "df_items": 300,
+                    "df_records": 86400,
+                },
+            ),
+        ):
+            response = TestClient(app).get("/api/asset_management/content")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("最新の資産情報を取得できませんでした", response.text)
+        self.assertIn("取得不可", response.text)
+        self.assertIn('id="asset-pie-chart-container"', response.text)
+        self.assertIn('id="asset-record-container"', response.text)
 
     def test_asset_content_is_not_cached_and_renders_asset_data(self) -> None:
         server_tools = Mock(

@@ -235,12 +235,28 @@ def get_cached_asset_table(
                 return _get_asset_cache_dataframes()
 
             log.debug(f"refreshing asset data: {expired_keys}")
-            data = asset_manager.get_asset_data(set(expired_keys))
+            try:
+                data = asset_manager.get_asset_data(set(expired_keys))
+            except Exception:
+                _df_cache_asset_table["stale"] = True
+                log.exception(
+                    "Failed to refresh asset data; using cached data."
+                )
+                return _get_asset_cache_dataframes()
+
+            failed_keys = set(expired_keys) - set(data)
+            if failed_keys:
+                log.warning(
+                    "Asset data unavailable for: %s",
+                    ", ".join(sorted(failed_keys)),
+                )
             refreshed_at = dt.datetime.now()
             for key, dataframe in data.items():
                 _df_cache_asset_table[key] = dataframe
                 _df_cache_asset_table[f"{key}_timestamp"] = refreshed_at
-            _df_cache_asset_table["graph_html"] = {}
+            _df_cache_asset_table["stale"] = bool(failed_keys)
+            if not failed_keys:
+                _df_cache_asset_table["graph_html"] = {}
             return _get_asset_cache_dataframes()
     finally:
         log.info("end 'get_cached_asset_table' method")
@@ -266,27 +282,30 @@ def _get_asset_cache_dataframes() -> (
     df_items = pd.DataFrame(_df_cache_asset_table.get("df_items"))
     df_records = pd.DataFrame(_df_cache_asset_table.get("df_records"))
     df_stock = pd.DataFrame(_df_cache_asset_table.get("df_stock"))
-    df_jpy = df_items.query("ticker=='現金(日本円)'")
-    df_stock = pd.concat(
-        [
-            df_stock,
-            pd.DataFrame(
-                dict(
-                    ticker=["JPY"],
-                    price=[pd.NA],
-                    change_pct=[0],
-                    change_pct_weekly=[0],
-                    change_pct_monthly=[0],
-                    drawdown=[0],
-                    change_pct_yen=[0],
-                    change_yen=[0],
-                    valuation=[df_jpy["valuation"].iloc[0]],
-                    profit=[0],
-                    roi=[0],
-                )
-            ),
-        ]
-    )
+    if {"ticker", "valuation"}.issubset(df_items.columns):
+        df_jpy = df_items.loc[df_items["ticker"] == "現金(日本円)"]
+        if not df_jpy.empty:
+            df_stock = pd.concat(
+                [
+                    df_stock,
+                    pd.DataFrame(
+                        dict(
+                            ticker=["JPY"],
+                            price=[pd.NA],
+                            change_pct=[0],
+                            change_pct_weekly=[0],
+                            change_pct_monthly=[0],
+                            drawdown=[0],
+                            change_pct_yen=[0],
+                            change_yen=[0],
+                            valuation=[df_jpy["valuation"].iloc[0]],
+                            profit=[0],
+                            roi=[0],
+                        )
+                    ),
+                ],
+                ignore_index=True,
+            )
     df_stock.index = range(1, len(df_stock) + 1)
     return df_summary, df_items, df_records, df_stock
 
@@ -514,34 +533,59 @@ def get_latest_ocr_screenshot() -> JSONResponse:
 def build_asset_summary_dict(
     df_summary: pd.DataFrame, df_items: pd.DataFrame, df_stock: pd.DataFrame
 ) -> dict:
-    df_usdjpy = df_stock.query("ticker == 'USDJPY'")
-    if df_usdjpy.empty:
-        usdjpy_chg = 0
-    else:
-        usdjpy_chg = df_usdjpy["change_pct"].iloc[0]
-    summary_list = df_summary.to_dict(orient="records")
-    if not len(summary_list):
-        return {}
-    summary = summary_list[0]
-    summary["total"] = f"¥{df_items['valuation'].sum():,.0f}"
-    summary["change"] = (
-        f" {'+' if summary['change_jpy'] >= 0 else '-'}¥{abs(summary['change_jpy']):,.0f}"
-        + f" ( {'+' if summary['change_pct'] >= 0 else '-'}{abs(summary['change_pct']):,.2f}% )"
+    df_usdjpy = (
+        df_stock.loc[df_stock["ticker"] == "USDJPY"]
+        if "ticker" in df_stock.columns
+        else pd.DataFrame()
     )
-    summary["drawdown"] = f"{summary['drawdown']:,.2f}%"
-    summary["usdjpy"] = f"¥{summary['usdjpy']:,.2f}"
+    if not df_usdjpy.empty and "change_pct" in df_usdjpy.columns:
+        usdjpy_chg = df_usdjpy["change_pct"].iloc[0]
+    else:
+        usdjpy_chg = None
+
+    summary_list = df_summary.to_dict(orient="records")
+    summary = summary_list[0] if summary_list else {}
+    unavailable = "取得不可"
+
+    if "valuation" in df_items.columns:
+        summary["total"] = f"¥{df_items['valuation'].sum():,.0f}"
+    else:
+        summary["total"] = unavailable
+    if {"change_jpy", "change_pct"}.issubset(summary):
+        summary["change"] = (
+            f" {'+' if summary['change_jpy'] >= 0 else '-'}"
+            f"¥{abs(summary['change_jpy']):,.0f}"
+            f" ( {'+' if summary['change_pct'] >= 0 else '-'}"
+            f"{abs(summary['change_pct']):,.2f}% )"
+        )
+    else:
+        summary["change"] = unavailable
+    summary["drawdown"] = (
+        f"{summary['drawdown']:,.2f}%" if "drawdown" in summary else "-"
+    )
+    summary["usdjpy"] = (
+        f"¥{summary['usdjpy']:,.2f}" if "usdjpy" in summary else unavailable
+    )
     summary["change_usdjpy"] = (
         f"{'+' if usdjpy_chg >= 0 else '-'}{abs(usdjpy_chg):,.2f}%"
+        if usdjpy_chg is not None
+        else unavailable
     )
-    summary["profit"] = df_items["profit"].sum()
-    summary["profit"] = (
-        f"{'+' if summary['profit'] >= 0 else '-'}¥{abs(summary['profit']):,.0f}"
-    )
+    if "profit" in df_items.columns:
+        profit = df_items["profit"].sum()
+        summary["profit"] = f"{'+' if profit >= 0 else '-'}¥{abs(profit):,.0f}"
+    else:
+        summary["profit"] = unavailable
     summary["profit_etf"] = (
-        f"{'+' if summary['profit_etf'] >= 0 else '-'}¥{abs(summary['profit_etf']):,.0f}"
+        f"{'+' if summary['profit_etf'] >= 0 else '-'}"
+        f"¥{abs(summary['profit_etf']):,.0f}"
+        if "profit_etf" in summary
+        else unavailable
     )
     summary["roi"] = (
-        f"{'+' if summary['roi'] >= 0 else '-'}{abs(summary['roi']):,.2f}%"
+        f"{'+' if summary['roi'] >= 0 else '-'}" f"{abs(summary['roi']):,.2f}%"
+        if "roi" in summary
+        else unavailable
     )
     return summary
 
@@ -568,6 +612,9 @@ def _get_asset_management_context(
         return context
 
     df_summary, df_items, _, df_stock = get_cached_asset_table(asset_manager)
+    context["asset_data_stale"] = bool(
+        _df_cache_asset_table.get("stale", False)
+    )
     summary = build_asset_summary_dict(df_summary, df_items, df_stock)
     items = df_items.to_dict(orient="records")
     allocation_config = server_tools.config.get("asset_management", {}).get(
@@ -575,19 +622,27 @@ def _get_asset_management_context(
     )
     target_weights = allocation_config.get("target_weights", {})
     tolerance_percent = allocation_config.get("tolerance_percent", 0.0)
-    asset_allocation = asset_manager.build_asset_allocation(
-        df_items, target_weights, tolerance_percent, df_summary
+    asset_allocation = (
+        asset_manager.build_asset_allocation(
+            df_items, target_weights, tolerance_percent, df_summary
+        )
+        if not df_items.empty
+        else []
     )
     allocation_adjustments = [
         allocation["ticker"]
         for allocation in asset_allocation
         if allocation["action"] != "調整不要"
     ]
-    asset_tickers = [
-        ticker
-        for ticker in df_stock["ticker"].dropna().unique().tolist()
-        if ticker != "JPY"
-    ]
+    asset_tickers = (
+        [
+            ticker
+            for ticker in df_stock["ticker"].dropna().unique().tolist()
+            if ticker != "JPY"
+        ]
+        if "ticker" in df_stock.columns
+        else []
+    )
     asset_tickers.extend(["VIX", "High Yield Spread"])
     context.update(
         {
@@ -1054,8 +1109,9 @@ def get_dataframes(
 
     df_records = pd.DataFrame(recent_expenses)
     if not df_records.empty:
-        exclude_types = server_tools.exclude_types
-        df_records = df_records.query("expense_type not in @exclude_types").copy()
+        df_records = df_records.loc[
+            ~df_records["expense_type"].isin(server_tools.exclude_types)
+        ].copy()
         df_records["date"] = pd.to_datetime(
             df_records["date"].map(lambda s: re.sub(r"[^\d\-]+", "", str(s))),
             errors="coerce",
