@@ -1637,6 +1637,49 @@ tr:nth-child(even) {
   color: #9ca3af;
 }
 
+.asset-goal-controls {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 10px;
+}
+
+.asset-goal-controls input {
+  width: 160px;
+}
+
+.asset-goal-progress {
+  padding: 0 10px;
+}
+
+.asset-goal-progress-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.asset-goal-progress-label strong {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.25rem;
+}
+
+#asset-goal-progress {
+  display: block;
+  width: 100%;
+  height: 14px;
+  margin: 10px 0;
+  accent-color: #2563eb;
+}
+
+#asset-goal-estimate {
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.dark #asset-goal-estimate {
+  color: #9ca3af;
+}
+
 #asset-tradingview-chart-container {
   margin: 0 auto;
   height: 500px;

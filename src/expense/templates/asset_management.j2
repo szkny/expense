@@ -215,9 +215,35 @@
       </div>
     </div>
 
+    <div class="card" data-card-key="asset-goal">
+      <h3 class="collapsible-trigger" data-key="asset-goal">
+        <span>{{ icons.get("asset_goal", "🎯") }} 資産目標</span>
+        <span class="collapsible-toggle"></span>
+      </h3>
+      <div id="asset-goal-container" class="collapsible-content">
+        <div class="asset-goal-controls">
+          <div class="simulation-input-group">
+            <label for="asset-goal-amount">目標額 (¥)</label>
+            <input type="number" id="asset-goal-amount" min="1" step="100000" placeholder="50000000">
+          </div>
+        </div>
+        <div class="asset-goal-progress" aria-live="polite">
+          <div class="asset-goal-progress-label">
+            <span>目標達成率</span>
+            <strong id="asset-goal-percent">目標額を入力してください</strong>
+          </div>
+          <progress id="asset-goal-progress" max="100" value="0" aria-label="資産目標の達成率"></progress>
+          <p id="asset-goal-estimate" role="status">
+            資産チャートの年利・月次積立の設定値を使って到達時期を試算します。
+          </p>
+          <p id="asset-goal-income" role="status"></p>
+        </div>
+      </div>
+    </div>
+
     <div class="card" data-card-key="asset-allocation">
       <h3 class="collapsible-trigger" data-key="asset-allocation">
-        <span>{{ icons.get("asset_allocation", "🎯") }} アセットアロケーション </span>
+        <span>{{ icons.get("asset_allocation", "🎛️") }} アセットアロケーション </span>
         <span class="collapsible-toggle"></span>
       </h3>
       <div id="asset-allocation-container" class="collapsible-content">

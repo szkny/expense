@@ -2,6 +2,7 @@
 import { initializeCharts } from "./chart.js";
 import { initializeTableFilter } from "./table.js";
 import { initSimulator } from "./simulator.js";
+import { initAssetGoal } from "./asset_goal.js";
 import { initNotifications } from "./notifications.js";
 import {
   initMenu,
@@ -25,6 +26,7 @@ import {
 function onDOMContentLoaded() {
   initCardReordering();
   initCollapsibleSections();
+  initAssetGoal();
   initAssetAdvisor();
   initializeCharts();
   initChartReloadUI();
