@@ -1676,6 +1676,10 @@ tr:nth-child(even) {
   font-size: 0.9rem;
 }
 
+#asset-goal-income {
+  white-space: pre-line;
+}
+
 .dark #asset-goal-estimate {
   color: #9ca3af;
 }

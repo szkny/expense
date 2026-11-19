@@ -77,14 +77,14 @@ export function initAssetGoal() {
       );
       const goalAnnualIncome = Math.round((goal * annualYield) / 100);
       const formatIncome = (annualIncome) =>
-        `約¥${(annualIncome / 10000).toLocaleString("ja-JP", {
+        `約 ¥${(annualIncome / 10000).toLocaleString("ja-JP", {
           maximumFractionDigits: 1,
         })}万/年（¥${(annualIncome / 12 / 10000).toLocaleString("ja-JP", {
           maximumFractionDigits: 1,
         })}万/月）`;
       incomeElement.textContent =
-        `現時点で${formatIncome(currentAnnualIncome)}、` +
-        `目標到達後は${formatIncome(goalAnnualIncome)}の不労所得が得られます。`;
+        `現在の資産: ${formatIncome(currentAnnualIncome)}\n` +
+        `目標到達後: ${formatIncome(goalAnnualIncome)}\nの不労所得が得られます。`;
     }
 
     const percent = (currentAmount / goal) * 100;
