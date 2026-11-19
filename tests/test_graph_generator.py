@@ -283,7 +283,10 @@ class GraphGeneratorAssetDrawdownTest(unittest.TestCase):
         self.assertEqual(figure.layout.yaxis2.side, "right")
         self.assertEqual(figure.layout.yaxis2.tickprefix, "¥")
         self.assertFalse(figure.layout.yaxis2.title.text)
-        self.assertEqual(figure.layout.annotations[0].text, "-9.09%")
+        latest_label_trace = figure.data[3]
+        self.assertEqual(latest_label_trace.text, ("-9.09%",))
+        self.assertEqual(latest_label_trace.legendgroup, trace.legendgroup)
+        self.assertFalse(latest_label_trace.showlegend)
         self.assertEqual(figure.data[1].mode, "text")
         self.assertEqual(list(figure.data[1].text), [])
         self.assertEqual(figure.data[1].textposition, "bottom center")

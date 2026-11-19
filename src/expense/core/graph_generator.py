@@ -3029,18 +3029,21 @@ class GraphGenerator(Base):
                 hovertemplate="金額ドローダウン: ¥%{y:,.0f}<extra></extra>",
             )
         )
-        fig.add_annotation(
-            x=df_graph["date"].iloc[-1],
-            y=values[-1],
-            text=f"{values[-1]:.2%}",
-            showarrow=False,
-            xanchor="left",
-            yanchor="auto",
-            yshift=8,
-            font=dict(
-                size=12,
-                weight="bold",
-                color="#ffffff" if theme == "dark" else "#000000",
+        fig.add_trace(
+            go.Scatter(
+                x=[df_graph["date"].iloc[-1]],
+                y=[values[-1]],
+                text=[f"{values[-1]:.2%}"],
+                mode="text",
+                textposition="top right",
+                textfont=dict(
+                    size=12,
+                    weight="bold",
+                    color="#ffffff" if theme == "dark" else "#000000",
+                ),
+                legendgroup="drawdown_rate",
+                hoverinfo="skip",
+                showlegend=False,
             ),
         )
         fig.add_hline(y=0, line_width=1, line_dash="dot", line_color="#888888")
