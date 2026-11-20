@@ -2708,8 +2708,9 @@ class GraphGenerator(Base):
                     weight="bold",
                     color="#ffffff" if theme == "dark" else "#000000",
                 ),
-                showlegend=True,
                 hoverinfo="skip",
+                showlegend=True,
+                visible="legendonly",
                 legendrank=1,
             )
         )
