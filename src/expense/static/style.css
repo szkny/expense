@@ -1497,8 +1497,16 @@ tr:nth-child(even) {
   margin-right: 10px;
 }
 
-.asset-masked #total-asset-amount {
+.asset-masked #total-asset-amount,
+.asset-masked [data-maskable-asset-value] {
   visibility: hidden;
+}
+
+[data-maskable-asset-value] {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .asset-summary-display-sub {

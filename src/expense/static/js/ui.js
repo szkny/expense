@@ -754,30 +754,33 @@ export function initAssetMasking() {
   const amountEl = document.getElementById("total-asset-amount");
   if (!amountEl) return;
 
-  const originalValue = amountEl.dataset.originalValue;
-  // 数字のみを1文字ずつspanで囲み、伏せ字にする
-  const maskedValue = originalValue.replace(
-    /\d/g,
-    '<span class="digit-span">*</span>',
-  );
-  // 元の値も、文字幅を揃えるために同じ構造にする（数字をspanで囲む）
-  const formattedOriginal = originalValue.replace(
-    /\d/g,
-    (d) => `<span class="digit-span">${d}</span>`,
-  );
-
-  let isMasked = localStorage.getItem("isAssetMasked") === "true";
-  amountEl.innerHTML = isMasked ? maskedValue : formattedOriginal;
+  const isMasked = localStorage.getItem("isAssetMasked") === "true";
+  const renderValues = (isMasked) => {
+    document.querySelectorAll("[data-maskable-asset-value]").forEach((el) => {
+      const originalValue = el.dataset.originalValue;
+      if (!originalValue) return;
+      const formattedValue = originalValue.replace(/\d/g, (digit) => {
+        const value = isMasked ? "*" : digit;
+        return `<span class="digit-span">${value}</span>`;
+      });
+      el.innerHTML = formattedValue;
+    });
+  };
+  renderValues(isMasked);
 
   // 初期ロード時のちらつき防止用クラスを削除
   if (isMasked) {
     document.documentElement.classList.remove("asset-masked");
   }
 
-  amountEl.addEventListener("click", () => {
-    isMasked = !isMasked;
-    amountEl.innerHTML = isMasked ? maskedValue : formattedOriginal;
-    localStorage.setItem("isAssetMasked", isMasked);
+  document.querySelectorAll("[data-maskable-asset-value]").forEach((el) => {
+    if (el.dataset.maskToggleInitialized) return;
+    el.dataset.maskToggleInitialized = "true";
+    el.addEventListener("click", () => {
+      const isMasked = localStorage.getItem("isAssetMasked") !== "true";
+      localStorage.setItem("isAssetMasked", String(isMasked));
+      renderValues(isMasked);
+    });
   });
 }
 
