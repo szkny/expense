@@ -1,6 +1,32 @@
 const lastPageStorageKey = "expense.lastPage";
 const pagePaths = ["/", "/asset_management", "/simulator"];
 
+document.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+
+  const menuBtn = document.getElementById("hamburger-menu-btn");
+  const menu = document.getElementById("menu-container");
+  if (!menuBtn || !menu) return;
+
+  const closeMenu = () => {
+    menu.classList.remove("show");
+    menuBtn.classList.remove("clicked");
+    menuBtn.textContent = "☰";
+  };
+
+  if (menuBtn.contains(target)) {
+    menu.classList.toggle("show");
+    menuBtn.classList.toggle("clicked");
+    menuBtn.textContent = menuBtn.textContent === "✕" ? "☰" : "✕";
+  } else if (
+    !menu.contains(target) ||
+    target.closest("#menu-container button")
+  ) {
+    closeMenu();
+  }
+});
+
 try {
   const currentPath = location.pathname;
   const lastPage = localStorage.getItem(lastPageStorageKey);

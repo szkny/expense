@@ -1,35 +1,5 @@
 // src/expense/static/js/ui.js
 
-export function initMenu() {
-  const menuBtn = document.getElementById("hamburger-menu-btn");
-  const menu = document.getElementById("menu-container");
-  if (!menuBtn || !menu) return;
-
-  const closeMenu = () => {
-    menu.classList.remove("show");
-    menuBtn.classList.remove("clicked");
-    menuBtn.textContent = "☰";
-  };
-
-  document
-    .querySelectorAll("#theme-toggle, #asset-management-btn, #home-btn")
-    .forEach((btn) => {
-      btn.addEventListener("click", closeMenu);
-    });
-
-  menuBtn.addEventListener("click", () => {
-    menu.classList.toggle("show");
-    menuBtn.classList.toggle("clicked");
-    menuBtn.textContent = menuBtn.textContent === "✕" ? "☰" : "✕";
-  });
-
-  document.addEventListener("click", (e) => {
-    if (!menu.contains(e.target) && !menuBtn.contains(e.target)) {
-      closeMenu();
-    }
-  });
-}
-
 export function initClosableMessages() {
   const closeBtn = document.getElementById("msg-close-btn");
   if (!closeBtn) return;

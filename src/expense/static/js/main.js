@@ -5,7 +5,6 @@ import { initSimulator } from "./simulator.js";
 import { initAssetGoal } from "./asset_goal.js";
 import { initNotifications } from "./notifications.js";
 import {
-  initMenu,
   initClosableMessages,
   initExpenseForm,
   initRecurringExpenseDialog,
@@ -31,7 +30,6 @@ function onDOMContentLoaded() {
   initializeCharts();
   initChartReloadUI();
   initializeTableFilter();
-  initMenu();
   initClosableMessages();
   initExpenseForm();
   initRecurringExpenseDialog();
