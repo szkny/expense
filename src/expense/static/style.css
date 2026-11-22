@@ -1551,6 +1551,33 @@ tr:nth-child(even) {
   margin-left: 5%;
 }
 
+.asset-recent-history-header {
+  margin: 4px 0 0;
+}
+
+.asset-recent-history-period {
+  margin-bottom: 3px;
+  color: #6b7280;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.asset-recent-history-title {
+  color: #1f2937;
+  font-size: 1.05rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.dark .asset-recent-history-period {
+  color: #9ca3af;
+}
+
+.dark .asset-recent-history-title {
+  color: #f3f4f6;
+}
+
 .chart-controls {
   display: flex;
   align-items: center;

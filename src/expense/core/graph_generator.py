@@ -2361,14 +2361,28 @@ class GraphGenerator(Base):
         if df_visible.empty:
             return ""
 
+        line_color = "#60a5fa" if theme == "dark" else "#2563eb"
+        paper_color = "#1f2937" if theme == "dark" else "#ffffff"
         fig = go.Figure(
             go.Scatter(
                 x=df_graph["date"],
                 y=df_graph["valuation"],
                 name="評価額",
                 mode="lines+markers",
+                fill="tozeroy",
+                fillcolor=(
+                    "rgba(96, 165, 250, 0.16)"
+                    if theme == "dark"
+                    else "rgba(37, 99, 235, 0.10)"
+                ),
                 line=dict(
-                    width=2, color="#4466cc" if theme == "dark" else "#3355bb"
+                    width=2.8,
+                    color=line_color,
+                ),
+                marker=dict(
+                    size=[4] * (len(df_graph) - 1) + [9],
+                    color=line_color,
+                    line=dict(width=2, color=paper_color),
                 ),
                 customdata=df_graph[["change_summary"]],
                 hovertemplate=(
@@ -2378,14 +2392,23 @@ class GraphGenerator(Base):
         )
         self._update_layout(fig, theme)
         fig.update_layout(
-            title="直近の資産推移",
+            title=None,
+            height=390,
+            margin=dict(l=12, r=20, t=12, b=36),
             hovermode="x unified",
             dragmode="pan",
+            hoverlabel=dict(
+                bgcolor="#111827" if theme == "dark" else "#1f2937",
+                bordercolor=line_color,
+                font=dict(color="#f9fafb", size=12),
+            ),
         )
         fig.update_xaxes(
             range=[start_date, today],
             type="date",
             fixedrange=False,
+            showgrid=False,
+            tickfont=dict(size=11),
         )
         min_value = float(df_visible["valuation"].min())
         max_value = float(df_visible["valuation"].max())
@@ -2397,6 +2420,13 @@ class GraphGenerator(Base):
             range=[min_value - margin, max_value + margin],
             autorange=False,
             fixedrange=True,
+            gridcolor=(
+                "rgba(148, 163, 184, 0.18)"
+                if theme == "dark"
+                else "rgba(100, 116, 139, 0.14)"
+            ),
+            zeroline=False,
+            tickfont=dict(size=11),
         )
         fig.update_yaxes(**self._format_yaxis_ticks(fig))
 

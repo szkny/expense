@@ -152,10 +152,13 @@ function updateYaxis(graphDiv, xRange, axisId, traceAxis) {
   const isLog = axis?.type === "log";
   const tickYmin = isLog ? 10 ** ymin : ymin;
   const tickYmax = isLog ? 10 ** ymax : ymax;
+  const layoutAxis = graphDiv.layout?.[axisId];
+  const hasExplicitTicks =
+    layoutAxis?.tickvals != null || layoutAxis?.ticktext != null;
   Plotly.relayout(graphDiv, {
     [`${axisId}.range`]: range,
     [`${axisId}.autorange`]: false,
-    ...(axisId === "yaxis2"
+    ...(axisId === "yaxis2" || hasExplicitTicks
       ? getAxisTickSettings(tickYmin, tickYmax, axisId)
       : {}),
   });

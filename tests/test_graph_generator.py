@@ -146,6 +146,8 @@ class GraphGeneratorAssetRecentlyHistoryTest(unittest.TestCase):
         trace = figure.data[0]
         self.assertEqual(list(trace.y), [50, 100, 200, 300, 400])
         self.assertEqual(trace.mode, "lines+markers")
+        self.assertEqual(trace.fill, "tozeroy")
+        self.assertEqual(list(trace.marker.size), [4, 4, 4, 4, 9])
         self.assertEqual(
             trace.hovertemplate,
             "評価額 ¥%{y:,.0f}<br>%{customdata[0]}<extra></extra>",
@@ -157,7 +159,8 @@ class GraphGeneratorAssetRecentlyHistoryTest(unittest.TestCase):
         self.assertEqual(pd.Timestamp(figure.layout.xaxis.range[1]), today)
         self.assertEqual(figure.layout.xaxis.type, "date")
         self.assertIsNone(figure.layout.xaxis.tickformat)
-        self.assertEqual(figure.layout.title.text, "直近の資産推移")
+        self.assertEqual(figure.layout.height, 390)
+        self.assertIsNone(figure.layout.title.text)
         self.assertEqual(list(figure.layout.yaxis.range), [160, 440])
         self.assertFalse(figure.layout.yaxis.autorange)
         self.assertFalse(figure.layout.xaxis.fixedrange)
