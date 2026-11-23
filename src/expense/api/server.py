@@ -1553,7 +1553,7 @@ def register(
                 )
             finally:
                 _clear_record_cache()
-            msg = "✅ 端末内の履歴に登録しました。"
+            msg = "✅ 家計簿に登録しました。"
             info = (
                 f"[{expense_date}] "
                 f"{expense_type}: "
@@ -1635,7 +1635,7 @@ def _register_ocr_result(
             json.dump(ocr_data, cache_file, ensure_ascii=False, indent=2)
     except OSError:
         log.exception("Failed to save OCR duplicate-prevention data.")
-    msg = "✅ 端末内の履歴に登録しました。"
+    msg = "✅ 家計簿に登録しました。"
     info = (
         f"[{expense_date}] "
         f"{expense_type}: "
@@ -1763,7 +1763,7 @@ def delete_process(
             finally:
                 _clear_record_cache()
         if status:
-            msg = "✅ 端末内の履歴を削除しました。"
+            msg = "✅ 家計簿から削除しました。"
         else:
             msg = "🚫 家計簿の削除処理に失敗しました。"
         info = (
@@ -1854,7 +1854,7 @@ def edit_process(
             finally:
                 _clear_record_cache()
             if status:
-                msg = "✅ 端末内の履歴を修正しました。"
+                msg = "✅ 家計簿を修正しました。"
             else:
                 msg = "🚫 家計簿の修正処理に失敗しました。"
             info = (
