@@ -14,7 +14,7 @@ from markdown_it import MarkdownIt
 
 _OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 DEFAULT_MODEL = "gpt-5-nano"
-_MAX_OUTPUT_TOKENS = 2000
+_MAX_OUTPUT_TOKENS = 4000
 _MAX_CHAT_OUTPUT_TOKENS = 3000
 _DAILY_ADVICE_VERSION = 3
 _cache_lock = threading.Lock()

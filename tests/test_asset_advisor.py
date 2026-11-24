@@ -73,7 +73,7 @@ class TestDailyAssetAdvice(unittest.TestCase):
         urlopen.assert_called_once()
         request_body = json.loads(urlopen.call_args.args[0].data)
         self.assertEqual(request_body["model"], "gpt-5-nano")
-        self.assertEqual(request_body["max_output_tokens"], 2000)
+        self.assertEqual(request_body["max_output_tokens"], 4000)
         self.assertEqual(request_body["reasoning"], {"effort": "low"})
         self.assertEqual(request_body["store"], False)
         self.assertEqual(
