@@ -1001,6 +1001,11 @@ img.screenshot {
   min-height: 100px;
 }
 
+[id$="-chart-container"] {
+  overflow: hidden;
+  border-radius: 18px;
+}
+
 .card.loading {
   gap: 12px;
 }
