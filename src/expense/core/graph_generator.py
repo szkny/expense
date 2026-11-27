@@ -3109,7 +3109,7 @@ class GraphGenerator(Base):
             xaxis=dict(
                 range=[
                     latest_date - pd.DateOffset(years=3),
-                    latest_date + pd.DateOffset(months=4),
+                    latest_date + pd.DateOffset(years=1),
                 ],
                 fixedrange=False,
             ),
