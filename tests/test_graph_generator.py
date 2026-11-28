@@ -337,7 +337,7 @@ class GraphGeneratorAssetDrawdownTest(unittest.TestCase):
             [pd.Timestamp("2026-01-04"), pd.Timestamp("2026-01-07")],
         )
 
-    def test_initial_x_axis_range_spans_six_months_before_and_one_after(
+    def test_initial_x_axis_range_spans_three_years_before_and_one_after(
         self,
     ) -> None:
         generator = GraphGenerator.__new__(GraphGenerator)
@@ -356,11 +356,11 @@ class GraphGeneratorAssetDrawdownTest(unittest.TestCase):
 
         self.assertEqual(
             pd.Timestamp(figure.layout.xaxis.range[0]),
-            pd.Timestamp("2025-07-01"),
+            pd.Timestamp("2023-01-01"),
         )
         self.assertEqual(
             pd.Timestamp(figure.layout.xaxis.range[1]),
-            pd.Timestamp("2026-02-01"),
+            pd.Timestamp("2027-01-01"),
         )
 
     def test_ignores_future_rows_from_sheet_formulas(self) -> None:
