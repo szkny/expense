@@ -450,6 +450,7 @@ class TestHistoryFiles(unittest.TestCase):
 class TestSheetEdits(unittest.TestCase):
     def setUp(self) -> None:
         self.handler = GspreadHandler.__new__(GspreadHandler)
+        self.handler.expense_types = ["食費", "交通費", "書籍費"]
         self.handler.sheet = Mock()
         self.handler.sheetname = "Apr"
 
@@ -473,6 +474,70 @@ class TestSheetEdits(unittest.TestCase):
         self.assertTrue(result)
         self.handler.sheet.update_acell.assert_called_once_with(
             "B51", "食費: 昼食, おやつ, 夕食"
+        )
+
+    def test_delete_removes_only_memo_and_empty_category_group(self) -> None:
+        self.handler.sheet.range.return_value = [
+            Mock(
+                value="食費: 昼食, 交通費: 電車",
+                address="B51",
+            )
+        ]
+
+        result = self.handler.delete_memo("B", "交通費", "電車")
+
+        self.assertTrue(result)
+        self.handler.sheet.update_acell.assert_called_once_with(
+            "B51", "食費: 昼食"
+        )
+
+    def test_delete_first_category_keeps_the_following_category(self) -> None:
+        self.handler.sheet.range.return_value = [
+            Mock(
+                value="食費: 昼食, 交通費: 電車",
+                address="B51",
+            )
+        ]
+
+        result = self.handler.delete_memo("B", "食費", "昼食")
+
+        self.assertTrue(result)
+        self.handler.sheet.update_acell.assert_called_once_with(
+            "B51", "交通費: 電車"
+        )
+
+    def test_edit_first_memo_in_later_category_keeps_category_and_groups(
+        self,
+    ) -> None:
+        self.handler.sheet.range.return_value = [
+            Mock(
+                value="食費: 昼食, 交通費: 電車, バス",
+                address="B51",
+            )
+        ]
+
+        result = self.handler.edit_memo("B", "交通費", "電車", "タクシー")
+
+        self.assertTrue(result)
+        self.handler.sheet.update_acell.assert_called_once_with(
+            "B51", "食費: 昼食, 交通費: タクシー, バス"
+        )
+
+    def test_edit_targets_memo_within_category_when_text_is_duplicated(
+        self,
+    ) -> None:
+        self.handler.sheet.range.return_value = [
+            Mock(
+                value="食費: 昼食, 交通費: 昼食",
+                address="B51",
+            )
+        ]
+
+        result = self.handler.edit_memo("B", "食費", "昼食", "朝食")
+
+        self.assertTrue(result)
+        self.handler.sheet.update_acell.assert_called_once_with(
+            "B51", "食費: 朝食, 交通費: 昼食"
         )
 
 

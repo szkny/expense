@@ -81,9 +81,51 @@ class TestMonthlyIncomeCells(unittest.TestCase):
         )
 
 
+class TestAddMemo(unittest.TestCase):
+    def setUp(self) -> None:
+        self.handler = GspreadHandler.__new__(GspreadHandler)
+        self.handler.expense_types = ["食費", "交通費", "書籍費", "医療費"]
+        self.handler.sheet = Mock()
+        self.handler.sheetname = "Apr"
+
+    def test_full_memo_range_appends_a_new_type_to_the_last_cell(self) -> None:
+        self.handler.sheet.range.return_value = [
+            Mock(address="B51", value="通信費: 携帯"),
+            Mock(address="B52", value="交通費: 電車"),
+            Mock(address="B53", value="食費: 昼食"),
+            Mock(address="B54", value="医療費: 薬"),
+        ]
+
+        result = self.handler.add_memo("B", "書籍費", "本")
+
+        self.assertTrue(result)
+        self.handler.sheet.update_acell.assert_called_once_with(
+            "B54", "医療費: 薬, 書籍費: 本"
+        )
+
+    def test_full_last_cell_inserts_memo_at_end_of_its_type_group(self) -> None:
+        self.handler.sheet.range.return_value = [
+            Mock(address="B51", value="通信費: 携帯"),
+            Mock(address="B52", value="交通費: 電車"),
+            Mock(address="B53", value="医療費: 薬"),
+            Mock(
+                address="B54",
+                value="食費: 昼食, 夕食, 書籍費: 本",
+            ),
+        ]
+
+        result = self.handler.add_memo("B", "食費", "朝食")
+
+        self.assertTrue(result)
+        self.handler.sheet.update_acell.assert_called_once_with(
+            "B54", "食費: 昼食, 夕食, 朝食, 書籍費: 本"
+        )
+
+
 class TestIdempotentExpenseSync(unittest.TestCase):
     def setUp(self) -> None:
         self.handler = GspreadHandler.__new__(GspreadHandler)
+        self.handler.expense_types = ["食費", "交通費", "書籍費", "医療費"]
         self.handler.workbook = Mock()
         self.handler.sheet = Mock(id=10)
         self.handler.sheetname = "Apr"
@@ -189,7 +231,7 @@ class TestIdempotentExpenseSync(unittest.TestCase):
             )
         )
 
-    def test_memo_add_with_no_empty_cell_does_not_commit_amount(self) -> None:
+    def test_memo_add_with_no_empty_cell_appends_to_the_last_cell(self) -> None:
         self.handler.sheet.range.return_value = [
             Mock(address="B51", value="通信費: 携帯"),
             Mock(address="B52", value="交通費: 電車"),
@@ -197,21 +239,52 @@ class TestIdempotentExpenseSync(unittest.TestCase):
             Mock(address="B54", value="医療費: 薬"),
         ]
 
-        with self.assertRaisesRegex(ValueError, "no room"):
-            self.handler.sync_expense_event(
-                {
-                    "event_id": "event-memo-full",
-                    "operation": "add",
-                    "payload": {
-                        "expense_date": "2026-04-01T10:00:00.000000",
-                        "expense_type": "書籍費",
-                        "expense_memo": "本",
-                        "expense_amount": 250,
-                    },
-                }
-            )
+        self.handler.sync_expense_event(
+            {
+                "event_id": "event-memo-full",
+                "operation": "add",
+                "payload": {
+                    "expense_date": "2026-04-01T10:00:00.000000",
+                    "expense_type": "書籍費",
+                    "expense_memo": "本",
+                    "expense_amount": 250,
+                },
+            }
+        )
 
-        self.handler.workbook.batch_update.assert_not_called()
+        requests = self.handler.workbook.batch_update.call_args.args[0][
+            "requests"
+        ]
+        memo_update = next(
+            request["updateCells"]
+            for request in requests
+            if request.get("updateCells", {}).get("start", {}).get("rowIndex")
+            == 53
+        )
+        self.assertEqual(
+            memo_update["rows"][0]["values"][0]["userEnteredValue"][
+                "stringValue"
+            ],
+            "医療費: 薬, 書籍費: 本",
+        )
+
+    def test_memo_delete_removes_category_without_changing_other_groups(
+        self,
+    ) -> None:
+        self.handler.sheet.range.return_value = [
+            Mock(address="B51", value=""),
+            Mock(address="B52", value=""),
+            Mock(address="B53", value=""),
+            Mock(
+                address="B54",
+                value="食費: 昼食, 交通費: 電車",
+            ),
+        ]
+        changes = {}
+
+        self.handler._apply_memo_delete("B", "交通費", "電車", changes)
+
+        self.assertEqual(changes[(10, "B54")][1], "食費: 昼食")
 
     def test_already_applied_event_is_not_written_again(self) -> None:
         self.ledger.col_values.return_value = ["event_id", "event-1"]

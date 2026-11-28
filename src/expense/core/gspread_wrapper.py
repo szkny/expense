@@ -180,30 +180,35 @@ class GspreadHandler(Base):
         try:
             cell_range = f"{column}{offset}:{column}{offset+3}"
             cells = self.sheet.range(cell_range)
-            non_empty_counts = len(
-                list(
-                    filter(
-                        lambda c: c.value != "" and c.value is not None, cells
-                    )
+            matching = [
+                cell
+                for cell in cells
+                if isinstance(cell.value, str)
+                and re.search(
+                    rf"(?:^|,\s*){re.escape(expense_type)}:\s*",
+                    cell.value,
                 )
-            )
-            cells = list(
-                filter(
-                    lambda c: isinstance(c.value, str)
-                    and expense_type in c.value,
-                    cells,
+            ]
+            if matching:
+                cell = matching[0]
+                new_value = self._append_memo(
+                    str(cell.value), expense_type, memo
                 )
-            )
-            if len(cells):
-                cell = cells[0]
-                new_value = f"{cell.value}, {memo}"
                 address = cell.address
             else:
-                new_value = f"{expense_type}: {memo}"
-                address = f"{column}{offset+non_empty_counts}"
-                if non_empty_counts > 3:
-                    log.warn("there are no space to write a memo.")
-                    return False
+                empty_cell = next(
+                    (cell for cell in cells if cell.value in ("", None)),
+                    None,
+                )
+                if empty_cell is not None:
+                    new_value = f"{expense_type}: {memo}"
+                    address = empty_cell.address
+                else:
+                    cell = cells[-1]
+                    new_value = self._append_memo(
+                        str(cell.value), expense_type, memo
+                    )
+                    address = cell.address
             log.debug(
                 f"writing: '{new_value}' to {address} in {self.sheetname}"
             )
@@ -213,7 +218,80 @@ class GspreadHandler(Base):
             return False
         finally:
             log.info("end 'add_memo' method")
-            return True
+        return True
+
+    def _memo_groups(self, value: str) -> list[tuple[str, list[str]]]:
+        """Parse category-prefixed memo groups from a sheet cell value."""
+        category_names = "|".join(
+            re.escape(name)
+            for name in sorted(self.expense_types, key=len, reverse=True)
+        )
+        if not category_names:
+            return []
+        category_pattern = re.compile(rf"(?:^|,\s*)({category_names}):\s*")
+        categories = list(category_pattern.finditer(value))
+        groups: list[tuple[str, list[str]]] = []
+        for index, category in enumerate(categories):
+            end = (
+                categories[index + 1].start()
+                if index + 1 < len(categories)
+                else len(value)
+            )
+            memo_text = value[category.end() : end].strip()
+            memos = re.split(r",\s*", memo_text) if memo_text else []
+            groups.append((category.group(1), memos))
+        return groups
+
+    @staticmethod
+    def _format_memo_groups(groups: list[tuple[str, list[str]]]) -> str:
+        return ", ".join(
+            f"{expense_type}: {', '.join(memos)}"
+            for expense_type, memos in groups
+            if memos
+        )
+
+    def _change_memo(
+        self,
+        value: str,
+        expense_type: str,
+        target_memo: str,
+        new_memo: str | None,
+    ) -> str | None:
+        groups = self._memo_groups(value)
+        for group_index in reversed(range(len(groups))):
+            group_type, memos = groups[group_index]
+            if group_type != expense_type:
+                continue
+            memo_index = next(
+                (
+                    index
+                    for index in reversed(range(len(memos)))
+                    if memos[index] == target_memo
+                ),
+                None,
+            )
+            if memo_index is None:
+                continue
+            if new_memo is None:
+                memos.pop(memo_index)
+                if not memos:
+                    groups.pop(group_index)
+            else:
+                memos[memo_index] = new_memo
+            return self._format_memo_groups(groups)
+        return None
+
+    def _append_memo(self, value: str, expense_type: str, memo: str) -> str:
+        """Append a memo within its expense-type group when one exists."""
+        groups = self._memo_groups(value)
+        for group_index in reversed(range(len(groups))):
+            if groups[group_index][0] == expense_type:
+                groups[group_index][1].append(memo)
+                return self._format_memo_groups(groups)
+        if not groups:
+            return f"{value}, {expense_type}: {memo}"
+        groups.append((expense_type, [memo]))
+        return self._format_memo_groups(groups)
 
     def register_expense(
         self, expense_type: str, amount: int, memo: str = "", date_str: str = ""
@@ -518,11 +596,12 @@ class GspreadHandler(Base):
         matching = [
             (address, value)
             for address, value in cells
-            if isinstance(value, str) and expense_type in value
+            if isinstance(value, str)
+            and re.search(rf"(?:^|,\s*){re.escape(expense_type)}:\s*", value)
         ]
         if matching:
             address, value = matching[0]
-            new_value = f"{value}, {memo}"
+            new_value = self._append_memo(value, expense_type, memo)
         else:
             empty_cell = next(
                 (
@@ -533,11 +612,11 @@ class GspreadHandler(Base):
                 None,
             )
             if empty_cell is None:
-                raise ValueError(
-                    "There is no room for another memo in the sheet."
-                )
-            address = empty_cell[0]
-            new_value = f"{expense_type}: {memo}"
+                address, value = cells[-1]
+                new_value = self._append_memo(str(value), expense_type, memo)
+            else:
+                address = empty_cell[0]
+                new_value = f"{expense_type}: {memo}"
         self._set_batch_cell_value(address, new_value, changes)
 
     @_log_method()
@@ -550,26 +629,14 @@ class GspreadHandler(Base):
         offset: int = 51,
     ) -> None:
         cells = self._memo_values(column, changes, offset)
-        matching = [
-            (address, value)
-            for address, value in cells
-            if isinstance(value, str) and expense_type in value
-        ]
-        pattern = re.compile(
-            rf"({re.escape(expense_type)}:|,) *{re.escape(memo)}"
-        )
-        for address, value in matching:
-            matches = list(pattern.finditer(str(value)))
-            if not matches:
+        for address, value in cells:
+            if not isinstance(value, str):
                 continue
-            match = matches[-1]
-            new_value = (
-                str(value)[: match.start()] + str(value)[match.end() :]
-            ).strip()
-            if not new_value:
-                new_value = ""
-            elif new_value.startswith(","):
-                new_value = expense_type + ":" + new_value[1:]
+            new_value = self._change_memo(
+                value, expense_type, memo, new_memo=None
+            )
+            if new_value is None:
+                continue
             self._set_batch_cell_value(address, new_value, changes)
             return
         raise ValueError("Expense memo was not found in its sheet cell.")
@@ -724,54 +791,28 @@ class GspreadHandler(Base):
     ) -> bool:
         log.info("start 'delete_memo' method")
         cell_range = f"{column}{offset}:{column}{offset+3}"
-        cells = self.sheet.range(cell_range)
-        cells = list(
-            filter(
-                lambda c: isinstance(c.value, str) and target_type in c.value,
-                cells,
+        for cell in self.sheet.range(cell_range):
+            if not isinstance(cell.value, str):
+                continue
+            new_value = self._change_memo(
+                cell.value, target_type, target_memo, new_memo=None
             )
-        )
-        if len(cells):
-            cell = cells[0]
-            address = cell.address
-
-            # 最後にマッチした部分を探す
-            new_value: str = ""
-            s = str(cell.value)
-            if matches := list(
-                re.finditer(f"({target_type}:|,) *{target_memo}", s)
-            ):
-                last_match = matches[-1]
-                start, end = last_match.span()
-                new_value = s[:start] + s[end:]
-            else:
-                new_value = s
-            new_value = new_value.strip()
-            if len(new_value) == 0:
-                new_value = ""
-            elif new_value[0] == ",":
-                new_value = target_type + ":" + new_value[1:]
+            if new_value is None:
+                continue
             log.debug(f"Generated new_value: '{new_value}'")
-            if cell.value != new_value:
-                log.debug(
-                    (
-                        f"Deleting memo: '{target_memo}' of {address} in {self.sheetname}\n"
-                        f"\tBefore: '{cell.value}'\n\tAfter : '{new_value}'"
-                    )
-                )
-                self.sheet.update_acell(address, new_value)
-            else:
-                log.debug(
-                    f"Deleting memo failed: target not found in the cell. (target_memo={target_memo}, cell.value={cell.value})"
-                )
-                return False
-        else:
             log.debug(
-                f"Deleting memo failed: target not found in the cell. (target_memo={target_memo})"
+                (
+                    f"Deleting memo: '{target_memo}' of {cell.address} in {self.sheetname}\n"
+                    f"\tBefore: '{cell.value}'\n\tAfter : '{new_value}'"
+                )
             )
-            return False
-        log.info("end 'delete_memo' method")
-        return True
+            self.sheet.update_acell(cell.address, new_value)
+            log.info("end 'delete_memo' method")
+            return True
+        log.debug(
+            f"Deleting memo failed: target not found in the cell. (target_memo={target_memo})"
+        )
+        return False
 
     def delete_expense(
         self,
@@ -918,70 +959,39 @@ class GspreadHandler(Base):
             f"Editing expense_memo: '{target_memo}' to '{new_expense_memo}'"
         )
         if len(target_memo) and len(new_expense_memo) == 0:
-            if not self.delete_memo(column, target_type, target_memo):
+            if not self.delete_memo(
+                column, target_type, target_memo, offset=offset
+            ):
                 return False
         elif len(target_memo) == 0 and len(new_expense_memo):
-            if not self.add_memo(column, target_type, new_expense_memo):
+            if not self.add_memo(
+                column, target_type, new_expense_memo, offset=offset
+            ):
                 return False
         else:
             cell_range = f"{column}{offset}:{column}{offset+3}"
-            cells = self.sheet.range(cell_range)
-            cells = list(
-                filter(
-                    lambda c: isinstance(c.value, str)
-                    and target_type in c.value,
-                    cells,
+            for cell in self.sheet.range(cell_range):
+                if not isinstance(cell.value, str):
+                    continue
+                new_value = self._change_memo(
+                    cell.value,
+                    target_type,
+                    target_memo,
+                    new_expense_memo,
                 )
-            )
-            if len(cells):
-                cell = cells[0]
-                address = cell.address
-                log.debug(
-                    f"call.value='{cell.value}', address='{address}', sheetname='{self.sheetname}'"
-                )
-                # 最後にマッチした部分を探す
-                new_value: str = ""
-                _target_memo = target_memo.replace("(", "\\(").replace(
-                    ")", "\\)"
-                )
-                s = str(cell.value)
-                if matches := list(
-                    re.finditer(
-                        f"({target_type}:|,) *{_target_memo}",
-                        s,
-                    )
-                ):
-                    last_match = matches[-1]
-                    start, end = last_match.span()
-                    new_value = (
-                        (
-                            s[:start] + ", "
-                            if len(s[:start])
-                            else f"{target_type}: "
-                        )
-                        + new_expense_memo
-                        + s[end:]
-                    )
-                else:
-                    log.debug(
-                        f"Editing memo failed: target not found in the cell. (target_memo={target_memo}, cell.value={cell.value})"
-                    )
+                if new_value is None:
+                    continue
+                if cell.value == new_value:
                     return False
-                new_value = new_value.strip()
                 log.debug(f"Generated new_value: '{new_value}'")
-                if cell.value != new_value:
-                    log.debug(
-                        (
-                            f"Editing memo: '{target_memo}' of {address} in {self.sheetname}\n"
-                            f"\tBefore: '{cell.value}'\n\tAfter : '{new_value}'"
-                        )
+                log.debug(
+                    (
+                        f"Editing memo: '{target_memo}' of {cell.address} in {self.sheetname}\n"
+                        f"\tBefore: '{cell.value}'\n\tAfter : '{new_value}'"
                     )
-                    self.sheet.update_acell(address, new_value)
-                else:
-                    log.debug(
-                        f"Editing memo failed: target not found in the cell. (target_memo={target_memo}, cell.value={cell.value})"
-                    )
-                    return False
+                )
+                self.sheet.update_acell(cell.address, new_value)
+                break
             else:
                 log.debug(
                     f"Editing memo failed: target not found in the cell. (target_memo={target_memo})"
